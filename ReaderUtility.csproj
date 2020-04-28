@@ -281,12 +281,6 @@
   <ItemGroup>
     <Resource Include="IMG\ic_arrow_right_32.png" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ReaderService\ReaderService.csproj">
-      <Project>{3e8c6e6b-6e6f-45bc-8fd4-69b7e5a69e0b}</Project>
-      <Name>ReaderService</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
