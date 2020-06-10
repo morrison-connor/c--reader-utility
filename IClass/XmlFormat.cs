@@ -36,17 +36,22 @@ using System.Xml;
 using System.Collections;
 using System.Reflection;
 using log4net;
+using System.Xml.XPath;
+using System.Resources;
+using System.Globalization;
 
 namespace RFID.Utility.IClass
 {
 
-	public class Xml : XmlBased {
-		// Fields
-		private String m_rootName = "profile";
+	public class XmlFormat : XmlBased {
 
-		//public Xml() { }
-		public Xml(String fileName) : base(fileName) { }	
-		public Xml(Xml xml) : base(xml) {
+		private String			m_rootName = "profile";
+		private ResourceManager stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
+
+		public XmlFormat(String fileName) : base(fileName) { }	
+		public XmlFormat(XmlFormat xml) : base(xml) {
+			if (xml == null)
+				throw new ArgumentNullException(stringManager.GetString("xml argument is null", CultureInfo.CurrentCulture));
 			m_rootName = xml.m_rootName;
 		}
 
@@ -54,12 +59,12 @@ namespace RFID.Utility.IClass
 
 		public override String DefaultName {
 			get {
-				return DefaultNameWithoutExtension + ".xml";
+				return DefaultNameWithoutExtension() + ".xml";
 			}
 		}
 
 		public override object Clone() {
-			return new Xml(this);
+			return new XmlFormat(this);
 		}
 
 		private String GetSectionsPath(String section) {
@@ -76,14 +81,16 @@ namespace RFID.Utility.IClass
 			}
 			set  { 
 				VerifyNotReadOnly();
+				if (value == null)
+					throw new ArgumentNullException(stringManager.GetString("value argument is null", CultureInfo.CurrentCulture));
 				if (m_rootName == value.Trim())
 					return;
 					
-				if (!RaiseChangeEvent(true, ProfileChangeType.Other, null, "RootName", value))
+				if (!OnRaiseChangeEvtCase(true, ProfileChangeType.Other, null, "RootName", value))
 					return;
 
 				m_rootName = value.Trim(); 				
-				RaiseChangeEvent(false, ProfileChangeType.Other, null, "RootName", value);				
+				OnRaiseChangeEvtCase(false, ProfileChangeType.Other, null, "RootName", value);				
 			}
 		}
 		
@@ -99,7 +106,7 @@ namespace RFID.Utility.IClass
 			VerifyAndAdjustSection(ref section);
 			VerifyAndAdjustEntry(ref entry);
 
-			if (!RaiseChangeEvent(true, ProfileChangeType.SetValue, section, entry, value))
+			if (!OnRaiseChangeEvtCase(true, ProfileChangeType.SetValue, section, entry, value))
 				return;
 
             String valueString = value.ToString();
@@ -133,13 +140,13 @@ namespace RFID.Utility.IClass
 						m_buffer.Load(writer);
 					writer.Close();
 
-					RaiseChangeEvent(false, ProfileChangeType.SetValue, section, entry, value);
+					OnRaiseChangeEvtCase(false, ProfileChangeType.SetValue, section, entry, value);
 					return;
 				}
-				catch (System.Exception ex) {
+				catch (ArgumentException ex) {
 					Logger.Info(ex.Message);
 					return;
-				}	
+				}
 			}
 			
 			// The file exists, edit it
@@ -171,7 +178,7 @@ namespace RFID.Utility.IClass
 			// Add the value and save the file
 			entryNode.InnerText = valueString;
 			Save(doc);		
-			RaiseChangeEvent(false, ProfileChangeType.SetValue, section, entry, value);
+			OnRaiseChangeEvtCase(false, ProfileChangeType.SetValue, section, entry, value);
 		}
 		
         /// <summary>
@@ -191,7 +198,7 @@ namespace RFID.Utility.IClass
 				XmlNode entryNode = root.SelectSingleNode(GetSectionsPath(section) + "/" + GetEntryPath(entry));
 				return entryNode.InnerText;
 			}
-			catch {	
+			catch (XPathException) {	
 				return null;
 			}			
 		}
@@ -217,12 +224,12 @@ namespace RFID.Utility.IClass
 			if (entryNode == null)
 				return;
 
-			if (!RaiseChangeEvent(true, ProfileChangeType.RemoveEntry, section, entry, null))
+			if (!OnRaiseChangeEvtCase(true, ProfileChangeType.RemoveEntry, section, entry, null))
 				return;
 			
 			entryNode.ParentNode.RemoveChild(entryNode);			
 			Save(doc);
-			RaiseChangeEvent(false, ProfileChangeType.RemoveEntry, section, entry, null);
+			OnRaiseChangeEvtCase(false, ProfileChangeType.RemoveEntry, section, entry, null);
 		}
 		
         /// <summary>
@@ -248,12 +255,12 @@ namespace RFID.Utility.IClass
 			if (sectionNode == null)
 				return;
 			
-			if (!RaiseChangeEvent(true, ProfileChangeType.RemoveSection, section, null, null))
+			if (!OnRaiseChangeEvtCase(true, ProfileChangeType.RemoveSection, section, null, null))
 				return;
 
 			root.RemoveChild(sectionNode);
 			Save(doc);
-			RaiseChangeEvent(false, ProfileChangeType.RemoveSection, section, null, null);
+			OnRaiseChangeEvtCase(false, ProfileChangeType.RemoveSection, section, null, null);
 		}
 		
 		public override String[] GetEntryNames(String section) {

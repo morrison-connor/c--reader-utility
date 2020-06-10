@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Globalization;
+using System.Reflection;
+using System.Resources;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -7,6 +10,7 @@ namespace RFID.Utility.VM
 {
     public class B01ListboxScroll : ListBox
     {
+        private static ResourceManager stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
         public bool AutoScroll
         {
             get { return (bool)GetValue(AutoScrollProperty); }
@@ -25,7 +29,8 @@ namespace RFID.Utility.VM
         public static void OnAutoScrollChanged(DependencyObject s, DependencyPropertyChangedEventArgs e)
         {
             B01ListboxScroll thisLb = (B01ListboxScroll)s;
-
+            if (thisLb == null)
+                throw new ArgumentNullException(stringManager.GetString("B01ListboxScroll parameter is null.", CultureInfo.CurrentCulture));
             // Add the event handler in case that the property is set to true
             if ((bool)e.NewValue == true && (bool)e.OldValue == false)
             {

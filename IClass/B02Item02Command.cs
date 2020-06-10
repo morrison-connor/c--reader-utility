@@ -24,7 +24,7 @@ namespace RFID.Utility.IClass
         public String CommandTemp { get; set; }
         public int TabIndex { get; set; }
         public int TabIndexTemp { get; set; }
-        public CommandStates CommandState { get; set; }
+        public CommandStatus CommandState { get; set; }
         public String DefineSequenceStandardTemp { get; set; }
         public String DefineSequenceCustomizeTemp { get; set; }
         //public bool OKButton { get; set; }
@@ -44,7 +44,7 @@ namespace RFID.Utility.IClass
             DefineSequenceCustomizeTemp = String.Empty;
         }
 
-        public B02Item02Command(bool check, bool type, String name, CommandStates commandState, String command, int idx
+        public B02Item02Command(bool check, bool type, String name, CommandStatus commandState, String command, int idx
             , bool apply)
         {
             Check = check;

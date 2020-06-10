@@ -66,7 +66,7 @@ namespace RFID.Utility.IClass
             ItemsControl itemsControl = (ItemsControl)sender;
             Point p = e.GetPosition(itemsControl);
             _data = DragDropHelper.GetDataObjectFromItemsControl(itemsControl, p);
-            if (_data != null && ((B02Item02Command)_data).CommandState != MainWindow.CommandStates.REGULATION)
+            if (_data != null && ((B02Item02Command)_data).CommandState != MainWindow.CommandStatus.REGULATION)
             {
                 //Debug.WriteLine("PreviewMouseLeftButtonDown  _isMouseDown = true");
                 _isMouseDown = true;
@@ -430,7 +430,7 @@ namespace RFID.Utility.IClass
         {
             if (_insertAdorner != null)
             {
-                _insertAdorner.IsTopHalf = DragDropHelper.IsPointInTopHalf(itemsControl, e);
+                _insertAdorner.IsTopHalf(DragDropHelper.IsPointInTopHalf(itemsControl, e));
                 _insertAdorner.InvalidateVisual();
             }
         }

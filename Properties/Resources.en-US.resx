@@ -180,6 +180,9 @@
   <data name="Connect" xml:space="preserve">
     <value>Connect</value>
   </data>
+  <data name="ConnectBLE" xml:space="preserve">
+    <value>BLE</value>
+  </data>
   <data name="ConnectCOM" xml:space="preserve">
     <value>COM</value>
   </data>

@@ -9,7 +9,7 @@ namespace RFID.Utility.IClass
 		public string LocationValue { get; set; }
 	}*/
 
-	public class DataRepository {
+	public static class DataRepository {
 		/*public static List<PowerItem> GetPowerGroups(ReaderService.Module.Version v){
 			var __list = new List<PowerItem>();
 			int i;

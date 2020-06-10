@@ -4,6 +4,9 @@ using RFID.Utility.VM;
 using System;
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Reflection;
+using System.Resources;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,8 +21,8 @@ namespace RFID.Utility
         enum ValidationStates { DEFAULF, OK, ERROR, WARNING, FOCUS };
         private Hashtable ValidationState = new Hashtable();
 
-        public ObservableCollection<B02Item02Command> B02Item02Commands { get; set; }
-        public Int32 Index = 0;
+        public ObservableCollection<B02Item02Command> B02Item02Commands { get; }
+        private Int32 Index = 0;
         private String TabCtrlHeader;
         //private String DefineSequenceStandardTemp, DefineSequenceCustomizeTemp;
         private Boolean IsFocus = false;
@@ -28,37 +31,27 @@ namespace RFID.Utility
 
         private EditCommandVM VM = new EditCommandVM();
 
+        private ResourceManager stringManager;
 
-        public class PassValuesEventArgs : EventArgs
-        {
-            private readonly Int32 index;
-            private readonly B02Item02Command cmd;
 
-            public PassValuesEventArgs(Int32 _index, B02Item02Command _cmd)
-            {
-                this.index = _index;
-                this.cmd = _cmd;
-            }
-            public B02Item02Command Command { get { return this.cmd; } }
-            public Int32 Index { get { return this.index; } }
+        public delegate void PassValuesEventHandler(object sender, PassValuesEventArgs e);
 
-        }
-        public delegate void PassValuesHandler(object sender, PassValuesEventArgs e);
-
-        public event PassValuesHandler EditCommandPassValuesEvent;
+        public event PassValuesEventHandler EditCommandPassValuesEventHandler;
 
         private void EditCommandPassValuesReceive(Int32 _index, B02Item02Command cmd)
         {
-            if (EditCommandPassValuesEvent != null)
+            if (EditCommandPassValuesEventHandler != null)
             {
                 PassValuesEventArgs e = new PassValuesEventArgs(_index, cmd);
-                EditCommandPassValuesEvent(this, e);
+                EditCommandPassValuesEventHandler(this, e);
             }
         }
 
         public EditCommandDialog()
         {
             InitializeComponent();
+            stringManager =
+            new ResourceManager("en-US", Assembly.GetExecutingAssembly());
         }
 
         /// <summary>
@@ -69,6 +62,8 @@ namespace RFID.Utility
         public EditCommandDialog(ObservableCollection<B02Item02Command> commands, int idx)
         {
             InitializeComponent();
+            stringManager =
+            new ResourceManager("en-US", Assembly.GetExecutingAssembly());
 
             this.B02Item02Commands = commands;
             this.VM.EditCommandTabReadMemBank = VM.MemBank[1];
@@ -88,15 +83,16 @@ namespace RFID.Utility
             this.DataContext = VM;
 
             this.Index = idx;
-            this.IndexForwardNext.Text = idx.ToString();
+            this.IndexForwardNext.Text = idx.ToString("D", CultureInfo.CurrentCulture);
 
 
             if (Index == 0) this.IndexForwardNext1.IsEnabled = false;
-            if (Index == (B02Item02Commands.Count - 1))
-            {
-                this.IndexForwardNext2.IsEnabled = false;
-                DeleteSequenceBtn.IsEnabled = false;
-            }
+            if (commands != null)
+                if (Index == (commands.Count - 1))
+                {
+                    this.IndexForwardNext2.IsEnabled = false;
+                    DeleteSequenceBtn.IsEnabled = false;
+                }
             //OKSequenceBtn.IsEnabled = false;
             ApplySequenceBtn.IsEnabled = false;
             VM.EditCommandFirst = true;
@@ -145,7 +141,7 @@ namespace RFID.Utility
         private void OnIndexForwardNextChecked1(object sender, RoutedEventArgs e)
         {
             this.Index -= 1;
-            this.IndexForwardNext.Text = Index.ToString();
+            this.IndexForwardNext.Text = Index.ToString(CultureInfo.CurrentCulture);
             if (Index == 0)
                 this.IndexForwardNext1.IsEnabled = false;
             if (Index == 0 && B02Item02Commands.Count > 1)
@@ -172,7 +168,7 @@ namespace RFID.Utility
         private void OnIndexForwardNextChecked2(object sender, RoutedEventArgs e)
         {
             this.Index += 1;
-            this.IndexForwardNext.Text = Index.ToString();
+            this.IndexForwardNext.Text = Index.ToString("D", CultureInfo.CurrentCulture);
             if (Index == 0)
                 this.IndexForwardNext1.IsEnabled = false;
             else if (Index == (B02Item02Commands.Count - 1))
@@ -199,7 +195,7 @@ namespace RFID.Utility
         {
             Boolean _change = false;
 
-            if (B02Item02Commands[idx].CommandState is CommandStates.REGULATION)
+            if (B02Item02Commands[idx].CommandState is CommandStatus.REGULATION)
             {
                 VM.EditCommandTabControlItemSelectedIndex = 0;
                 VM.DefineName = String.Empty;
@@ -221,7 +217,7 @@ namespace RFID.Utility
                 ApplySequenceBtn.IsEnabled = false;
 
             VM.DefineName = (String.IsNullOrEmpty(B02Item02Commands[idx].Name)) ? String.Empty : B02Item02Commands[idx].Name;
-            if (B02Item02Commands[idx].CommandTemp.Equals(B02Item02Commands[idx].Command))
+            if (B02Item02Commands[idx].CommandTemp.Equals(B02Item02Commands[idx].Command, StringComparison.CurrentCulture))
             {
                 _change = false;
                 VM.DefineSequence = B02Item02Commands[idx].Command;
@@ -241,8 +237,8 @@ namespace RFID.Utility
                     switch (B02Item02Commands[idx].TabIndexTemp)
                     {
                         case 1:
-                            VM.EditCommandTabReadMemBank = VM.MemBank[int.Parse(_str[0].Substring(1))];
-                            VM.EditCommandTabReadMemBankIndex = int.Parse(_str[0].Substring(1));
+                            VM.EditCommandTabReadMemBank = VM.MemBank[int.Parse(_str[0].Substring(1), CultureInfo.CurrentCulture)];
+                            VM.EditCommandTabReadMemBankIndex = int.Parse(_str[0].Substring(1), CultureInfo.CurrentCulture);
 
                             if (_change is false)
                             {
@@ -253,7 +249,7 @@ namespace RFID.Utility
                             }
                             else
                             {
-                                if (_str[1].Equals(String.Empty))
+                                if (String.IsNullOrEmpty(_str[1]))//_str[1].Equals(String.Empty)
                                 {
                                     VM.EditCommandTabReadAddress = String.Empty;
                                     ValidationState["EditCommandTabReadAddress"] = ValidationStates.ERROR;
@@ -263,7 +259,7 @@ namespace RFID.Utility
                                     VM.EditCommandTabReadAddress = _str[1];
                                 }
 
-                                if (_str[2].Equals(String.Empty))
+                                if (String.IsNullOrEmpty(_str[2])) //_str[2].Equals(String.Empty)
                                 {
                                     VM.EditCommandTabReadLength = String.Empty;
                                     ValidationState["EditCommandTabReadLength"] = ValidationStates.ERROR;
@@ -276,8 +272,8 @@ namespace RFID.Utility
                             break;
                         //W
                         case 2:
-                            VM.EditCommandTabWriteMemBank = VM.MemBank[int.Parse(_str[0].Substring(1))];
-                            VM.EditCommandTabWriteMemBankIndex = int.Parse(_str[0].Substring(1));
+                            VM.EditCommandTabWriteMemBank = VM.MemBank[int.Parse(_str[0].Substring(1), CultureInfo.CurrentCulture)];
+                            VM.EditCommandTabWriteMemBankIndex = int.Parse(_str[0].Substring(1), CultureInfo.CurrentCulture);
 
                             if (_change is false)
                             {
@@ -285,7 +281,7 @@ namespace RFID.Utility
                                 VM.EditCommandTabWriteLength = _str[2];
                                 VM.EditCommandTabWriteData = _str[3];
                                 var _idx = Convert.ToInt32(VM.EditCommandTabWriteLength, 16) * 4;
-                                VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
+                                VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
 
                                 ValidationState["EditCommandTabWriteAddress"] = ValidationStates.OK;
                                 ValidationState["EditCommandTabWriteLength"] = ValidationStates.OK;
@@ -293,7 +289,7 @@ namespace RFID.Utility
                             }
                             else
                             {
-                                if (_str[1].Equals(String.Empty))
+                                if (String.IsNullOrEmpty(_str[1])) //_str[1].Equals(String.Empty)
                                 {
                                     VM.EditCommandTabWriteAddress = String.Empty;
                                     ValidationState["EditCommandTabWriteAddress"] = ValidationStates.ERROR;
@@ -303,7 +299,7 @@ namespace RFID.Utility
                                     VM.EditCommandTabWriteAddress = _str[1];
                                 }
 
-                                if (_str[2].Equals(String.Empty))
+                                if (String.IsNullOrEmpty(_str[2]))  //_str[2].Equals(String.Empty)
                                 {
                                     VM.EditCommandTabWriteLength = String.Empty;
                                     ValidationState["EditCommandTabWriteLength"] = ValidationStates.ERROR;
@@ -313,15 +309,15 @@ namespace RFID.Utility
                                     VM.EditCommandTabWriteLength = _str[2];
                                 }
 
-                                if (!VM.EditCommandTabWriteData.Equals(VM.EditCommandTabWriteDataTemp))
+                                if (!VM.EditCommandTabWriteData.Equals(VM.EditCommandTabWriteDataTemp, StringComparison.CurrentCulture))
                                 {
                                     VM.EditCommandTabWriteData = VM.EditCommandTabWriteDataTemp;
                                 }
 
-                                if (!_str[2].Equals(String.Empty))
+                                if (!String.IsNullOrEmpty(_str[2])) //_str[2].Equals(String.Empty)
                                 {
                                     var _idx = Convert.ToInt32(VM.EditCommandTabWriteLength, 16) * 4;
-                                    VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
+                                    VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
 
                                     if (_idx.Equals(VM.EditCommandTabWriteData.Length))
                                     {
@@ -341,8 +337,8 @@ namespace RFID.Utility
                             ValidationState["EditCommandTabAccessPassword"] = ValidationStates.OK;
                             break;
                         case 4:
-                            VM.EditCommandTabSelectMemBank = VM.MemBank[int.Parse(_str[0].Substring(1))];
-                            VM.EditCommandTabSelectMemBankIndex = int.Parse(_str[0].Substring(1));
+                            VM.EditCommandTabSelectMemBank = VM.MemBank[int.Parse(_str[0].Substring(1), CultureInfo.CurrentCulture)];
+                            VM.EditCommandTabSelectMemBankIndex = int.Parse(_str[0].Substring(1), CultureInfo.CurrentCulture);
                             VM.EditCommandTabSelectAddress = _str[1];
                             VM.EditCommandTabSelectLength = _str[2];
                             VM.EditCommandTabSelectData = _str[3];
@@ -350,7 +346,7 @@ namespace RFID.Utility
                             var _idx1 = Convert.ToInt32(VM.EditCommandTabSelectLength, 16) / 4;
                             var _par = Convert.ToInt32(VM.EditCommandTabSelectLength, 16) % 4;
                             if (_par > 0) _idx1++;
-                            VM.EditCommandTabSelectDataIdx = String.Format("({0} / {1})", VM.EditCommandTabSelectData.Length, _idx1);
+                            VM.EditCommandTabSelectDataIdx = String.Format(CultureInfo.CurrentCulture,"({0} / {1})", VM.EditCommandTabSelectData.Length, _idx1);
 
                             ValidationState["EditCommandTabSelectAddress"] = ValidationStates.OK;
                             ValidationState["EditCommandTabSelectLength"] = ValidationStates.OK;
@@ -375,8 +371,8 @@ namespace RFID.Utility
 
                             if (_str.Length > 1)
                             {
-                                VM.EditCommandTabUQRMemBank = VM.MemBank[int.Parse(_str[1].Substring(1))];
-                                VM.EditCommandTabUQRMemBankIndex = int.Parse(_str[1].Substring(1));
+                                VM.EditCommandTabUQRMemBank = VM.MemBank[int.Parse(_str[1].Substring(1), CultureInfo.CurrentCulture)];
+                                VM.EditCommandTabUQRMemBankIndex = int.Parse(_str[1].Substring(1), CultureInfo.CurrentCulture);
                                 VM.EditCommandTabUQRAddress = _str[2];
                                 VM.EditCommandTabUQRLength = _str[3];
                                 ValidationState["EditCommandTabUQRAddress"] = ValidationStates.OK;
@@ -422,7 +418,7 @@ namespace RFID.Utility
 
             var _str = _radioButton.Tag.ToString();
 
-            if (_str.Equals("Standard")) //Standard
+            if (_str.Equals("Standard", StringComparison.CurrentCulture)) //Standard
             {
                 EditCommandTab.Visibility = Visibility.Visible;
                 VM.DefineSequenceIsEnabled = false;
@@ -443,8 +439,8 @@ namespace RFID.Utility
                     switch (B02Item02Commands[Index].TabIndexTemp)
                     {
                         case 1:
-                            VM.EditCommandTabReadMemBank = VM.MemBank[int.Parse(_strArray[0].Substring(1))];
-                            VM.EditCommandTabReadMemBankIndex = int.Parse(_strArray[0].Substring(1));
+                            VM.EditCommandTabReadMemBank = VM.MemBank[int.Parse(_strArray[0].Substring(1), CultureInfo.CurrentCulture)];
+                            VM.EditCommandTabReadMemBankIndex = int.Parse(_strArray[0].Substring(1), CultureInfo.CurrentCulture);
 
                             VM.EditCommandTabReadAddress = _strArray[1];
                             VM.EditCommandTabReadLength = _strArray[2];
@@ -454,14 +450,14 @@ namespace RFID.Utility
                             break;
                         case 2:
 
-                            VM.EditCommandTabWriteMemBank = VM.MemBank[int.Parse(_strArray[0].Substring(1))];
-                            VM.EditCommandTabWriteMemBankIndex = int.Parse(_strArray[0].Substring(1));
+                            VM.EditCommandTabWriteMemBank = VM.MemBank[int.Parse(_strArray[0].Substring(1), CultureInfo.CurrentCulture)];
+                            VM.EditCommandTabWriteMemBankIndex = int.Parse(_strArray[0].Substring(1), CultureInfo.CurrentCulture);
 
                             VM.EditCommandTabWriteAddress = _strArray[1];
                             VM.EditCommandTabWriteLength = _strArray[2];
                             VM.EditCommandTabWriteData = _strArray[3];
                             var _idx = Convert.ToInt32(VM.EditCommandTabWriteLength, 16) * 4;
-                            VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
+                            VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
 
                             ValidationState["EditCommandTabWriteAddress"] = ValidationStates.OK;
                             ValidationState["EditCommandTabWriteLength"] = ValidationStates.OK;
@@ -472,8 +468,8 @@ namespace RFID.Utility
                             ValidationState["EditCommandTabAccessPassword"] = ValidationStates.OK;
                             break;
                         case 4:
-                            VM.EditCommandTabSelectMemBank = VM.MemBank[int.Parse(_strArray[0].Substring(1))];
-                            VM.EditCommandTabSelectMemBankIndex = int.Parse(_strArray[0].Substring(1));
+                            VM.EditCommandTabSelectMemBank = VM.MemBank[int.Parse(_strArray[0].Substring(1), CultureInfo.CurrentCulture)];
+                            VM.EditCommandTabSelectMemBankIndex = int.Parse(_strArray[0].Substring(1), CultureInfo.CurrentCulture);
                             VM.EditCommandTabSelectAddress = _strArray[1];
                             VM.EditCommandTabSelectLength = _strArray[2];
                             VM.EditCommandTabSelectData = _strArray[3];
@@ -481,7 +477,7 @@ namespace RFID.Utility
                             var _idx1 = Convert.ToInt32(VM.EditCommandTabSelectLength, 16) / 4;
                             var _par = Convert.ToInt32(VM.EditCommandTabSelectLength, 16) % 4;
                             if (_par > 0) _idx1++;
-                            VM.EditCommandTabSelectDataIdx = String.Format("({0} / {1})", VM.EditCommandTabSelectData.Length, _idx1);
+                            VM.EditCommandTabSelectDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", VM.EditCommandTabSelectData.Length, _idx1);
 
                             ValidationState["EditCommandTabSelectAddress"] = ValidationStates.OK;
                             ValidationState["EditCommandTabSelectLength"] = ValidationStates.OK;
@@ -506,8 +502,8 @@ namespace RFID.Utility
 
                             if (_strArray.Length > 1)
                             {
-                                VM.EditCommandTabUQRMemBank = VM.MemBank[int.Parse(_strArray[1].Substring(1))];
-                                VM.EditCommandTabUQRMemBankIndex = int.Parse(_strArray[1].Substring(1));
+                                VM.EditCommandTabUQRMemBank = VM.MemBank[int.Parse(_strArray[1].Substring(1), CultureInfo.CurrentCulture)];
+                                VM.EditCommandTabUQRMemBankIndex = int.Parse(_strArray[1].Substring(1), CultureInfo.CurrentCulture);
                                 VM.EditCommandTabUQRAddress = _strArray[2];
                                 VM.EditCommandTabUQRLength = _strArray[3];
                                 ValidationState["EditCommandTabUQRAddress"] = ValidationStates.OK;
@@ -604,7 +600,8 @@ namespace RFID.Utility
                 switch (VM.EditCommandTabControlItemSelectedIndex)
                 {
                     case 0:
-                        _result = MessageBox.Show("尚未編輯任何指令。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]", "Information",
+                        _result = MessageBox.Show("尚未編輯任何指令。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]",
+                            stringManager.GetString("Information", CultureInfo.CurrentCulture),
                             MessageBoxButton.OKCancel, MessageBoxImage.Information);
                         if (_result == MessageBoxResult.OK)
                         {
@@ -619,12 +616,13 @@ namespace RFID.Utility
                         if ((ValidationStates)ValidationState["EditCommandTabReadAddress"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabReadLength"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_R;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02R;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Read(R)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Read(R)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]",
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -641,7 +639,7 @@ namespace RFID.Utility
                             (ValidationStates)ValidationState["EditCommandTabWriteLength"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabWriteData"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_W;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02W;
                             this.B02Item02Commands[Index].Command = VM.DefineSequence;
                             VM.EditCommandTabWriteAddress = String.Empty;
                             VM.EditCommandTabWriteLength = String.Empty;
@@ -649,8 +647,9 @@ namespace RFID.Utility
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Write(W)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Write(W)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]",
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -665,14 +664,15 @@ namespace RFID.Utility
                     case 3:
                         if ((ValidationStates)ValidationState["EditCommandTabAccessPassword"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_P;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02P;
                             this.B02Item02Commands[Index].Command = VM.DefineSequence;
                             VM.EditCommandTabAccessPassword = String.Empty;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Access Password(P)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Access Password(P)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]",
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -689,12 +689,13 @@ namespace RFID.Utility
                             (ValidationStates)ValidationState["EditCommandTabSelectLength"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabSelectData"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_T;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02T;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Select(T)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Select(T)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]",
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -711,12 +712,13 @@ namespace RFID.Utility
                         if ((ValidationStates)ValidationState["EditCommandTabLockMask"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabLockAction"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_L;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02L;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Lock(L)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Lock(L)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]",
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -739,30 +741,31 @@ namespace RFID.Utility
                                     if (VM.EditCommandTabUQRReadIsCheck is true)
                                     {
                                         if (VM.EditCommandTabUQRSlotQIsCheck is true)
-                                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_UR_SLOTQ;
+                                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02URSLOTQ;
                                         else
-                                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_UR;
+                                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02UR;
                                     }
                                     else
                                     {
                                         if (VM.EditCommandTabUQRSlotQIsCheck is true)
-                                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_U_SLOTQ;
+                                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02USLOTQ;
                                         else
-                                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_U;
+                                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02U;
                                     }
                                 }
                                 else
                                 {
                                     if (VM.EditCommandTabUQRReadIsCheck is true)
-                                        this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_QR;
+                                        this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02QR;
                                     else
-                                        this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_Q;
+                                        this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02Q;
                                 }
                             }
                             else
                             {
-                                _result = MessageBox.Show("編輯不符合MultiRead(UR),SingleRead(QR)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                                _result = MessageBox.Show("編輯不符合MultiRead(UR),SingleRead(QR)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]",
+                                    stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                    MessageBoxButton.OKCancel, MessageBoxImage.Information);
                                 if (_result == MessageBoxResult.OK)
                                 {
                                     return;
@@ -779,13 +782,13 @@ namespace RFID.Utility
                             if (VM.EditCommandTabUQRIsChecked is "U")
                             {
                                 if (VM.EditCommandTabUQRSlotQIsCheck is true)
-                                    this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_U_SLOTQ;
+                                    this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02USLOTQ;
                                 else
-                                    this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_U;
+                                    this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02U;
                             }
                             else
                             {
-                                this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_Q;
+                                this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02Q;
                             }
                         }
                         break;
@@ -800,8 +803,9 @@ namespace RFID.Utility
             {
                 if (VM.DefineSequence.Length == 0)
                 {
-                    _result = MessageBox.Show("自訂義指令長度為0。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                    _result = MessageBox.Show("自訂義指令長度為0。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]",
+                        stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                        MessageBoxButton.OKCancel, MessageBoxImage.Information);
                     if (_result == MessageBoxResult.OK)
                     {
                         return;
@@ -818,7 +822,7 @@ namespace RFID.Utility
                     this.B02Item02Commands[Index].TypeTemp = true;
                     this.B02Item02Commands[Index].TabIndex = 0;
                     this.B02Item02Commands[Index].TabIndexTemp = 0;
-                    this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_CUSTOMIZE;
+                    this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02CUSTOMIZE;
                 }
                 
             }
@@ -853,7 +857,8 @@ namespace RFID.Utility
                 switch (VM.EditCommandTabControlItemSelectedIndex)
                 {
                     case 0:
-                        _result = MessageBox.Show("尚未編輯任何指令。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]", "Information",
+                        _result = MessageBox.Show("尚未編輯任何指令。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]", 
+                            stringManager.GetString("Information", CultureInfo.CurrentCulture),
                             MessageBoxButton.OKCancel, MessageBoxImage.Information);
                         if (_result == MessageBoxResult.OK)
                         {
@@ -868,12 +873,13 @@ namespace RFID.Utility
                         if ((ValidationStates)ValidationState["EditCommandTabReadAddress"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabReadLength"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_R;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02R;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Read(R)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Read(R)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -892,12 +898,13 @@ namespace RFID.Utility
                             (ValidationStates)ValidationState["EditCommandTabWriteLength"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabWriteData"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_W;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02W;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Write(W)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Write(W)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -914,12 +921,13 @@ namespace RFID.Utility
                     case 3:
                         if ((ValidationStates)ValidationState["EditCommandTabAccessPassword"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_P;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02P;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Access Password(P)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Access Password(P)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -938,12 +946,13 @@ namespace RFID.Utility
                             (ValidationStates)ValidationState["EditCommandTabSelectLength"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabSelectData"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_T;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02T;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Select(T)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Select(T)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -961,12 +970,13 @@ namespace RFID.Utility
                         if ((ValidationStates)ValidationState["EditCommandTabLockMask"] == ValidationStates.OK &&
                             (ValidationStates)ValidationState["EditCommandTabLockAction"] == ValidationStates.OK)
                         {
-                            this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_L;
+                            this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02L;
                         }
                         else
                         {
-                            _result = MessageBox.Show("編輯不符合Lock(L)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                            _result = MessageBox.Show("編輯不符合Lock(L)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
                             if (_result == MessageBoxResult.OK)
                             {
                                 return;
@@ -990,19 +1000,20 @@ namespace RFID.Utility
                                 if (VM.EditCommandTabUQRIsChecked is "U")
                                 {
                                     if (VM.EditCommandTabUQRSlotQIsCheck is true)
-                                        this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_UR_SLOTQ;
+                                        this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02URSLOTQ;
                                     else
-                                        this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_UR;
+                                        this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02UR;
                                 }
                                 else
                                 {
-                                    this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_QR;
+                                    this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02QR;
                                 } 
                             }
                             else
                             {
-                                _result = MessageBox.Show("編輯不符合MultiRead(UR),SingleRead(QR)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", "Information",
-                                MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                                _result = MessageBox.Show("編輯不符合MultiRead(UR),SingleRead(QR)指令格式。\n\r若要重新編輯請按[OK]；離開編輯請按[Cancel]", 
+                                    stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                                    MessageBoxButton.OKCancel, MessageBoxImage.Information);
                                 if (_result == MessageBoxResult.OK)
                                 {
                                     return;
@@ -1021,13 +1032,13 @@ namespace RFID.Utility
                             if (VM.EditCommandTabUQRIsChecked is "U")
                             {
                                 if (VM.EditCommandTabUQRSlotQIsCheck is true)
-                                    this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_U_SLOTQ;
+                                    this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02USLOTQ;
                                 else
-                                    this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_U;
+                                    this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02U;
                             }
                             else
                             {
-                                this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_Q;
+                                this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02Q;
                             }
                         }
                         
@@ -1043,8 +1054,9 @@ namespace RFID.Utility
             {
                 if (VM.DefineSequence.Length == 0)
                 {
-                    _result = MessageBox.Show("自訂義指令長度為0。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]", "Information",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                    _result = MessageBox.Show("自訂義指令長度為0。\n\r若要編輯請按[OK]；離開編輯視窗請按[Cancel]", 
+                        stringManager.GetString("Information", CultureInfo.CurrentCulture),
+                        MessageBoxButton.OKCancel, MessageBoxImage.Information);
                     if (_result == MessageBoxResult.OK)
                     {
                         return;
@@ -1061,7 +1073,7 @@ namespace RFID.Utility
                     this.B02Item02Commands[Index].TypeTemp = true;
                     this.B02Item02Commands[Index].TabIndex = 0;
                     this.B02Item02Commands[Index].TabIndexTemp = 0;
-                    this.B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_CUSTOMIZE;
+                    this.B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02CUSTOMIZE;
                 }
                 
             }
@@ -1098,28 +1110,28 @@ namespace RFID.Utility
                     switch (tc.SelectedIndex)
                     {
                         case 1:
-                            if (VM.EditCommandTabReadAddress == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabReadAddress))
                                 ValidationState["EditCommandTabReadAddress"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabReadLength == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabReadLength))
                                 ValidationState["EditCommandTabReadLength"] = ValidationStates.DEFAULF;
 
-                            VM.DefineSequence = String.Format("R{0},{1},{2}", VM.EditCommandTabReadMemBankIndex, VM.EditCommandTabReadAddress, VM.EditCommandTabReadLength);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "R{0},{1},{2}", VM.EditCommandTabReadMemBankIndex, VM.EditCommandTabReadAddress, VM.EditCommandTabReadLength);
                             break;
                         case 2:
-                            if (VM.EditCommandTabWriteAddress == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabWriteAddress))
                                 ValidationState["EditCommandTabWriteAddress"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabWriteLength == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabWriteLength))
                                 ValidationState["EditCommandTabWriteLength"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabWriteData == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabWriteData))
                                 ValidationState["EditCommandTabWriteData"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabWriteLength == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabWriteLength))
                             {
-                                VM.DefineSequence = String.Format("W{0},{1},{2},{3}", VM.EditCommandTabWriteMemBankIndex, VM.EditCommandTabWriteAddress, String.Empty, String.Empty);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "W{0},{1},{2},{3}", VM.EditCommandTabWriteMemBankIndex, VM.EditCommandTabWriteAddress, String.Empty, String.Empty);
                             }
                             else
                             {
                                 var _idx = Convert.ToInt32(VM.EditCommandTabWriteLength, 16) * 4;
-                                VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
+                                VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
 
                                 if (_idx.Equals(VM.EditCommandTabWriteData.Length))
                                 {
@@ -1130,52 +1142,52 @@ namespace RFID.Utility
                                     ValidationState["EditCommandTabWriteData"] = ValidationStates.ERROR;
                                 }
                             }
-                            VM.DefineSequence = String.Format("W{0},{1},{2},{3}", VM.EditCommandTabWriteMemBankIndex, VM.EditCommandTabWriteAddress, VM.EditCommandTabWriteLength, VM.EditCommandTabWriteData);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "W{0},{1},{2},{3}", VM.EditCommandTabWriteMemBankIndex, VM.EditCommandTabWriteAddress, VM.EditCommandTabWriteLength, VM.EditCommandTabWriteData);
                             break;
                         //P
                         case 3:
-                            if (VM.EditCommandTabAccessPassword == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabAccessPassword))
                                 ValidationState["EditCommandTabAccessPassword"] = ValidationStates.DEFAULF;
 
-                            VM.DefineSequence = String.Format("P{0}", VM.EditCommandTabAccessPassword);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "P{0}", VM.EditCommandTabAccessPassword);
                             break;
                         //S
                         case 4:
-                            if (VM.EditCommandTabSelectAddress == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabSelectAddress))
                                 ValidationState["EditCommandTabSelectAddress"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabSelectLength == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabSelectLength))
                                 ValidationState["EditCommandTabSelectLength"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabSelectData == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabSelectData))
                                 ValidationState["EditCommandTabSelectData"] = ValidationStates.DEFAULF;
-                            VM.DefineSequence = String.Format("T{0},{1},{2},{3}", VM.EditCommandTabSelectMemBankIndex, VM.EditCommandTabSelectAddress, VM.EditCommandTabSelectLength, VM.EditCommandTabSelectData);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "T{0},{1},{2},{3}", VM.EditCommandTabSelectMemBankIndex, VM.EditCommandTabSelectAddress, VM.EditCommandTabSelectLength, VM.EditCommandTabSelectData);
                             break;
                         case 5:
-                            if (VM.EditCommandTabLockMask == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabLockMask))
                                 ValidationState["EditCommandTabLockMask"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabLockAction == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabLockAction))
                                 ValidationState["EditCommandTabLockAction"] = ValidationStates.DEFAULF;
                             NoName();
                             break;
                         case 6:
                             if (VM.EditCommandTabUQRIsChecked == null)
                                 VM.EditCommandTabUQRIsChecked = "U";
-                            if (VM.EditCommandTabUQRAddress == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabUQRAddress))
                                 ValidationState["EditCommandTabUQRAddress"] = ValidationStates.DEFAULF;
-                            if (VM.EditCommandTabUQRLength == String.Empty)
+                            if (String.IsNullOrEmpty(VM.EditCommandTabUQRLength))
                                 ValidationState["EditCommandTabUQRLength"] = ValidationStates.DEFAULF;
                             if (VM.EditCommandTabUQRSlotTitlexVisibility == Visibility.Visible)
                             {
                                 if (VM.EditCommandTabUQRReadIsCheck is true)
                                 {
                                     if (VM.EditCommandTabUQRSlotQIsCheck == true)
-                                        VM.DefineSequence = String.Format("U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag, VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag, VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                                     else
-                                        VM.DefineSequence = String.Format("U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                                 }
                                 else
                                 {
                                     if (VM.EditCommandTabUQRSlotQIsCheck == true)
-                                        VM.DefineSequence = String.Format("U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag);
+                                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag);
                                     else
                                         VM.DefineSequence = "U";
                                 }
@@ -1183,7 +1195,7 @@ namespace RFID.Utility
                             else
                             {
                                 if (VM.EditCommandTabUQRReadIsCheck is true)
-                                    VM.DefineSequence = String.Format("Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                                 else
                                     VM.DefineSequence = "Q";
                             }
@@ -1226,7 +1238,7 @@ namespace RFID.Utility
             {
                 ValidationState["EditCommandTabReadAddress"] = ValidationStates.OK;
                 ValidationState["EditCommandTabReadLength"] = ValidationStates.OK;
-                VM.DefineSequence = String.Format("R{0},{1},{2}", VM.EditCommandTabReadMemBank.Tag, VM.EditCommandTabReadAddress, VM.EditCommandTabReadLength);
+                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "R{0},{1},{2}", VM.EditCommandTabReadMemBank.Tag, VM.EditCommandTabReadAddress, VM.EditCommandTabReadLength);
             }
 
             if (B02Item02Commands[Index].CommandTemp != VM.DefineSequence)
@@ -1282,7 +1294,7 @@ namespace RFID.Utility
                 EditCommandTabWriteData.IsEnabled = true;
 
                 var _idx = Convert.ToInt32(VM.EditCommandTabWriteLength, 16) * 4;
-                VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
+                VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
 
                 if (_idx.Equals(VM.EditCommandTabWriteData.Length))
                 {
@@ -1290,7 +1302,7 @@ namespace RFID.Utility
                     ValidationState["EditCommandTabWriteLength"] = ValidationStates.OK;
                     EditCommandTabWriteData.Style = (Style)FindResource("TextBoxNormalStyle");
                     ValidationState["EditCommandTabWriteData"] = ValidationStates.OK;
-                    VM.DefineSequence = String.Format("W{0},{1},{2},{3}",
+                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "W{0},{1},{2},{3}",
                         VM.EditCommandTabWriteMemBankIndex, 
                         VM.EditCommandTabWriteAddress, 
                         VM.EditCommandTabWriteLength, 
@@ -1304,7 +1316,7 @@ namespace RFID.Utility
 
                     EditCommandTabWriteData.Style = (Style)FindResource("TextBoxErrorStyle");
                     ValidationState["EditCommandTabWriteData"] = ValidationStates.ERROR;
-                    VM.DefineSequence = String.Format("W{0},{1},{2},{3}",
+                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "W{0},{1},{2},{3}",
                         VM.EditCommandTabWriteMemBankIndex, 
                         VM.EditCommandTabWriteAddress, 
                         VM.EditCommandTabWriteLength, 
@@ -1395,14 +1407,14 @@ namespace RFID.Utility
                     if (VM.EditCommandTabUQRSlotQIsCheck == true)
                     {
                         if (VM.EditCommandTabUQRReadIsCheck == true)
-                            VM.DefineSequence = String.Format("U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag, VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag, VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                         else
-                            VM.DefineSequence = String.Format("U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag);
                     }   
                     else
                     {
                         if (VM.EditCommandTabUQRReadIsCheck == true)
-                            VM.DefineSequence = String.Format("U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                         else
                             VM.DefineSequence = "U";
                     }      
@@ -1410,7 +1422,7 @@ namespace RFID.Utility
                 else
                 {
                     if (VM.EditCommandTabUQRReadIsCheck == true)
-                        VM.DefineSequence = String.Format("Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                     else
                         VM.DefineSequence = "Q";
                 }  
@@ -1429,7 +1441,7 @@ namespace RFID.Utility
             if (!(sender is RadioButton _radioButton)) return;
 
             var _str = _radioButton.Tag.ToString();
-            if (_str.Equals("U"))
+            if (_str.Equals("U", StringComparison.CurrentCulture))
             {
                 VM.EditCommandTabUQRSlotTitlexVisibility = Visibility.Visible;
                 VM.EditCommandTabUQRSlotComboBoxVisibility = Visibility.Visible;
@@ -1437,14 +1449,14 @@ namespace RFID.Utility
                 if (VM.EditCommandTabUQRReadIsCheck is true)
                 {
                     if (VM.EditCommandTabUQRSlotQIsCheck == true)
-                        VM.DefineSequence = String.Format("U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                     else
-                        VM.DefineSequence = String.Format("U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                 }
                 else
                 {
                     if (VM.EditCommandTabUQRSlotQIsCheck == true)
-                        VM.DefineSequence = String.Format("U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1");
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1");
                     else
                         VM.DefineSequence = "U";
                 }
@@ -1456,7 +1468,7 @@ namespace RFID.Utility
                 VM.EditCommandTabUQRSlotComboBoxVisibility = Visibility.Hidden;
 
                 if (VM.EditCommandTabUQRReadIsCheck is true)
-                    VM.DefineSequence = String.Format("Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                 else
                     VM.DefineSequence = "Q";
             }
@@ -1475,13 +1487,13 @@ namespace RFID.Utility
             if (VM.EditCommandTabUQRIsChecked is "U")
             {
                 if(VM.EditCommandTabUQRSlotQIsCheck)
-                    VM.DefineSequence = String.Format("U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
                 else
-                    VM.DefineSequence = String.Format("U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
             }
             else
             {
-                VM.DefineSequence = String.Format("Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "Q,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
             }
 
             if (B02Item02Commands[Index].CommandTemp != VM.DefineSequence)
@@ -1496,7 +1508,7 @@ namespace RFID.Utility
         {
             if (VM.EditCommandTabUQRIsChecked is "U")
                 if (VM.EditCommandTabUQRSlotQIsCheck)
-                    VM.DefineSequence = String.Format("U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1");
+                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1");
                 else
                     VM.DefineSequence = "U";
             else
@@ -1513,9 +1525,9 @@ namespace RFID.Utility
         private void OnEditCommandTabUQRSlotQChecked(object sender, RoutedEventArgs e)
         {
             if (VM.EditCommandTabUQRReadIsCheck)
-                VM.DefineSequence = String.Format("U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0},R{1},{2},{3}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
             else
-                VM.DefineSequence = String.Format("U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1");
+                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U{0}", VM.EditCommandTabUQRSlotQComboBox.Tag ?? "1");
 
             if (B02Item02Commands[Index].CommandTemp != VM.DefineSequence)
             {
@@ -1528,7 +1540,7 @@ namespace RFID.Utility
         private void OnEditCommandTabUQRSlotQUnChecked(object sender, RoutedEventArgs e)
         {
             if (VM.EditCommandTabUQRReadIsCheck)
-                VM.DefineSequence = String.Format("U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
+                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "U,R{0},{1},{2}", VM.EditCommandTabUQRMemBankIndex, VM.EditCommandTabUQRAddress, VM.EditCommandTabUQRLength);
             else
                 VM.DefineSequence = "U";
 
@@ -1548,12 +1560,12 @@ namespace RFID.Utility
 
             if (_idx == 4)
             {
-                VM.DefineSequence = String.Format("T{0},{1},{2},{3}", String.Empty, 
+                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "T{0},{1},{2},{3}", String.Empty, 
                     VM.EditCommandTabSelectAddress, VM.EditCommandTabSelectLength, VM.EditCommandTabSelectData);
             }
             else
             {
-                VM.DefineSequence = String.Format("T{0},{1},{2},{3}", VM.EditCommandTabSelectMemBank.Tag,
+                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "T{0},{1},{2},{3}", VM.EditCommandTabSelectMemBank.Tag,
                     VM.EditCommandTabSelectAddress, VM.EditCommandTabSelectLength, VM.EditCommandTabSelectData);
             }
 
@@ -1605,20 +1617,20 @@ namespace RFID.Utility
             this.Mask_ = 0;
             this.Action_ = 0;
 
-            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockKillPwd.SelectedItem).Tag.ToString()), 8);
-            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockAccessPwd.SelectedItem).Tag.ToString()), 6);
-            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockEPC.SelectedItem).Tag.ToString()), 4);
-            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockTID.SelectedItem).Tag.ToString()), 2);
-            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockUser.SelectedItem).Tag.ToString()), 0);
+            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockKillPwd.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 8);
+            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockAccessPwd.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 6);
+            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockEPC.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 4);
+            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockTID.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 2);
+            this.Mask_ |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)EditCommandLockUser.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 0);
 
-            VM.EditCommandTabLockMask = this.Mask_.ToString("X3");
+            VM.EditCommandTabLockMask = this.Mask_.ToString("X3", CultureInfo.CurrentCulture);
             //TextBoxGotFocusValidation(EditCommandTabLockMask, null);
             TextBoxKeyUpValidation(EditCommandTabLockMask, null);
-            VM.EditCommandTabLockAction = this.Action_.ToString("X3");
+            VM.EditCommandTabLockAction = this.Action_.ToString("X3", CultureInfo.CurrentCulture);
             //TextBoxGotFocusValidation(EditCommandTabLockAction, null);
             TextBoxKeyUpValidation(EditCommandTabLockAction, null);
 
-            VM.DefineSequence = String.Format("L{0},{1}", this.Mask_.ToString("X3"), this.Action_.ToString("X3"));
+            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "L{0},{1}", this.Mask_.ToString("X3", CultureInfo.CurrentCulture), this.Action_.ToString("X3", CultureInfo.CurrentCulture));
 
             if (B02Item02Commands[Index].CommandTemp != VM.DefineSequence)
             {
@@ -1663,19 +1675,21 @@ namespace RFID.Utility
                 switch (_tbox.Name)
                 {
                     case "EditCommandTabWriteData":
-                        if (VM.EditCommandTabWriteLength == String.Empty)
+                        if (String.IsNullOrEmpty(VM.EditCommandTabWriteLength))
                         {
                             e.Handled = true;
                             EditCommandTabWriteLength.Focus();
-                            var _result = MessageBox.Show("請先編輯[Length]。", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                            var _result = MessageBox.Show("請先編輯[Length]。", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture), MessageBoxButton.OK, MessageBoxImage.Information);
                         }
                         break;
                     case "EditCommandTabSelectData":
-                        if (VM.EditCommandTabSelectLength == String.Empty)
+                        if (String.IsNullOrEmpty(VM.EditCommandTabSelectLength))
                         {
                             e.Handled = true;
                             EditCommandTabSelectLength.Focus();
-                            var _result = MessageBox.Show("請先編輯[Length]。", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                            var _result = MessageBox.Show("請先編輯[Length]。", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture), MessageBoxButton.OK, MessageBoxImage.Information);
                         }
                         break;
                 }
@@ -1718,7 +1732,7 @@ namespace RFID.Utility
             Regex regex = new Regex(@"^[0-9A-F]+$");
             TextBox _tbox = (TextBox)sender;
             String _str = _tbox.Text;
-            String[] _temp = {};
+            String[] _temp = Array.Empty<string>();
             Int32 _idx, _par;
 
             if (regex.IsMatch(_str)) //e.Key.ToString()
@@ -1727,7 +1741,7 @@ namespace RFID.Utility
                     _tbox.Style = (Style)FindResource("TextBoxNormalStyle");
                 ValidationState[_tbox.Name] = ValidationStates.OK;
 
-                if (_str == String.Empty)
+                if (String.IsNullOrEmpty(_str))
                 {
                     _tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                     ValidationState[_tbox.Name] = ValidationStates.ERROR;
@@ -1754,12 +1768,12 @@ namespace RFID.Utility
                             if (_tbox.Name == "EditCommandTabReadAddress")
                             {
                                 //VM.EditCommandTabReadAddressTemp = _temp[1];
-                                VM.DefineSequence = String.Format("{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
                             } 
                             else
                             {
                                 VM.EditCommandTabWriteAddressTemp = _temp[1];
-                                VM.DefineSequence = String.Format("{0},{1},{2}, {3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2}, {3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                             }
                                 
                         }
@@ -1780,33 +1794,33 @@ namespace RFID.Utility
                             _temp[2] = _str;
 
                             if (_tbox.Name == "EditCommandTabReadLength")
-                                VM.DefineSequence = String.Format("{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
                             else
                             {
                                 VM.EditCommandTabWriteLengthTemp = _temp[2];
                                 if (_temp[2].Length > 0)
                                 {
                                     _idx = Convert.ToInt32(_temp[2], 16) * 4;
-                                    VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
+                                    VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", VM.EditCommandTabWriteData.Length, _idx);
 
                                     if (_idx.Equals(VM.EditCommandTabWriteData.Length))
                                     {
                                         EditCommandTabWriteData.Style = (Style)FindResource("TextBoxNormalStyle");
                                         ValidationState[EditCommandTabWriteData.Name] = ValidationStates.OK;
-                                        VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], VM.EditCommandTabWriteData);
+                                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], VM.EditCommandTabWriteData);
                                     }  
                                     else
                                     {
                                         EditCommandTabWriteData.Style = (Style)FindResource("TextBoxErrorStyle");
                                         ValidationState[EditCommandTabWriteData.Name] = ValidationStates.ERROR;
-                                        VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                                     }
                                     VM.EditCommandTabWriteDataTemp = VM.EditCommandTabWriteData;
                                 }
                                 else
                                 {
                                     VM.EditCommandTabWriteDataIdx = String.Empty;
-                                    VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                                 }
                             }    
                         }
@@ -1820,19 +1834,19 @@ namespace RFID.Utility
                         {
                             _tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[_tbox.Name] = ValidationStates.ERROR;
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
                         }
                         else
                         {
                             _tbox.Style = (Style)FindResource("TextBoxNormalStyle");
                             ValidationState[_tbox.Name] = ValidationStates.OK;
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         }
 
-                        VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", _temp[3].Length, _nWordsLength);
+                        VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", _temp[3].Length, _nWordsLength);
                         break;
                     case "EditCommandTabAccessPassword":
-                        if (_str == String.Empty || _str.Length < 8)
+                        if (String.IsNullOrEmpty(_str) || _str.Length < 8)
                         {
                             _tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[_tbox.Name] = ValidationStates.ERROR;
@@ -1841,7 +1855,7 @@ namespace RFID.Utility
                         {
                             _tbox.Style = (Style)FindResource("TextBoxNormalStyle");
                             ValidationState[_tbox.Name] = ValidationStates.OK;
-                            VM.DefineSequence = String.Format("P{0}", _str);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "P{0}", _str);
                         }
                         break;
                     case "EditCommandTabUQRAddress":
@@ -1859,7 +1873,7 @@ namespace RFID.Utility
                             if (_temp.Length == 4)
                             {
                                 _temp[2] = _str;
-                                VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                             }
                         }
                         break;
@@ -1878,7 +1892,7 @@ namespace RFID.Utility
                             if(_temp.Length == 4)
                             {
                                 _temp[3] = _str;
-                                VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                             }
                         }
                         break;
@@ -1896,7 +1910,7 @@ namespace RFID.Utility
                             _temp = VM.DefineSequence.Split(',');
                             _temp[1] = _str;
 
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         }
                         break;
                     case "EditCommandTabSelectLength":
@@ -1919,26 +1933,26 @@ namespace RFID.Utility
                                 _idx = Convert.ToInt32(VM.EditCommandTabSelectLength, 16)/4;
                                 _par = Convert.ToInt32(VM.EditCommandTabSelectLength, 16) % 4;
                                 if (_par > 0) _idx++;
-                                VM.EditCommandTabSelectDataIdx = String.Format("({0} / {1})", _temp[3].Length, _idx);
+                                VM.EditCommandTabSelectDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", _temp[3].Length, _idx);
 
                                 //if (_idx >= VM.EditCommandTabSelectData.Length && ((_idx - 3) <= VM.EditCommandTabSelectData.Length))
                                 if (_idx != VM.EditCommandTabSelectData.Length)
                                 {
                                     EditCommandTabSelectData.Style = (Style)FindResource("TextBoxErrorStyle");
                                     ValidationState["EditCommandTabSelectData"] = ValidationStates.ERROR;
-                                    VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
+                                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
                                 } 
                                 else
                                 {
                                     EditCommandTabSelectData.Style = (Style)FindResource("TextBoxNormalStyle");
                                     ValidationState["EditCommandTabSelectData"] = ValidationStates.OK;
-                                    VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                    VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                                 }  
                             }
                             else
                             {
                                 VM.EditCommandTabSelectDataIdx = String.Empty;
-                                VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                             }
                         }
                         break;
@@ -1954,43 +1968,43 @@ namespace RFID.Utility
                         {
                             _tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[_tbox.Name] = ValidationStates.ERROR;
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
                         }
                         else
                         {
                             _tbox.Style = (Style)FindResource("TextBoxNormalStyle");
                             ValidationState[_tbox.Name] = ValidationStates.OK;
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         }
 
-                        VM.EditCommandTabSelectDataIdx = String.Format("({0} / {1})", _temp[3].Length, _nBitsLength);
+                        VM.EditCommandTabSelectDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", _temp[3].Length, _nBitsLength);
                         break;
                     case "EditCommandTabLockMask":
-                        if (_tbox.Text == String.Empty || _tbox.Text.Length != 3 || Convert.ToInt32(_tbox.Text, 16) > 0x3FF)
+                        if (String.IsNullOrEmpty(_tbox.Text) || _tbox.Text.Length != 3 || Convert.ToInt32(_tbox.Text, 16) > 0x3FF)
                         {
                             _tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[_tbox.Name] = ValidationStates.ERROR;
-                            VM.DefineSequence = String.Format("L{0},{1}", String.Empty, String.Empty);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "L{0},{1}", String.Empty, String.Empty);
                         }
                         else
                         {
                             _tbox.Style = (Style)FindResource("TextBoxNormalStyle");
                             ValidationState[_tbox.Name] = ValidationStates.OK;
-                            VM.DefineSequence = String.Format("L{0},{1}", _tbox.Text, VM.EditCommandTabLockAction);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "L{0},{1}", _tbox.Text, VM.EditCommandTabLockAction);
                         }
                         break;
                     case "EditCommandTabLockAction":
-                        if (_tbox.Text == String.Empty || _tbox.Text.Length != 3 || Convert.ToInt32(_tbox.Text, 16) > 0x3FF)
+                        if (String.IsNullOrEmpty(_tbox.Text) || _tbox.Text.Length != 3 || Convert.ToInt32(_tbox.Text, 16) > 0x3FF)
                         {
                             _tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[_tbox.Name] = ValidationStates.ERROR;
-                            VM.DefineSequence = String.Format("L{0},{1}", String.Empty, String.Empty);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "L{0},{1}", String.Empty, String.Empty);
                         }
                         else
                         {
                             _tbox.Style = (Style)FindResource("TextBoxNormalStyle");
                             ValidationState[_tbox.Name] = ValidationStates.OK;
-                            VM.DefineSequence = String.Format("L{0},{1}", VM.EditCommandTabLockMask, _tbox.Text);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "L{0},{1}", VM.EditCommandTabLockMask, _tbox.Text);
                         }
                         break;
                 }
@@ -2017,9 +2031,9 @@ namespace RFID.Utility
                         _temp[1] = _str;
 
                         if (_tbox.Name == "EditCommandTabReadAddress")
-                                VM.DefineSequence = String.Format("{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
                         else
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         break;
 
                     case "EditCommandTabReadLength":
@@ -2027,17 +2041,17 @@ namespace RFID.Utility
                         _temp[2] = _str;
 
                         if (_tbox.Name == "EditCommandTabReadLength")
-                            VM.DefineSequence = String.Format("{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2}", _temp[0], _temp[1], _temp[2]);
                         else
                         {
                             VM.EditCommandTabWriteLengthTemp = _temp[2];
                             if (_temp[2].Length == 0)
                             {
                                 VM.EditCommandTabWriteDataIdx = String.Empty;
-                                VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
                             }
                             else    
-                                VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         }
                             
                         
@@ -2045,62 +2059,62 @@ namespace RFID.Utility
                     case "EditCommandTabWriteData":
                         _temp[3] = _str;
                         VM.EditCommandTabWriteDataTemp = _temp[3];
-                        VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
 
                         _idx = Convert.ToInt32(_temp[2], 16) * 4;
-                        VM.EditCommandTabWriteDataIdx = String.Format("({0} / {1})", _temp[3].Length, _idx);
+                        VM.EditCommandTabWriteDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", _temp[3].Length, _idx);
                         break;
                     case "EditCommandTabAccessPassword":
-                        VM.DefineSequence = String.Format("P{0}", _str);
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "P{0}", _str);
                         break;
                     case "EditCommandTabUQRAddress":
                         if (_temp.Length == 4)
                         {
                             _temp[2] = _str;
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         }
                         break;
                     case "EditCommandTabUQRLength":
                         if (_temp.Length == 4)
                         {
                             _temp[3] = _str;
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         }
                         break;
                     case "EditCommandTabSelectAddress":
                         _temp[1] = _str;
 
-                        VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                         break;
                     case "EditCommandTabSelectLength":
                         _temp[2] = _str;
-                        if (_str.Equals(String.Empty))
+                        if (String.IsNullOrEmpty(_str))
                         {
                             VM.EditCommandTabSelectDataIdx = String.Empty;
-                            VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
+                            VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
                         }
                         else
                         {
                             _idx = Convert.ToInt32(_temp[2], 16) / 4;
                             _par = Convert.ToInt32(_temp[2], 16) % 4;
                             if (_par > 0) _idx++;
-                            VM.EditCommandTabSelectDataIdx = String.Format("({0} / {1})", _temp[3].Length, _idx);
+                            VM.EditCommandTabSelectDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", _temp[3].Length, _idx);
                             if (_temp[3].Length.Equals(_idx))
-                                VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
                             else
-                                VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
+                                VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], String.Empty);
                         }
                         
                         break;
                     case "EditCommandTabSelectData":
                         _temp[3] = _str;
 
-                        VM.DefineSequence = String.Format("{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
+                        VM.DefineSequence = String.Format(CultureInfo.CurrentCulture, "{0},{1},{2},{3}", _temp[0], _temp[1], _temp[2], _temp[3]);
 
                         _idx = Convert.ToInt32(_temp[2], 16) / 4;
                         _par = Convert.ToInt32(_temp[2], 16) % 4;
                         if (_par > 0) _idx++;
-                        VM.EditCommandTabSelectDataIdx = String.Format("({0} / {1})", _temp[3].Length, _idx);
+                        VM.EditCommandTabSelectDataIdx = String.Format(CultureInfo.CurrentCulture, "({0} / {1})", _temp[3].Length, _idx);
                         break;
                 }
 
@@ -2134,7 +2148,7 @@ namespace RFID.Utility
                     _tbox.Style = (Style)FindResource("TextBoxNormalStyle");
                 ValidationState[_tbox.Name] = ValidationStates.OK;
 
-                if (_str == String.Empty)
+                if (String.IsNullOrEmpty(_str))
                 {
                     _tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                     ValidationState[_tbox.Name] = ValidationStates.ERROR;
@@ -2143,7 +2157,7 @@ namespace RFID.Utility
                 else
                 {
                     B02Item02Commands[Index].Type = true;
-                    B02Item02Commands[Index].CommandState = CommandStates.B02ITEM02_CUSTOMIZE;
+                    B02Item02Commands[Index].CommandState = CommandStatus.B02ITEM02CUSTOMIZE;
                     B02Item02Commands[Index].CommandTemp = _str;
                 }
             }
@@ -2230,7 +2244,7 @@ namespace RFID.Utility
                     case "EditCommandTabWriteAddress":
                     case "EditCommandTabUQRAddress":
                     case "EditCommandTabSelectAddress":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -2245,7 +2259,7 @@ namespace RFID.Utility
                     case "EditCommandTabWriteLength":
                     case "EditCommandTabUQRLength":
                     case "EditCommandTabSelectLength":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x60 || Convert.ToInt32(tbox.Text, 16) < 1)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x60 || Convert.ToInt32(tbox.Text, 16) < 1)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -2257,7 +2271,7 @@ namespace RFID.Utility
                         }
                         break;
                     case "EditCommandTabWriteData":
-                        if (VM.EditCommandTabWriteLength == String.Empty) { EditCommandTabWriteLength.Focus(); goto GotFocus; }
+                        if (String.IsNullOrEmpty(VM.EditCommandTabWriteLength)) { EditCommandTabWriteLength.Focus(); goto GotFocus; }
 
                         Int32 _nWordsLength = Convert.ToInt32(VM.EditCommandTabWriteLength, 16);
                         if (_nWordsLength * 4 != tbox.Text.Length)
@@ -2273,7 +2287,7 @@ namespace RFID.Utility
 
                         break;
                     case "EditCommandTabAccessPassword":
-                        if (tbox.Text == String.Empty || tbox.Text.Length < 8)
+                        if (String.IsNullOrEmpty(tbox.Text) || tbox.Text.Length < 8)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -2285,7 +2299,7 @@ namespace RFID.Utility
                         }
                         break;
                     case "EditCommandTabSelectData":
-                        if (VM.EditCommandTabSelectLength == String.Empty) { EditCommandTabSelectLength.Focus(); goto GotFocus; }
+                        if (String.IsNullOrEmpty(VM.EditCommandTabSelectLength)) { EditCommandTabSelectLength.Focus(); goto GotFocus; }
 
                         Int32 _nBitsLength = Convert.ToInt32(VM.EditCommandTabSelectLength, 16) / 4;
                         var par = Convert.ToInt32(VM.EditCommandTabSelectLength, 16) % 4;
@@ -2303,7 +2317,7 @@ namespace RFID.Utility
                         break;
                     case "EditCommandTabLockMask":
                     case "EditCommandTabLockAction":
-                        if (tbox.Text == String.Empty || tbox.Text.Length != 3 || Convert.ToInt32(tbox.Text, 16) > 0x3FF)
+                        if (String.IsNullOrEmpty(tbox.Text) || tbox.Text.Length != 3 || Convert.ToInt32(tbox.Text, 16) > 0x3FF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -2359,7 +2373,7 @@ namespace RFID.Utility
 
         private void NoName()
         {
-            if (VM.EditCommandTabLockMask == String.Empty || VM.EditCommandTabLockAction == String.Empty)
+            if (String.IsNullOrEmpty(VM.EditCommandTabLockMask) || String.IsNullOrEmpty(VM.EditCommandTabLockAction))
                 return;
 
             var mask = Format.HexStringToInt(VM.EditCommandTabLockMask);

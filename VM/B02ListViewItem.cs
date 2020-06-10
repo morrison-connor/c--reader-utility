@@ -6,8 +6,10 @@ namespace RFID.Utility.VM
 {
     public class B02ListViewItem : INotifyPropertyChanged
     {
-        private const Int32 _length = 4;
-        public Int32 Length { get { return _length; } }
+        private Int32 _length = 4;
+        public Int32 Length() {
+            return _length;
+        }
 
         private String _B02PC = String.Empty;
         public String B02PC {

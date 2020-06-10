@@ -23,23 +23,28 @@ namespace RFID.Utility.IClass
 				return _supportedCultures;
 			}
 		}
-
+		
 		public CulturesHelper() {
 			if (!_isFoundInstalledCultures) {
 
 				CultureInfo cultureInfo = new CultureInfo("");
+                DirectoryInfo dirinfo = null;
+                String _dir = null;
 
-				foreach (String dir in Directory.GetDirectories(System.Windows.Forms.Application.StartupPath)) {
+                foreach (String dir in Directory.GetDirectories(System.Windows.Forms.Application.StartupPath)) {
 					try {
-						DirectoryInfo dirinfo = new DirectoryInfo(dir);
-						cultureInfo = CultureInfo.GetCultureInfo(dirinfo.Name);
+						dirinfo = new DirectoryInfo(dir);
+                        _dir = dir;
+                        cultureInfo = CultureInfo.GetCultureInfo(dirinfo.Name);
 
 						if (dirinfo.GetFiles(Path.GetFileNameWithoutExtension(
 							System.Windows.Forms.Application.ExecutablePath) + ".resources.dll").Length > 0) {
 							_supportedCultures.Add(cultureInfo);
 						}
 					}
-					catch (Exception) { }
+					catch (CultureNotFoundException) {
+                        //MessageBox.Show(String.Format(CultureInfo.CurrentCulture, "dirinfo.name ={0}, _dir= {1}, CultureNotFoundException={2}", dirinfo.Name, _dir, ce.Message));
+                    }
 				}
                 
 
@@ -55,18 +60,18 @@ namespace RFID.Utility.IClass
 			}
 		}
 
-		public Properties.Resources GetResourceInstance() {
+        public Properties.Resources GetResourceInstance() {
 			return new Properties.Resources();
 		}
 
-		public Properties.Resources GetResourceInstance(string cultureName) {
+        public Properties.Resources GetResourceInstance(string cultureName) {
 			ChangeCulture(new CultureInfo(cultureName));
 
 			return new Properties.Resources();
 		}
 
 
-		public static ObjectDataProvider ResourceProvider {
+        public static ObjectDataProvider ResourceProvider {
 			get {
 				if (_objectDataProvider == null) {
 					_objectDataProvider = (ObjectDataProvider)App.Current.FindResource("Resources");

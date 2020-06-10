@@ -37,7 +37,8 @@ namespace RFID.Utility.IClass
             UIElement.VisibilityProperty.AddOwner(typeof(GridViewColumnResize),
                 new PropertyMetadata(Visibility.Visible, new PropertyChangedCallback(Target)));
 
-        private static readonly double _zeroValue = 0d;
+        //private static readonly double _zeroValue = 0d;
+        private const double _zeroValue = 0d;
 
         private static void Target(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
         {

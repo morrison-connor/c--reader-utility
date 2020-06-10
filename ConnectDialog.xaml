@@ -13,6 +13,13 @@
             <Setter Property="FontSize" Value="12"></Setter>
             <Setter Property="VerticalAlignment" Value="Center"></Setter>
         </Style>
+        <Style x:Key="TextBlockStyle12B" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="微軟正黑體"></Setter>
+            <Setter Property="FontSize" Value="12"></Setter>
+            <Setter Property="FontWeight" Value="Bold"></Setter>
+            <Setter Property="Foreground" Value="WhiteSmoke"></Setter>
+            <Setter Property="VerticalAlignment" Value="Center"></Setter>
+        </Style>
         <Style x:Key="TextBlockStyle16B" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="微軟正黑體"></Setter>
             <Setter Property="FontSize" Value="16"></Setter>
@@ -82,6 +89,25 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="ListItemTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Margin" Value="10,0,0,0"/>
+            <Setter Property="Foreground" Value="WhiteSmoke"/>
+        </Style>
+
+        <!-- 
+        <DataTemplate x:Key="ResultsListViewTemplate" DataType="local:BluetoothLEDeviceDisplay">
+            <StackPanel Grid.Column="1" Margin="5">
+                <TextBlock Style="{StaticResource ListItemTextStyle}" TextWrapping="Wrap">
+                    Name: <Run Text="{Binding Name, Mode=OneWay}" FontWeight="Bold"/>
+                </TextBlock>
+                <TextBlock>
+                    IsPaired: <Run Text="{Binding IsPaired, Mode=OneWay}"/>, IsConnected: <Run Text="{Binding IsConnected, Mode=OneWay}"/>, IsConnectable:<Run Text="{Binding IsConnectable, Mode=OneWay}"/>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+        -->
+        
     </Window.Resources>
     
     
@@ -94,7 +120,7 @@
             <Grid Margin="2">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <TextBlock Style="{StaticResource TextBlockStyle16B}">Reader Search</TextBlock>
-                    <TextBlock FontSize="12" FontWeight="Bold" FontFamily="微軟正黑體" Foreground="WhiteSmoke" VerticalAlignment="Top" Margin="5,15,0,0" Text="v3.5.7"/>
+                    <TextBlock Style="{StaticResource TextBlockStyle12B}" Margin="5,15,0,0">v4.0.0</TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="ConnectDialogClose" Content="{StaticResource IMG_Close}" Width="28" Height="28" Click="OnConnectDialogCloseClick" VerticalContentAlignment="Center"/>
@@ -140,7 +166,7 @@
                         <TextBlock Style="{StaticResource TextBlockStyle12}" Margin="10,2,10,0" x:Name="USBTBMSG2"></TextBlock>
                         <GroupBox Height="60" Width="410" Margin="10,0,10,0" BorderBrush="LightSlateGray" HorizontalAlignment="Left">
                             <GroupBox.Header>
-                                <Label>USB Device list:</Label>
+                                <Label>USB Device List:</Label>
                             </GroupBox.Header>
                             <ComboBox x:Name="ComboBoxUSBReader" Height="24" Width="396" FontStyle="Normal" FontSize="14" VerticalAlignment="Top" HorizontalAlignment="Left"></ComboBox>
                         </GroupBox>
@@ -169,6 +195,39 @@
                                 <TextBox x:Name="TextBoxNetPort" FontSize="14" VerticalContentAlignment="Center" Height="26" Width="80"></TextBox>
                             </StackPanel>
                             <Button x:Name="ButtonNetConnect" Click="OnButtonNetConnectClick" Style="{StaticResource ButtonStyle12B}" Margin="10,0,5,0">Connect</Button>
+                        </StackPanel>
+                    </StackPanel>
+                </TabItem>
+                <TabItem Header="{Binding ConnectBLE, Source={StaticResource Resources}}">
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Top" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource TextBlockStyle12}" Margin="10,5,10,0" x:Name="BLETBMSG1"></TextBlock>
+                        <TextBlock Style="{StaticResource TextBlockStyle12}" Margin="10,2,10,0" x:Name="BLETBMSG2"></TextBlock>
+                        <GroupBox Height="105" Width="420" Margin="5,-5,6,0" BorderBrush="LightSlateGray" HorizontalAlignment="Left">
+                            <GroupBox.Header>
+                                <Label>BLE Device List:</Label>
+                            </GroupBox.Header>
+                            <ListView x:Name="ListViewBLEResults" Width="398" ItemsSource="{Binding BLEDeviceUnpairedItemsSource}" SelectedItem="{Binding BLEDeviceUnpairedItemsSelected, Mode=TwoWay}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Background="AliceBlue" Height="34" >
+                                            <TextBlock Text="{Binding Path=DeviceName}" FontSize="16" FontFamily="Consolas" FontWeight="Bold" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Path=ShowDeviceUUID}" FontSize="14" FontFamily="Consolas" FontWeight="Bold" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                            </ListView>
+                            <!--<ComboBox x:Name="ComboBoxBLEReader" Height="24" Width="396" FontStyle="Normal" FontSize="14" VerticalAlignment="Top" HorizontalAlignment="Left"></ComboBox>-->
+                        </GroupBox>
+                        
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button Style="{StaticResource ButtonStyle12B}" Margin="5,5,0,0" x:Name="ButtonBLEEnumerate" Click="OnButtonBLEEnumerateClick">Enumerate</Button>
+                            <Button Style="{StaticResource ButtonStyle12B}" Margin="115,5,5,0" x:Name="ButtonBLEConnect" Click="OnButtonBLEConnectClick">Connect</Button>
+                            <Button Style="{StaticResource ButtonStyle12B}" Margin="0,5,0,0"  x:Name="ButtonBLEEnter" Click="OnButtonBLEEnterClick">Enter Utility</Button>
                         </StackPanel>
                     </StackPanel>
                 </TabItem>

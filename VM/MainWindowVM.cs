@@ -58,19 +58,19 @@ namespace RFID.Utility.VM
     /// </summary>
     public class MainWindowVM : INotifyPropertyChanged
     {
-        public ObservableCollection<MemBank> MemBank { get; set; }
-        public ObservableCollection<SlotQ> SlotQ { get; set; }
-        public ObservableCollection<B01ListboxItem> B01GroupMsgListBox { get; set; }
-        public ObservableCollection<GPIOConfig> GPIOConfig { get; set; }
+        public ObservableCollection<MemBank> MemBank { get; private set; }
+        public ObservableCollection<SlotQ> SlotQ { get; private set; }
+        public ObservableCollection<B01ListboxItem> B01GroupMsgListBox { get; private set; }
+        public ObservableCollection<GPIOConfig> GPIOConfig { get; private set; }
 
         private readonly object _b02stocksLock = new object();
-        public ObservableCollection<B02ListViewItem> B02ListViewItemsSource { get; set; }
+        public ObservableCollection<B02ListViewItem> B02ListViewItemsSource { get; private set; }
 
         private readonly object _b03stocksLock = new object();
-        public ObservableCollection<B03ListViewItem> B03ListViewItemsSource { get; set; }
+        public ObservableCollection<B03ListViewItem> B03ListViewItemsSource { get; private set; }
 
         private readonly object _b04stocksLock = new object();
-        public ObservableCollection<B04ListViewItem> B04ListViewItemsSource { get; set; }
+        public ObservableCollection<B04ListViewItem> B04ListViewItemsSource { get; private set; }
 
         
 
@@ -1307,7 +1307,7 @@ namespace RFID.Utility.VM
         public ObservableCollection<B03ListViewItem> B03ListViewTagWindowList
         {
             get { return _B03ListViewTagWindowList; }
-            set
+            private set
             {
                 if (value != _B03ListViewTagWindowList)
                 {

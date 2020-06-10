@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
+using System.Resources;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -11,19 +14,24 @@ using System.Windows.Controls;
 
 namespace RFID.Utility.IClass
 {
-    public class AutoScrollBottom
+    public static class AutoScrollBottom
     {
+        private static ResourceManager stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
         static readonly Dictionary<ListBox, Capture> Associations =
            new Dictionary<ListBox, Capture>();
 
-        public static bool GetScrollOnNewItem(DependencyObject obj)
+        public static bool GetScrollOnNewItem(DependencyObject objj)
         {
-            return (bool)obj.GetValue(ScrollOnNewItemProperty);
+            if (objj == null)
+                throw new ArgumentNullException(stringManager.GetString("DependencyObject argument is null", CultureInfo.CurrentCulture));
+            return (bool)objj.GetValue(ScrollOnNewItemProperty);
         }
 
-        public static void SetScrollOnNewItem(DependencyObject obj, bool value)
+        public static void SetScrollOnNewItem(DependencyObject objj, bool value)
         {
-            obj.SetValue(ScrollOnNewItemProperty, value);
+            if (objj == null)
+                throw new ArgumentNullException(stringManager.GetString("DependencyObject argument is null", CultureInfo.CurrentCulture));
+            objj.SetValue(ScrollOnNewItemProperty, value);
         }
 
         public static readonly DependencyProperty ScrollOnNewItemProperty =
@@ -115,14 +123,18 @@ namespace RFID.Utility.IClass
 
 
 
-        public static bool GetAutoScroll(DependencyObject obj)
+        public static bool GetAutoScroll(DependencyObject objj)
         {
-            return (bool)obj.GetValue(AutoScrollProperty);
+            if (objj == null)
+                throw new ArgumentNullException(stringManager.GetString("DependencyObject argument is null", CultureInfo.CurrentCulture));
+            return (bool)objj.GetValue(AutoScrollProperty);
         }
 
-        public static void SetAutoScroll(DependencyObject obj, bool value)
+        public static void SetAutoScroll(DependencyObject objj, bool value)
         {
-            obj.SetValue(AutoScrollProperty, value);
+            if (objj == null)
+                throw new ArgumentNullException(stringManager.GetString("DependencyObject argument is null", CultureInfo.CurrentCulture));
+            objj.SetValue(AutoScrollProperty, value);
         }
 
         public static readonly DependencyProperty AutoScrollProperty =

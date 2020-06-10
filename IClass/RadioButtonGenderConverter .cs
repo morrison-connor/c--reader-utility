@@ -8,7 +8,7 @@ using System.Windows.Data;
 
 namespace RFID.Utility.IClass
 {
-    class RadioButtonGenderConverter : IValueConverter
+    public class RadioButtonGenderConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {

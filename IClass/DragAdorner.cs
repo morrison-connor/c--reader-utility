@@ -1,4 +1,8 @@
-﻿using System.Windows;
+﻿using System;
+using System.Globalization;
+using System.Reflection;
+using System.Resources;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
@@ -11,13 +15,17 @@ namespace RFID.Utility.IClass
         private AdornerLayer _adornerLayer;
         private double _leftOffset;
         private double _topOffset;
+        private ResourceManager stringManager;
 
         public DragAdorner(object data, DataTemplate dataTemplate, UIElement adornedElement, AdornerLayer adornerLayer)
             : base(adornedElement)
         {
+            stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
             _adornerLayer = adornerLayer;
             _contentPresenter = new ContentPresenter() { Content = data, ContentTemplate = dataTemplate, Opacity = 0.75 };
 
+            if (_adornerLayer == null)
+                throw new ArgumentNullException(stringManager.GetString("AdornerLayer parameter is null", CultureInfo.CurrentCulture));
             _adornerLayer.Add(this);
         }
 

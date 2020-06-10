@@ -31,7 +31,9 @@
 
 using System;
 using System.Data;
+using System.Globalization;
 using System.Reflection;
+using System.Resources;
 
 namespace RFID.Utility.IClass
 {		
@@ -41,26 +43,31 @@ namespace RFID.Utility.IClass
 	///   This class contains fields and methods which are common for all the derived Profile classes. 
 	///   It fully implements most of the methods and properties of its base interfaces so that 
 	///   derived classes don't have to. </remarks>
-	public abstract class Profile : IProfile
+	public abstract class ProfileX : IProfileX
 	{
 		// Fields
 		private string m_name;
 		private bool m_readOnly;	
-		public event ProfileChangingHandler Changing;
-		public event ProfileChangedHandler Changed;				
-		
+		public event ProfileChangingEventHandler ChangingEventHandler;
+		public event ProfileChangedEventHandler ChangedEventHandler;
+		private ResourceManager stringManager;
 
 		/*protected Profile() {			
 			m_name = DefaultName;
-		}*/	
-		protected Profile(string name) {			
+		}*/
+		protected ProfileX(string name) {
+			stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
 			m_name = name;
 		}	
-		protected Profile(Profile profile) {			
+		protected ProfileX(ProfileX profile) {
+			stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
+
+			if (profile == null)
+				throw new ArgumentNullException(stringManager.GetString("profile is null.", CultureInfo.CurrentCulture));
 			m_name = profile.m_name;
 			m_readOnly = profile.m_readOnly;			
-			Changing = profile.Changing;
-			Changed = profile.Changed;
+			ChangingEventHandler = profile.ChangingEventHandler;
+			ChangedEventHandler = profile.ChangedEventHandler;
 		}
 		
 		
@@ -68,20 +75,22 @@ namespace RFID.Utility.IClass
 			get { 
 				return m_name; 
 			}
-			set { 
+			set {
+				if (value == null)
+					throw new ArgumentNullException(stringManager.GetString("Name parameter is null.", CultureInfo.CurrentCulture));
 				VerifyNotReadOnly();	
 				if (m_name == value.Trim())
 					return;
 					
-				if (!RaiseChangeEvent(true, ProfileChangeType.Name, null, null, value))
+				if (!OnRaiseChangeEvtCase(true, ProfileChangeType.Name, null, null, value))
 					return;
 							
 				m_name = value.Trim();
-				RaiseChangeEvent(false, ProfileChangeType.Name, null, null, value);
+				OnRaiseChangeEvtCase(false, ProfileChangeType.Name, null, null, value);
 			}
 		}
 		
-		public bool ReadOnly {
+		public bool ReadOnlyValue {
 			get { 
 				return m_readOnly; 
 			}
@@ -91,11 +100,11 @@ namespace RFID.Utility.IClass
 				if (m_readOnly == value)
 					return;
 				
-				if (!RaiseChangeEvent(true, ProfileChangeType.ReadOnly, null, null, value))
+				if (!OnRaiseChangeEvtCase(true, ProfileChangeType.ReadOnly, null, null, value))
 					return;
 							
 				m_readOnly = value;
-				RaiseChangeEvent(false, ProfileChangeType.ReadOnly, null, null, value);
+				OnRaiseChangeEvtCase(false, ProfileChangeType.ReadOnly, null, null, value);
 			}
 		}
 		
@@ -120,9 +129,9 @@ namespace RFID.Utility.IClass
 				return defaultValue;
 
 			try {
-				return Convert.ToInt32(value);
+				return Convert.ToInt32(value, CultureInfo.CurrentCulture);
 			}
-			catch {
+			catch (FormatException) {
 				return 0;
 			}
 		}
@@ -133,9 +142,10 @@ namespace RFID.Utility.IClass
 				return defaultValue;
 
 			try {
-				return Convert.ToDouble(value);
+				return Convert.ToDouble(value, CultureInfo.CurrentCulture);
 			}
-			catch {
+			catch (FormatException)
+			{
 				return 0;
 			}
 		}
@@ -146,9 +156,9 @@ namespace RFID.Utility.IClass
 				return defaultValue;			
 
 			try {
-				return Convert.ToBoolean(value);
+				return Convert.ToBoolean(value, CultureInfo.CurrentCulture);
 			}
-			catch {
+			catch(FormatException) {
 				return false;
 			}
 		}
@@ -182,7 +192,7 @@ namespace RFID.Utility.IClass
 		public abstract string[] GetSectionNames();
 			
 		public virtual IReadOnlyProfile CloneReadOnly() {
-			Profile profile = (Profile)Clone();
+			ProfileX profile = (ProfileX)Clone();
 			profile.m_readOnly = true;
 			
 			return profile;
@@ -225,7 +235,7 @@ namespace RFID.Utility.IClass
 			
 		public virtual void SetDataSet(DataSet ds) {
 			if (ds == null)
-				throw new ArgumentNullException("ds");
+				throw new ArgumentNullException(stringManager.GetString("DataSet parameter is null.", CultureInfo.CurrentCulture));
 			
 			// Create a section for each table
 			foreach (DataTable table in ds.Tables) {
@@ -233,8 +243,7 @@ namespace RFID.Utility.IClass
 				DataRowCollection rows = table.Rows;				
 				if (rows.Count == 0)
 					continue;
-
-				// Loop through each column and add it as entry with value of the first row				
+			
 				foreach (DataColumn column in table.Columns) {
 					string entry = column.ColumnName;
 					object value = rows[0][column];
@@ -244,64 +253,65 @@ namespace RFID.Utility.IClass
 			}
 		}
 
-		protected string DefaultNameWithoutExtension {
-			get {
-				try {
-					string file = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
-					return file.Substring(0, file.LastIndexOf('.'));
-				}
-				catch {
-					return "profile";  // if all else fails
-				}
+		protected static string DefaultNameWithoutExtension() {
+			
+			try {
+				string file = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
+				return file.Substring(0, file.LastIndexOf('.'));
 			}
+			catch(ArgumentOutOfRangeException) {
+				return "profile";  // if all else fails
+			}
+			
 		}
+
 
 		protected virtual void VerifyAndAdjustSection(ref string section) {
 			if (section == null)
-				throw new ArgumentNullException("section");			
+				throw new ArgumentNullException(stringManager.GetString("section", CultureInfo.CurrentCulture));			
 			
 			section = section.Trim();
 		}
 
 		protected virtual void VerifyAndAdjustEntry(ref string entry) {
 			if (entry == null)
-				throw new ArgumentNullException("entry");			
+				throw new ArgumentNullException(stringManager.GetString("entry parameter is null.", CultureInfo.CurrentCulture));			
 
 			entry = entry.Trim();
 		}
 
 		protected internal virtual void VerifyName() {
-			if (m_name == null || m_name == "")
-				throw new InvalidOperationException("Operation not allowed because Name property is null or empty.");
+			if (String.IsNullOrEmpty(m_name))
+				throw new InvalidOperationException(stringManager.GetString("Operation not allowed because Name property is null or empty.", CultureInfo.CurrentCulture));
 		}
 
 		protected internal virtual void VerifyNotReadOnly() {
 			if (m_readOnly)
-				throw new InvalidOperationException("Operation not allowed because ReadOnly property is true.");			
+				throw new InvalidOperationException(stringManager.GetString("Operation not allowed because ReadOnly property is true.", CultureInfo.CurrentCulture));			
 		}
 		
-		protected bool RaiseChangeEvent(bool changing, ProfileChangeType changeType, string section, string entry, object value) {
+		protected bool OnRaiseChangeEvtCase(bool changing, ProfileChangeType changeType, string section, string entry, object value) {
 			if (changing) {
 				// Don't even bother if there are no handlers.
-				if (Changing == null)
+				if (ChangingEventHandler == null)
 					return true;
 
-				ProfileChangingArgs e = new ProfileChangingArgs(changeType, section, entry, value);
+				ProfileChangingEventArgs e = new ProfileChangingEventArgs(changeType, section, entry, value);
 				OnChanging(e);
 				return !e.Cancel;
 			}
 			
 			// Don't even bother if there are no handlers.
-			if (Changed != null)
-				OnChanged(new ProfileChangedArgs(changeType, section, entry, value));
+			if (ChangedEventHandler != null)
+				OnChanged(new ProfileChangedEventArgs(changeType, section, entry, value));
 			return true;
 		}
 		                          
-		protected virtual void OnChanging(ProfileChangingArgs e) {
-			if (Changing == null)
+		protected virtual void OnChanging(ProfileChangingEventArgs e) {
+			if (ChangingEventHandler == null)
 				return;
 
-			foreach (ProfileChangingHandler handler in Changing.GetInvocationList()) {
+			foreach (ProfileChangingEventHandler handler in ChangingEventHandler.GetInvocationList()) {
 				handler(this, e);
 				
 				// If a particular handler cancels the event, stop
@@ -310,8 +320,8 @@ namespace RFID.Utility.IClass
 			}
 		}
 
-		protected virtual void OnChanged(ProfileChangedArgs e) {
-            Changed?.Invoke(this, e);
+		protected virtual void OnChanged(ProfileChangedEventArgs e) {
+            ChangedEventHandler?.Invoke(this, e);
         }
 	
 		public virtual void Test(bool cleanup) {
@@ -346,7 +356,7 @@ namespace RFID.Utility.IClass
 					try
 					{
 						SetValue(section, null, "123 abc"); 
-						throw new Exception("Passing a null entry was allowed for SetValue");
+						throw new Exception(stringManager.GetString("Passing a null entry was allowed for SetValue", CultureInfo.CurrentCulture));
 					}
 					catch (ArgumentNullException)
 					{						
@@ -357,7 +367,7 @@ namespace RFID.Utility.IClass
 					try
 					{
 						GetValue(null, "Test"); 
-						throw new Exception("Passing a null section was allowed for GetValue");
+						throw new Exception(stringManager.GetString("Passing a null section was allowed for GetValue", CultureInfo.CurrentCulture));
 					}
 					catch (ArgumentNullException)
 					{						
@@ -384,12 +394,12 @@ namespace RFID.Utility.IClass
 						throw new Exception("Incorrect integer value found for the Text entry: " + nValue);
 
 					strValue = GetValue(section, "Blank entry", "invalid");
-					if (strValue != "")
+					if (!String.IsNullOrEmpty(strValue))
 						throw new Exception("Incorrect string value found for the Blank entry: '" + strValue + "'");
 				
 					object value = GetValue(section, "Blank entry");
 					if (value == null)
-						throw new Exception("Incorrect null value found for the Blank entry");
+						throw new Exception(stringManager.GetString("Incorrect null value found for the Blank entry", CultureInfo.CurrentCulture));
 
 					nValue = GetValue(section, "Blank entry", 321);
 					if (nValue != 0)
@@ -400,7 +410,7 @@ namespace RFID.Utility.IClass
 						throw new Exception("Incorrect bool value found for the Blank entry: " + bValue);
 
 					strValue = GetValue(section, "Null entry", "");
-					if (strValue != "")
+					if (!String.IsNullOrEmpty(strValue))
 						throw new Exception("Incorrect string value found for the Null entry: '" + strValue + "'");
 				
 					value = GetValue(section, "Null entry");
@@ -412,7 +422,7 @@ namespace RFID.Utility.IClass
 						throw new Exception("Incorrect string value found for the Entry with leading and trailing spaces: '" + strValue + "'");
 
 					if (!HasEntry(section, "Entry with leading and trailing spaces"))
-						throw new Exception("The Entry with leading and trailing spaces (trimmed) was not found");
+						throw new Exception(stringManager.GetString("The Entry with leading and trailing spaces (trimmed) was not found", CultureInfo.CurrentCulture));
 
 					nValue = GetValue(section, "Integer entry", 0);
 					if (nValue != 17)
@@ -422,7 +432,7 @@ namespace RFID.Utility.IClass
 					if (dValue != 17)
 						throw new Exception("Incorrect double value found for the Integer entry: " + dValue);
 
-					long lValue = Convert.ToInt64(GetValue(section, "Long entry"));
+					long lValue = Convert.ToInt64(GetValue(section, "Long entry"), CultureInfo.CurrentCulture);
 					if (lValue != 1234567890123456789)
 						throw new Exception("Incorrect long value found for the Long entry: " + lValue);
 					
@@ -439,10 +449,10 @@ namespace RFID.Utility.IClass
 						throw new Exception("Incorrect integer value found for the Double entry: " + nValue);
 				
 					strValue = GetValue(section, "DateTime entry", String.Empty);
-					if (strValue != DateTime.Today.ToString())
+					if (strValue != DateTime.Today.ToString(CultureInfo.CurrentCulture))
 						throw new Exception("Incorrect string value found for the DateTime entry: '" + strValue + "'");
 
-					DateTime today = DateTime.Parse(strValue);
+					DateTime today = DateTime.Parse(strValue, CultureInfo.CurrentCulture);
 					if (today != DateTime.Today)
 						throw new Exception("The DateTime value is not today's date: '" + strValue + "'");
 				
@@ -451,7 +461,7 @@ namespace RFID.Utility.IClass
 						throw new Exception("Incorrect bool value found for the Boolean entry: " + bValue);
 					
 					strValue = GetValue(section, "Boolean entry", String.Empty);
-					if (strValue != haveSections.ToString())
+					if (strValue != haveSections.ToString(CultureInfo.CurrentCulture))
 						throw new Exception("Incorrect string value found for the Boolean entry: '" + strValue + "'");
 
 					value = GetValue(section, "Nonexistent entry");
@@ -467,7 +477,7 @@ namespace RFID.Utility.IClass
 					IReadOnlyProfile roProfile = CloneReadOnly();
 					
 					if (!roProfile.HasSection(section))
-						throw new Exception("The section is missing from the cloned read-only profile");
+						throw new Exception(stringManager.GetString("The section is missing from the cloned read-only profile", CultureInfo.CurrentCulture));
 
 					dValue = roProfile.GetValue(section, "Double entry", 0.0);
 					if (dValue != 17.95)
@@ -477,8 +487,8 @@ namespace RFID.Utility.IClass
 
 					try
 					{
-						((IProfile)roProfile).ReadOnly = false;
-						throw new Exception("Changing of the ReadOnly flag was allowed on the cloned read-only profile");
+						((IProfileX)roProfile).ReadOnlyValue = false;
+						throw new Exception(stringManager.GetString("Changing of the ReadOnly flag was allowed on the cloned read-only profile", CultureInfo.CurrentCulture));
 					}
 					catch (InvalidOperationException)
 					{						
@@ -487,8 +497,8 @@ namespace RFID.Utility.IClass
 					try
 					{
 						// Test if a read-only profile can be hacked by casting
-						((IProfile)roProfile).SetValue(section, "Entry which should not be written", "This should not happen");
-						throw new Exception("SetValue did not throw an InvalidOperationException when writing to the cloned read-only profile");
+						((IProfileX)roProfile).SetValue(section, "Entry which should not be written", "This should not happen");
+						throw new Exception(stringManager.GetString("SetValue did not throw an InvalidOperationException when writing to the cloned read-only profile", CultureInfo.CurrentCulture));
 					}
 					catch (InvalidOperationException)
 					{						
@@ -540,7 +550,7 @@ namespace RFID.Utility.IClass
 					entries = GetEntryNames(section);				
 				
 					if (entries != null)
-						throw new Exception("The section was apparently not deleted since GetEntryNames did not return null");
+						throw new Exception(stringManager.GetString("The section was apparently not deleted since GetEntryNames did not return null", CultureInfo.CurrentCulture));
 			}
 			catch (Exception ex)
 			{

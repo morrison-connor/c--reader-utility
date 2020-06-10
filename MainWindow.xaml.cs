@@ -21,14 +21,21 @@ using System.Collections.ObjectModel;
 using log4net;
 using log4net.Config;
 using RFID.Service;
-using RFID.Service.Interface.COM;
-using RFID.Service.Interface.NET;
-using RFID.Service.Interface.USB;
+using RFID.Service.IInterface.COM;
+using RFID.Service.IInterface.NET;
+using RFID.Service.IInterface.USB;
 using System.Linq;
 using Microsoft.Win32;
 using static RFID.Utility.EditCommandDialog;
-
-
+using RFID.Service.IInterface.COM.Events;
+using RFID.Service.IInterface.USB.Events;
+using RFID.Service.IInterface.NET.Events;
+using RFID.Service.IInterface.BLE;
+using System.Resources;
+using System.Net.Sockets;
+using System.Xml.XPath;
+using System.Reflection;
+using RFID.Service.IInterface.BLE.Events;
 
 namespace RFID.Utility
 {
@@ -36,35 +43,35 @@ namespace RFID.Utility
 
 		enum ValidationStates { DEFAULF, OK, ERROR, WARNING, FOCUS };
 
-		public enum CommandStates {
+		public enum CommandStatus : Int32 {
             REGULATION,
             DEFAULT, EPC, TID, SELECT, INFO,
             PASSWORD, READ, WRITE, LOCK, KILL,//MULTI, 
-            CUSTOM, CUSTOM_EM,
-            GPIO_CONFIG,
-            GPIO_CONFIG_10C, GPIO_CONFIG_10UC,
-            GPIO_CONFIG_11C, GPIO_CONFIG_11UC,
-            GPIO_CONFIG_14C, GPIO_CONFIG_14UC,
-            GPIO_PINS,
-            GPIO_GET_PINS,
-            GPIO_PIN_10C, GPIO_PIN_10UC,
-            GPIO_PIN_11C, GPIO_PIN_11UC,
-            GPIO_PIN_14C, GPIO_PIN_14UC,
+            CUSTOM, CUSTOMEM,
+            GPIOCONFIG,
+            GPIOCONFIG10C, GPIOCONFIG10UC,
+            GPIOCONFIG11C, GPIOCONFIG11UC,
+            GPIOCONFIG14C, GPIOCONFIG14UC,
+            GPIOPINS,
+            GPIOGETPINS,
+            GPIOPIN10C, GPIOPIN10UC,
+            GPIOPIN11C, GPIOPIN11UC,
+            GPIOPIN14C, GPIOPIN14UC,
 
-            B02_T, B02_P,
-            B02_UR_SLOTQ, B02_UR, B02_U_SLOTQ, B02_U,
-            B02_QR, B02_Q,
+            B02T, B02P,
+            B02URSLOTQ, B02UR, B02USLOTQ, B02U,
+            B02QR, B02Q,
 
-            B02ITEM02_R, B02ITEM02_W, B02ITEM02_P, B02ITEM02_T, B02ITEM02_L,
-            B02ITEM02_UR_SLOTQ, B02ITEM02_UR, B02ITEM02_U_SLOTQ, B02ITEM02_U,
-            B02ITEM02_QR, B02ITEM02_Q, B02ITEM02_CUSTOMIZE,
+            B02ITEM02R, B02ITEM02W, B02ITEM02P, B02ITEM02T, B02ITEM02L,
+            B02ITEM02URSLOTQ, B02ITEM02UR, B02ITEM02USLOTQ, B02ITEM02U,
+            B02ITEM02QR, B02ITEM02Q, B02ITEM02CUSTOMIZE,
 
-            B03_SELECT, B03_WRITE, B03_READ,
-            B03_GET, B03_TAGRUN,
+            B03SELECT, B03WRITE, B03READ,
+            B03GET, B03TAGRUN,
 
-            B04_GPIO_PINS,
-            B04_ANTENNA01, B04_ANTENNA02, B04_ANTENNA03, B04_ANTENNA04,
-            B04_ANTENNA05, B04_ANTENNA06, B04_ANTENNA07, B04_ANTENNA08,
+            B04GPIOPINS,
+            B04ANTENNA01, B04ANTENNA02, B04ANTENNA03, B04ANTENNA04,
+            B04ANTENNA05, B04ANTENNA06, B04ANTENNA07, B04ANTENNA08,
         };
 
         /// <summary>
@@ -85,17 +92,19 @@ namespace RFID.Utility
             GB03, GB04, GB04ReadCtrl, GB04SlotQ, GB04AntennaCtrl
         };
 
-		private CommandStates					DoProcess, DoFakeProcess, DoOldProcess;
+		private CommandStatus					DoProcess, DoFakeProcess, DoOldProcess;
 		private ReaderService					ReaderService = null;
         private ICOM                            _ICOM;
         private INET                            _INet;
         private INETInfo                        _INetInfo;
         private IUSB                            _IUSB;
-        private ICOM.CombineDataHandler         _CombineDataHandler;
-        private INET.NetTCPDataHandler          _NetTCPDataHandler;
-        private IUSB.USBDataHandler             _USBDataHandler;
-        private Module.Version	                _VersionFW;
-        private Module.BaudRate                 _BaudRate = Module.BaudRate.B38400;
+        private IBLE                            _IBLE;
+        private ICOM.CombineDataEventHandler    _CombineDataHandler;
+        private INET.NetTCPDataEventHandler     _NetTCPDataHandler;
+        private IUSB.USBDataEventHandler        _USBDataHandler;
+        private IBLE.BLEDataEventHandler        _BLEDataHandler;
+        private ReaderModule.Version	        _VersionFW;
+        private ReaderModule.BaudRate           _BaudRate = ReaderModule.BaudRate.B38400;
         private ReaderService.ConnectType       _ConnectType = ReaderService.ConnectType.DEFAULT;
         private ConnectDialog					_ConnectDialog = null;
 		private RegulationDialog				_RegulationDialog = null;
@@ -105,6 +114,7 @@ namespace RFID.Utility
         //Menu, Common
         private Hashtable                       ValidationState = new Hashtable();
         private CultureInfo                     Culture;
+        //private CulturesHelper                  culturesHelper = new CulturesHelper();
         private List<UIControl>                 UIControPackets = new List<UIControl>();
         private List<UIControl>                 UITempControPackets = new List<UIControl>();
         //private Thread                          SelectPreThread;
@@ -128,10 +138,10 @@ namespace RFID.Utility
 
 
         //Page02
-        public ObservableCollection<B02Item02Command> B02Item02Commands { get; set; }
+        public ObservableCollection<B02Item02Command> B02Item02Commands { get; private set; }
         private readonly DispatcherTimer        B02Item02Process = new DispatcherTimer();
         //private readonly DispatcherTimer        B02TagsTime = new DispatcherTimer();
-        private List<CommandStates>             B02Item02ProcessItem = new List<CommandStates>();
+        private List<CommandStatus>             B02Item02ProcessItem = new List<CommandStatus>();
         private List<String>                    B02Item02CommandSets = new List<String>();
         private Int32                           B02Item02ProcessCounts = 0, 
                                                 B02Item02ProcessIdx = 0,
@@ -153,6 +163,7 @@ namespace RFID.Utility
         private Boolean                         IsB03EMWork = false;
         private Boolean                         IsB03EMVoltTempWork = false;
         private Thread                          B03Thread;
+        private System.Timers.Timer             B03LightTimeEvent = new System.Timers.Timer();
 
 
         //Page04
@@ -161,7 +172,7 @@ namespace RFID.Utility
         private readonly DispatcherTimer        B04AntennaTestStart = new DispatcherTimer();
         private readonly DispatcherTimer        B04Process = new DispatcherTimer();
         private readonly DispatcherTimer        B04ProcessDelay = new DispatcherTimer();
-        private List<CommandStates>             B04ProcessItem = new List<CommandStates>();
+        private List<CommandStatus>             B04ProcessItem = new List<CommandStatus>();
         private Boolean                         IsB04AntennaSetPinWork = false; 
         private Boolean                         IsB04ChangeAndRun = false;// false to deal with antenna change, otherwise is antenna test run
         private Boolean                         IsB04RepeatRunEnd = false;
@@ -172,18 +183,19 @@ namespace RFID.Utility
         private List<Int32>                     B04AntennaTargetRunTimes = new List<Int32>();
         private Int32                           B04AntennaRunCount = 0;
         private Int32                           B04AntennaTagIncreaseCount = 0;
-        private readonly DispatcherTimer        B04RepeatEvent = new DispatcherTimer();
+        //private readonly DispatcherTimer        B04RepeatEvent = new DispatcherTimer();
         private Boolean                         IsOnB04BtnAntennaClick = false;
         private Boolean                         IsB04BtnAntennaRun = false;
 
 
         private static ILog                     RawLogger, FragmentSummaryLogger;
-        private Xml                             ProfileXml;
+        private XmlFormat                       ProfileXml;
         private String                          ProfileXmlName;
         private MainWindowVM                    VM = new MainWindowVM();
 
         private Boolean                         IsRunning = false;
 
+        private ResourceManager                 stringManager;
 
         /// <summary>
         /// 
@@ -202,6 +214,8 @@ namespace RFID.Utility
         {
 			InitializeComponent();
 
+            stringManager =
+            new ResourceManager("en-US", Assembly.GetExecutingAssembly());
 
             VM.B01GroupPreSetSelectMemBank = VM.MemBank[1];
             VM.B01GroupRWComboBoxMemBank = VM.MemBank[1];
@@ -212,9 +226,10 @@ namespace RFID.Utility
             VM.B02GroupPreSetReadMemBank = VM.MemBank[1];
             VM.B02GroupUSlotQComboBox = VM.SlotQ[4];
             DataContext = VM;
+            this.Culture = new CultureInfo("en-US", false);
 
             //this.Regex["BitAddress"] = @"[0-9a-fA-F]";
-			this.ReaderService = new ReaderService();//?
+            this.ReaderService = new ReaderService();//?
 			this._ConnectDialog = new ConnectDialog();
 			this._ConnectDialog.ShowDialog();
 
@@ -233,38 +248,46 @@ namespace RFID.Utility
                         this._ICOM = this._ConnectDialog.GetICOM();
                         this._SerialPort = this._ICOM.GetSerialPort();
                         this._BaudRate = ICOM.GetBaudRate(this._SerialPort.BaudRate);
-                        this._CombineDataHandler = new ICOM.CombineDataHandler(DoReceiveDataWork);
-                        this._ICOM.CombineDataReceiveEvent += this._CombineDataHandler;
+                        this._CombineDataHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
+                        this._ICOM.CombineDataReceiveEventHandler += this._CombineDataHandler;
                         //this._ICOM.RawDataReceiveEvent += new ICOM.RawDataHandler(DoRawReceiveDataWork);
                         this.ReaderService.COM = this._ICOM;
-                        VM.BorderTextBlockStatus = String.Format("{0} ({1},{2},{3},{4})",
+                        VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0} ({1},{2},{3},{4})",
                                                                     this._SerialPort.PortName,
                                                                     this._SerialPort.BaudRate,
                                                                     this._SerialPort.DataBits,
                                                                     this._SerialPort.Parity,
                                                                     this._SerialPort.StopBits);
                         break;
-                    case ReaderService.ConnectType.USB:
-                        this._ConnectType = ReaderService.ConnectType.USB;
-                        this._IUSB = _ConnectDialog.GetIUSB();
-                        this._USBDataHandler = new IUSB.USBDataHandler(DoReceiveDataWork);
-                        this._IUSB.USBDataReceiveEvent += this._USBDataHandler;
-                        this.ReaderService.USB = this._IUSB;
-                        VM.BorderTextBlockStatus = String.Format("{0}, VID:{1},PID:{2}", this._IUSB.ProductName, this._IUSB.VendorId, this._IUSB.ProductID);
-                        break;
                     case ReaderService.ConnectType.NET:
                         this._ConnectType = ReaderService.ConnectType.NET;
                         this._INet = this._ConnectDialog.GetINET();
-                        this._NetTCPDataHandler = new INET.NetTCPDataHandler(DoReceiveDataWork);
-                        this._INet.NetTCPDataReceiveEvent += _NetTCPDataHandler;
+                        this._NetTCPDataHandler = new INET.NetTCPDataEventHandler(DoReceiveDataWork);
+                        this._INet.NetTCPDataReceiveEventHandler += _NetTCPDataHandler;
                         this.ReaderService.NET = this._INet;
-                        VM.BorderTextBlockStatus = String.Format("{0}:{1}", this._INet.IP(), this._INet.Port());
+                        VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0}:{1}", this._INet.IP(), this._INet.Port());
 
                         _INetInfo = new INETInfo
                         {
                             IP = this._INet.IP(),
                             Port = this._INet.Port()
                         };
+                        break;
+                    case ReaderService.ConnectType.USB:
+                        this._ConnectType = ReaderService.ConnectType.USB;
+                        this._IUSB = _ConnectDialog.GetIUSB();
+                        this._USBDataHandler = new IUSB.USBDataEventHandler(DoReceiveDataWork);
+                        this._IUSB.USBDataReceiveEvent += this._USBDataHandler;
+                        this.ReaderService.USB = this._IUSB;
+                        VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0}, VID:{1},PID:{2}", this._IUSB.ProductName, this._IUSB.VendorId, this._IUSB.ProductID);
+                        break;
+                    case ReaderService.ConnectType.BLE:
+                        this._ConnectType = ReaderService.ConnectType.BLE;
+                        this._IBLE = _ConnectDialog.GetIBLE();
+                        this._BLEDataHandler = new IBLE.BLEDataEventHandler(DoReceiveDataWork);
+                        this._IBLE.BLEDataReceiveEvent += this._BLEDataHandler;
+                        this.ReaderService.BLE = this._IBLE;
+                        VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0}/ {1}", this._IBLE.DeviceName, this._IBLE.DeviceId);
                         break;
                 } 
 
@@ -392,28 +415,28 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="process"></param>
         /// <param name="s"></param>
-		private void ErrorCodeCheck(CommandStates process, String s)
+		private void ErrorCodeCheck(CommandStatus process, String s)
         {
             switch (process)
             {
-                case CommandStates.EPC: break;
-                case CommandStates.TID: break;
-                //case CommandStates.MULTI: break;
-                case CommandStates.READ:
-                case CommandStates.KILL:
-                case CommandStates.LOCK:
-                case CommandStates.WRITE:
-                case CommandStates.B02_UR_SLOTQ:
-                case CommandStates.B02_UR:
-                case CommandStates.B02_U_SLOTQ:
-                case CommandStates.B02_U:
-                    if (s == String.Empty) break;
+                case CommandStatus.EPC: break;
+                case CommandStatus.TID: break;
+                //case CommandStatus.MULTI: break;
+                case CommandStatus.READ:
+                case CommandStatus.KILL:
+                case CommandStatus.LOCK:
+                case CommandStatus.WRITE:
+                case CommandStatus.B02URSLOTQ:
+                case CommandStatus.B02UR:
+                case CommandStatus.B02USLOTQ:
+                case CommandStatus.B02U:
+                    if (String.IsNullOrEmpty(s)) break;
                     if (s == "0") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "0: other error." : "0: 其他未知的錯誤", true);
                     else if (s == "3") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "3: The specified memory location does not exist or the EPC length field is not supported." : "3: 寫入的記憶體位置不存在或內容長度超出範圍", true);
                     else if (s == "4") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "4: The specified memory location is locked and/or per-malocked." : "4: 此標籤記憶體已鎖住或永久鎖住", true);
                     else if (s == "B") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "B: The Tag has insufficient power." : "B: 標籤Power不足，無法進行寫入操作", true);
                     else if (s == "F") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "F: Non-specific error." : "F: 此標籤不支援錯誤規範碼(Error-specific)", true);
-                    else if (s[0] == 'Z') MessageShow((this.Culture.IetfLanguageTag == "en-US") ? String.Format("{0}: {1} chars written to the memory.", s, s.Substring(1, 2)) : String.Format("{0}: {1} 字元已寫入", s, s.Substring(1, 2)), true);
+                    else if (s[0] == 'Z') MessageShow((this.Culture.IetfLanguageTag == "en-US") ? String.Format(CultureInfo.CurrentCulture, "{0}: {1} chars written to the memory.", s, s.Substring(1, 2)) : String.Format(CultureInfo.CurrentCulture, "{0}: {1} 字元已寫入", s, s.Substring(1, 2)), true);
                     else if (s == "W") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "W: The Tag does not exist or multiple-tags interference or no reply." : "W: 在Reader作用範圍內沒有標籤或標籤干擾", false);
                     else if (s == "L") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "L: The Tag does not exist or multiple-tags interference or no reply." : "L: 在Reader作用範圍內沒有標籤或標籤干擾", false);
                     else if (s == "K") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "K: The Tag does not exist or multiple-tags interference or no reply." : "K: 在Reader作用範圍內沒有標籤或標籤干擾", false);
@@ -421,10 +444,10 @@ namespace RFID.Utility
                     else if (s == "X") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "X: Command error or not support." : "X: 傳送指令格式錯誤或未支援", true);
                     else if (s == "L<OK>") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "L<OK>: The Tag has been successfully lock." : "L<OK>: 標籤Lock成功", false);
                     else if (s == "W<OK>") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "W<OK>: The Tag has been successfully written." : "W<OK>: 標籤寫入成功", false);
-                    else if (s.Length >= 2 && s.Substring(0, 2) == "3Z") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? String.Format("{0}: error code and {1} chars has been written.", s, s.Substring(2, 2)) : String.Format("{0}: 錯誤碼且 {1} 字元已寫入", s, s.Substring(2, 2)), true);
+                    else if (s.Length >= 2 && s.Substring(0, 2) == "3Z") MessageShow((this.Culture.IetfLanguageTag == "en-US") ? String.Format(CultureInfo.CurrentCulture, "{0}: error code and {1} chars has been written.", s, s.Substring(2, 2)) : String.Format(CultureInfo.CurrentCulture, "{0}: 錯誤碼且 {1} 字元已寫入", s, s.Substring(2, 2)), true);
                     else MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "N/A: Not applicable." : "N/A: 不適用此版本Utility", false);
                     break;
-                case CommandStates.DEFAULT:
+                case CommandStatus.DEFAULT:
                 default: break;
             }
         }
@@ -459,6 +482,9 @@ namespace RFID.Utility
                     case ReaderService.ConnectType.USB:
                         this._IUSB.Close();
                         break;
+                    case ReaderService.ConnectType.BLE:
+                        this._IBLE.Close();
+                        break;
                 }
 
                 //this.InfoThread.Join();
@@ -474,7 +500,7 @@ namespace RFID.Utility
                     VM.BorderTextBlockStatus = String.Empty;
                     VM.BorderFirmwareVersion = String.Empty;
                     VM.BorderTBReaderID = String.Empty;
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                 }));
 
                 var _thread = new Thread(new ThreadStart(() =>
@@ -503,50 +529,50 @@ namespace RFID.Utility
 
             switch (DoProcess)
             {
-                case CommandStates.CUSTOM:
-                case CommandStates.SELECT:
-                case CommandStates.PASSWORD:
+                case CommandStatus.CUSTOM:
+                case CommandStatus.SELECT:
+                case CommandStatus.PASSWORD:
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     
                     break;
-                case CommandStates.EPC:
+                case CommandStatus.EPC:
                     VM.B01GroupEPCTextBoxEPC = Format.RemoveCRLFandTarget(s_crlf, 'Q');
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.TID:
+                case CommandStatus.TID:
                     VM.B01GroupEPCTextBoxTID = Format.RemoveCRLFandTarget(s_crlf, 'R');
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.READ:
+                case CommandStatus.READ:
                     VM.B01GroupRWTextBoxRead = Format.RemoveCRLFandTarget(s_crlf, 'R');
-                    ErrorCodeCheck(CommandStates.READ, (s_crlf.IndexOf('R') != -1) ? String.Empty : VM.B01GroupRWTextBoxRead);
+                    ErrorCodeCheck(CommandStatus.READ, (s_crlf.IndexOf('R') != -1) ? String.Empty : VM.B01GroupRWTextBoxRead);
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.WRITE:
-                case CommandStates.LOCK:
-                case CommandStates.KILL:
-                    ErrorCodeCheck(CommandStates.KILL, Format.RemoveCRLF(s_crlf));
+                case CommandStatus.WRITE:
+                case CommandStatus.LOCK:
+                case CommandStatus.KILL:
+                    ErrorCodeCheck(CommandStatus.KILL, Format.RemoveCRLF(s_crlf));
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.GPIO_CONFIG:
+                case CommandStatus.GPIOCONFIG:
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     
                     b_crlf = Format.StringToBytes(s_crlf);
                     if (b_crlf != null && b_crlf.Length == 5)
                     {
-                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]));
+                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]), CultureInfo.CurrentCulture);
                         Int32 mask = GPIOConfigurMask;
                         if (mask != val)
                         {
@@ -577,31 +603,31 @@ namespace RFID.Utility
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Set GPIO configuration error." : "設定GPIO configuration失敗", false);
                     }
                     break;
-                case CommandStates.GPIO_CONFIG_10C:
-                case CommandStates.GPIO_CONFIG_10UC:
-                case CommandStates.GPIO_CONFIG_11C:
-                case CommandStates.GPIO_CONFIG_11UC:
-                case CommandStates.GPIO_CONFIG_14C:
-                case CommandStates.GPIO_CONFIG_14UC:
+                case CommandStatus.GPIOCONFIG10C:
+                case CommandStatus.GPIOCONFIG10UC:
+                case CommandStatus.GPIOCONFIG11C:
+                case CommandStatus.GPIOCONFIG11UC:
+                case CommandStatus.GPIOCONFIG14C:
+                case CommandStatus.GPIOCONFIG14UC:
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
 
                     b_crlf = Format.StringToBytes(s_crlf);
                     if (b_crlf.Length == 5)
                     {
-                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]));
+                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]), CultureInfo.CurrentCulture);
                         VM.B01GroupGPIOComboBoxConfigur = VM.GPIOConfig[val];
                     }
                     break;
-                case CommandStates.GPIO_PINS:
+                case CommandStatus.GPIOPINS:
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     b_crlf = Format.StringToBytes(s_crlf);
                     if (b_crlf != null && b_crlf.Length == 5)
                     {
-                        int val = Int32.Parse(Format.ByteToString(b_crlf[2]));
+                        int val = Int32.Parse(Format.ByteToString(b_crlf[2]), CultureInfo.CurrentCulture);
                         if ((val & (byte)0x04) > 0)
                         {
                             if (!VM.B01GroupGPIOCheckBoxPin10IsChecked)
@@ -657,14 +683,14 @@ namespace RFID.Utility
                     }
                     break;
                 
-                case CommandStates.GPIO_GET_PINS:
+                case CommandStatus.GPIOGETPINS:
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     b_crlf = Format.StringToBytes(s_crlf);
                     if (b_crlf.Length == 5)
                     {
-                        int val = Int32.Parse(Format.ByteToString(b_crlf[2]));
+                        int val = Int32.Parse(Format.ByteToString(b_crlf[2]), CultureInfo.CurrentCulture);
                         if ((val & (byte)0x04) > 0)
                         {
                             VM.B01GroupGPIOCheckBoxStatus10IsChecked = true;
@@ -692,50 +718,50 @@ namespace RFID.Utility
                     }
                     break;
 
-                case CommandStates.GPIO_PIN_10C:
-                case CommandStates.GPIO_PIN_10UC:
-                case CommandStates.GPIO_PIN_11C:
-                case CommandStates.GPIO_PIN_11UC:
-                case CommandStates.GPIO_PIN_14C:
-                case CommandStates.GPIO_PIN_14UC:
+                case CommandStatus.GPIOPIN10C:
+                case CommandStatus.GPIOPIN10UC:
+                case CommandStatus.GPIOPIN11C:
+                case CommandStatus.GPIOPIN11UC:
+                case CommandStatus.GPIOPIN14C:
+                case CommandStatus.GPIOPIN14UC:
                     B01DisplayInfoMsg("RX", s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
 
                     b_crlf = Format.StringToBytes(s_crlf);
                     if (b_crlf.Length == 5)
                     {
-                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]));
+                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]), CultureInfo.CurrentCulture);
                         VM.B01GroupGPIOComboBoxPins = VM.GPIOConfig[val];
                     }
                     break;
 
 
-                case CommandStates.B02_T:
-                case CommandStates.B02ITEM02_T:
-                case CommandStates.B02_P:
-                case CommandStates.B02ITEM02_P:
-                case CommandStates.B02ITEM02_L:
-                case CommandStates.B02ITEM02_W:
-                case CommandStates.B02ITEM02_R:
-                case CommandStates.B02ITEM02_CUSTOMIZE:
+                case CommandStatus.B02T:
+                case CommandStatus.B02ITEM02T:
+                case CommandStatus.B02P:
+                case CommandStatus.B02ITEM02P:
+                case CommandStatus.B02ITEM02L:
+                case CommandStatus.B02ITEM02W:
+                case CommandStatus.B02ITEM02R:
+                case CommandStatus.B02ITEM02CUSTOMIZE:
                     B02DisplayInfoMsg("RX", s_crlf, false, DateTime.Now);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.B02_UR_SLOTQ:
-                case CommandStates.B02ITEM02_UR_SLOTQ:
-                case CommandStates.B02_UR:
-                case CommandStates.B02ITEM02_UR:
-                case CommandStates.B02_U_SLOTQ:
-                case CommandStates.B02ITEM02_U_SLOTQ:
-                case CommandStates.B02_U:
-                case CommandStates.B02ITEM02_U:
+                case CommandStatus.B02URSLOTQ:
+                case CommandStatus.B02ITEM02URSLOTQ:
+                case CommandStatus.B02UR:
+                case CommandStatus.B02ITEM02UR:
+                case CommandStatus.B02USLOTQ:
+                case CommandStatus.B02ITEM02USLOTQ:
+                case CommandStatus.B02U:
+                case CommandStatus.B02ITEM02U:
                     DateTime dtU = DateTime.Now;
                     B02DisplayInfoMsg("RX", s_crlf, true, dtU);
                     B02DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'U'));
                     IsReceiveSubDataWork = true;
-                    if (s_crlf.Equals("\nU\r\n") || s_crlf.Equals("\nX\r\n"))
+                    if (s_crlf.Equals("\nU\r\n", StringComparison.CurrentCulture) || s_crlf.Equals("\nX\r\n", StringComparison.CurrentCulture))
                     {
 
                         var ts2 = new TimeSpan(dtU.Ticks);
@@ -744,18 +770,18 @@ namespace RFID.Utility
                         
                         this.B02Item02CommandRunTimesCount += ts.TotalSeconds;
                         var avg1 = (Double)B02ListViewTagCount / B02Item02CommandRunTimesCount;
-                        VM.B02GroupRecordTextBlockTimeAvgCount = avg1.ToString("0.0");
+                        VM.B02GroupRecordTextBlockTimeAvgCount = avg1.ToString("0.0", CultureInfo.CurrentCulture);
 
-                        if (s_crlf.Equals("\nX\r\n"))
-                            ErrorCodeCheck(CommandStates.B02_UR_SLOTQ, "X");
-                        DoProcess = CommandStates.DEFAULT;
+                        if (s_crlf.Equals("\nX\r\n", StringComparison.CurrentCulture))
+                            ErrorCodeCheck(CommandStatus.B02URSLOTQ, "X");
+                        DoProcess = CommandStatus.DEFAULT;
                         IsReceiveDataWork = false;
                     }
                     break;
-                case CommandStates.B02_QR:
-                case CommandStates.B02ITEM02_QR:
-                case CommandStates.B02_Q:
-                case CommandStates.B02ITEM02_Q:
+                case CommandStatus.B02QR:
+                case CommandStatus.B02ITEM02QR:
+                case CommandStatus.B02Q:
+                case CommandStatus.B02ITEM02Q:
                     DateTime dtQ = DateTime.Now;
                     B02DisplayInfoMsg("RX", s_crlf, false, dtQ);
                     B02DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'Q'));
@@ -766,44 +792,44 @@ namespace RFID.Utility
 
                     this.B02Item02CommandRunTimesCount += tss.TotalSeconds;
                     var avg11 = (Double)B02ListViewTagCount / B02Item02CommandRunTimesCount;
-                    VM.B02GroupRecordTextBlockTimeAvgCount = avg11.ToString("0.0");
+                    VM.B02GroupRecordTextBlockTimeAvgCount = avg11.ToString("0.0", CultureInfo.CurrentCulture);
 
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
 
-                case CommandStates.B03_SELECT:
+                case CommandStatus.B03SELECT:
                     B03DisplayInfoMsg("RX", s_crlf, false);
                     EMTemp = s_crlf;
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.B03_WRITE:
+                case CommandStatus.B03WRITE:
                     B03DisplayInfoMsg("RX", s_crlf, false);
                     EMTemp = Format.RemoveCRLF(s_crlf);
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.B03_READ:
+                case CommandStatus.B03READ:
                     B03DisplayInfoMsg("RX", s_crlf, false);
                     EMTemp = Format.RemoveCRLFandTarget(s_crlf, 'R');
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
                 
-                case CommandStates.B03_GET:
+                case CommandStatus.B03GET:
                     B03DisplayInfoMsg("RX", s_crlf, false);
                     B03DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'U'));
                     IsReceiveSubDataWork = true;
-                    if (s_crlf.Equals("\nU\r\n") || s_crlf.Equals("\nX\r\n"))
+                    if (s_crlf.Equals("\nU\r\n", StringComparison.CurrentCulture) || s_crlf.Equals("\nX\r\n", StringComparison.CurrentCulture))
                     {
-                        if (s_crlf.Equals("\nX\r\n"))
-                            ErrorCodeCheck(CommandStates.B02_UR_SLOTQ, "X");
+                        if (s_crlf.Equals("\nX\r\n", StringComparison.CurrentCulture))
+                            ErrorCodeCheck(CommandStatus.B02URSLOTQ, "X");
                         IsReceiveDataWork = false;
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Process end" : "執行結束", false);
                     }
                     break;
-                case CommandStates.CUSTOM_EM:
+                case CommandStatus.CUSTOMEM:
                     B03DisplayInfoMsg("RX", s_crlf, false);
                     if (s_crlf.IndexOf('Y') != -1)
                     {
@@ -813,16 +839,16 @@ namespace RFID.Utility
                     {
                         EMTemp = String.Empty;
                     }
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
 
-                case CommandStates.B04_GPIO_PINS:
-                    B04RAWLOG(String.Format("[RX]{0}", Format.ShowCRLF(s_crlf)));
+                case CommandStatus.B04GPIOPINS:
+                    B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "[RX]{0}", Format.ShowCRLF(s_crlf)));
                     b_crlf = Format.StringToBytes(s_crlf);
                     if (b_crlf != null && b_crlf.Length == 5)
                     {
-                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]));
+                        Int32 val = Int32.Parse(Format.ByteToString(b_crlf[2]), CultureInfo.CurrentCulture);
                         if (B04AntennaTempData.Equals((Byte)val))
                             IsB04AntennaSetPinWork = true;
                         else IsB04AntennaSetPinWork = false;
@@ -832,37 +858,37 @@ namespace RFID.Utility
                         IsB04AntennaSetPinWork = false;
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Set GPIO Pins error." : "設定GPIO Pins失敗", false);
                     }
-                    DoProcess = CommandStates.DEFAULT;
+                    DoProcess = CommandStatus.DEFAULT;
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.B04_ANTENNA01:
-                case CommandStates.B04_ANTENNA02:
-                case CommandStates.B04_ANTENNA03:
-                case CommandStates.B04_ANTENNA04:
-                case CommandStates.B04_ANTENNA05:
-                case CommandStates.B04_ANTENNA06:
-                case CommandStates.B04_ANTENNA07:
-                case CommandStates.B04_ANTENNA08:
-                    B04RAWLOG(String.Format("[RX]{0}", Format.ShowCRLF(s_crlf)));
+                case CommandStatus.B04ANTENNA01:
+                case CommandStatus.B04ANTENNA02:
+                case CommandStatus.B04ANTENNA03:
+                case CommandStatus.B04ANTENNA04:
+                case CommandStatus.B04ANTENNA05:
+                case CommandStatus.B04ANTENNA06:
+                case CommandStatus.B04ANTENNA07:
+                case CommandStatus.B04ANTENNA08:
+                    B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "[RX]{0}", Format.ShowCRLF(s_crlf)));
                     B04DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'U'));
                     IsReceiveSubDataWork = true;
-                    if (s_crlf.Equals("\nU\r\n") || s_crlf.Equals("\nX\r\n"))
+                    if (s_crlf.Equals("\nU\r\n", StringComparison.CurrentCulture) || s_crlf.Equals("\nX\r\n", StringComparison.CurrentCulture))
                     {
-                        if (s_crlf.Equals("\nX\r\n"))
-                            ErrorCodeCheck(CommandStates.B02_UR_SLOTQ, "X");
-                        DoProcess = CommandStates.DEFAULT;
+                        if (s_crlf.Equals("\nX\r\n", StringComparison.CurrentCulture))
+                            ErrorCodeCheck(CommandStatus.B02URSLOTQ, "X");
+                        DoProcess = CommandStatus.DEFAULT;
                         IsReceiveDataWork = false;
                     }
                     break;
 
-                case CommandStates.INFO:
+                case CommandStatus.INFO:
                     //B01DisplayInfoMsg("RX", s_crlf);
                     IsReceiveDataWork = false;
                     break;
-                case CommandStates.REGULATION:
+                case CommandStatus.REGULATION:
                     break;
 
-                case CommandStates.DEFAULT:
+                case CommandStatus.DEFAULT:
                     if (TabCtrlIndex == 0)
                     {
                         B01DisplayInfoMsg("RX", s_crlf);
@@ -870,12 +896,12 @@ namespace RFID.Utility
                     else if (TabCtrlIndex == 1)
                     {
                         B02DisplayInfoMsg("RX", s_crlf, false, DateTime.Now);
-                        if (s_crlf.IndexOf("U") != -1)
+                        if (s_crlf.IndexOf("U", StringComparison.CurrentCulture) != -1)
                         {
-                            if (s_crlf.Equals("\nU\r\n")) this.B02ListViewRunCount++;
+                            if (s_crlf.Equals("\nU\r\n", StringComparison.CurrentCulture)) this.B02ListViewRunCount++;
                             B02DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'U'));
                         }
-                        if (s_crlf.IndexOf("Q") != -1)
+                        if (s_crlf.IndexOf("Q", StringComparison.CurrentCulture) != -1)
                         {
                             B02DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'Q'));
                         }
@@ -892,7 +918,7 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e">raw data argument class</param>
-		private void DoRawReceiveDataWork(object sender, ICOM.RawDataReceiveArgument e)
+		private void DoRawReceiveDataWork(object sender, RawDataReceiveArgumentEventArgs e)
         {
             //implement code
         }
@@ -902,7 +928,7 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e">combne data argument class</param>
-		private void DoReceiveDataWork(object sender, ICOM.CombineDataReceiveArgument e)
+		private void DoReceiveDataWork(object sender, CombineDataReceiveArgumentEventArgs e)
         {
             ReceiveDataWork(e.Status, e.Data);
         }
@@ -912,7 +938,7 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e">combne data argument class</param>
-        private void DoReceiveDataWork(object sender, INET.DataReceiveArgument e)
+        private void DoReceiveDataWork(object sender, NETDataReceiveEventArgs e)
         {
             ReceiveDataWork(e.Status, e.Data);
         }
@@ -922,7 +948,17 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void DoReceiveDataWork(object sender, IUSB.USBDataReceiveArgument e)
+        private void DoReceiveDataWork(object sender, USBDataReceiveEventArgs e)
+        {
+            ReceiveDataWork(e.Status, e.Data);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void DoReceiveDataWork(object sender, BLEDataReceiveEventArgs e)
         {
             ReceiveDataWork(e.Status, e.Data);
         }
@@ -943,19 +979,21 @@ namespace RFID.Utility
                 switch (_tbox.Name)
                 {
                     case "B01GroupRWTextBoxWrite":
-                        if (VM.B01GroupRWTextBoxLength == String.Empty)
+                        if (String.IsNullOrEmpty(VM.B01GroupRWTextBoxLength))
                         {
                             e.Handled = true;
                             B01GroupRWTextBoxLength.Focus();
-                            var _result = MessageBox.Show("請先編輯[Length]。", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                            var _result = MessageBox.Show("請先編輯[Length]。", 
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture), MessageBoxButton.OK, MessageBoxImage.Information);
                         }
                         break;
                     case "B01GroupPreSetSelectBitData":
-                        if (VM.B01GroupPreSetSelectBitLength == String.Empty)
+                        if (String.IsNullOrEmpty(VM.B01GroupPreSetSelectBitLength))
                         {
                             e.Handled = true;
                             B01GroupPreSetSelectBitLength.Focus();
-                            var _result = MessageBox.Show("請先編輯[Length]。", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                            var _result = MessageBox.Show("請先編輯[Length]。",
+                                stringManager.GetString("Information", CultureInfo.CurrentCulture), MessageBoxButton.OK, MessageBoxImage.Information);
                         }
                         break;
                 }
@@ -1010,7 +1048,7 @@ namespace RFID.Utility
             TextBox tbox = (TextBox)sender;
             Regex regex = new Regex(@"\A\b[0-9a-fA-F]+\b\Z"); //@"[0-9a-fA-F]"
 
-            if (regex.IsMatch(tbox.Text)) //e.Key.ToString()
+            if (regex.IsMatch(tbox.Text)) //e.Key.ToString(CultureInfo.CurrentCulture)
             {
                 if ((ValidationStates)ValidationState[tbox.Name] != ValidationStates.OK)
                     tbox.Style = (Style)FindResource("TextBoxNormalStyle");
@@ -1020,7 +1058,7 @@ namespace RFID.Utility
                 {
                     case "B01GroupPreSetSelectBitAddress":
                     case "B02GroupPreSetSelectBitAddress":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1033,7 +1071,7 @@ namespace RFID.Utility
                         break;
                     case "B01GroupPreSetSelectBitLength":
                     case "B02GroupPreSetSelectBitLength":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x60 || Convert.ToInt32(tbox.Text, 16) < 1)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x60 || Convert.ToInt32(tbox.Text, 16) < 1)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1054,16 +1092,16 @@ namespace RFID.Utility
                                 Convert.ToInt32(VM.B02GroupPreSetSelectBitLength, 16);
                             Int32 nMax = tbox.Text.Length * 4;
                             Int32 nMin = tbox.Text.Length * 4 - 3;
-                            if (tbox.Text == String.Empty || nBitsLength < nMin || nBitsLength > nMax)
+                            if (String.IsNullOrEmpty(tbox.Text) || nBitsLength < nMin || nBitsLength > nMax)
                             {
                                 tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                                 ValidationState[tbox.Name] = ValidationStates.ERROR;
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                    String.Format("Bit length and data field isn't match, data={0}, the length value range is: 0x{1} ~ 0x{2}",
+                                    String.Format(CultureInfo.CurrentCulture, "Bit length and data field isn't match, data={0}, the length value range is: 0x{1} ~ 0x{2}",
                                     tbox.Text,
                                     nMin.ToString("X2", new CultureInfo("en-us")),
                                     nMax.ToString("X2", new CultureInfo("en-us"))) :
-                                    String.Format("位元長度與資料不符合,資料={0},對應的長度值範圍應為: 0x{1} ~ 0x{2}",
+                                    String.Format(CultureInfo.CurrentCulture, "位元長度與資料不符合,資料={0},對應的長度值範圍應為: 0x{1} ~ 0x{2}",
                                     tbox.Text,
                                     nMin.ToString("X2", new CultureInfo("en-us")),
                                     nMax.ToString("X2", new CultureInfo("en-us"))), true);
@@ -1075,7 +1113,7 @@ namespace RFID.Utility
                                 MessageShow(String.Empty, false);
                             }
                         }
-                        catch (Exception ex)
+                        catch (ArgumentNullException ex)
                         {
                             MessageShow(ex.Message, false);
                         }
@@ -1083,7 +1121,7 @@ namespace RFID.Utility
                     case "B01GroupRWTextBoxAddress":
                     case "B02GroupPreSetReadAddress":
 					case "B04GroupPreSetReadAddress":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1098,7 +1136,7 @@ namespace RFID.Utility
                     case "B02GroupPreSetReadLength":
                     case "B01GroupEPCTextBoxTIDLength":
 					case "B04GroupPreSetReadLength":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x20 || Convert.ToInt32(tbox.Text, 16) < 1)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x20 || Convert.ToInt32(tbox.Text, 16) < 1)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1124,7 +1162,7 @@ namespace RFID.Utility
                         break;
                     case "B01GroupLockTextBoxMask":
                     case "B01GroupLockTextBoxAction":
-                        if (tbox.Text == String.Empty || tbox.Text.Length != 3 || Convert.ToInt32(tbox.Text, 16) > 0x3FF)
+                        if (String.IsNullOrEmpty(tbox.Text) || tbox.Text.Length != 3 || Convert.ToInt32(tbox.Text, 16) > 0x3FF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1140,7 +1178,7 @@ namespace RFID.Utility
                     case "B01TextBoxKillPassword":
                     case "B01GroupPreSetAccessPassword":
                     case "B02GroupPreSetAccessPassword":
-                        if (tbox.Text == String.Empty)
+                        if (String.IsNullOrEmpty(tbox.Text))
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1152,7 +1190,7 @@ namespace RFID.Utility
                         }
                         break;
                     case "B03GroupTagWindowTime":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0xFF || Convert.ToInt32(tbox.Text, 16) == 0x0)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0xFF || Convert.ToInt32(tbox.Text, 16) == 0x0)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1203,7 +1241,7 @@ namespace RFID.Utility
                     case "B04Antenna7RunTimes":
                     case "B04Antenna8RunTimes":
                     case "B04AntennaLoopTimes":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text) > 1000 || Convert.ToInt32(tbox.Text) <= 0)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, CultureInfo.CurrentCulture) > 1000 || Convert.ToInt32(tbox.Text, CultureInfo.CurrentCulture) <= 0)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1246,7 +1284,7 @@ namespace RFID.Utility
                 switch (tbox.Name)
                 {
                     case "B04AntennaLoopDelayTime":
-                        if (tbox.Text == String.Empty || Convert.ToDouble(tbox.Text) > 86400 || Convert.ToDouble(tbox.Text) < 0.1)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToDouble(tbox.Text, CultureInfo.CurrentCulture) > 86400 || Convert.ToDouble(tbox.Text, CultureInfo.CurrentCulture) < 0.1)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1334,7 +1372,7 @@ namespace RFID.Utility
                 {
                     case "B01GroupPreSetSelectBitAddress":
                     case "B02GroupPreSetSelectBitAddress":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1347,7 +1385,7 @@ namespace RFID.Utility
                         break;
                     case "B01GroupPreSetSelectBitLength":
                     case "B02GroupPreSetSelectBitLength":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x60 || Convert.ToInt32(tbox.Text, 16) < 1)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x60 || Convert.ToInt32(tbox.Text, 16) < 1)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1370,7 +1408,7 @@ namespace RFID.Utility
                             Int32 nMax = nLength * 4;
                             Int32 nMin = nLength * 4 - 3;
                             
-                            if (tbox.Text == String.Empty || nBitsLengthLength < nMin || nBitsLengthLength > nMax)
+                            if (String.IsNullOrEmpty(tbox.Text) || nBitsLengthLength < nMin || nBitsLengthLength > nMax)
                             {
                                 tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                                 ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1381,7 +1419,7 @@ namespace RFID.Utility
                                 ValidationState[tbox.Name] = ValidationStates.OK;
                             }
                         }
-                        catch (Exception ex)
+                        catch (ArgumentNullException ex)
                         {
                             MessageShow(ex.Message, false);
                         }
@@ -1389,7 +1427,7 @@ namespace RFID.Utility
                     case "B01GroupRWTextBoxAddress":
                     case "B02GroupPreSetReadAddress":
 					case "B04GroupPreSetReadAddress":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x3FFF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1404,7 +1442,7 @@ namespace RFID.Utility
                     case "B02GroupPreSetReadLength":
                     case "B01GroupEPCTextBoxTIDLength":
 					case "B04GroupPreSetReadLength":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0x20 || Convert.ToInt32(tbox.Text, 16) < 1)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0x20 || Convert.ToInt32(tbox.Text, 16) < 1)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1417,7 +1455,7 @@ namespace RFID.Utility
                         break;
                     case "B01GroupRWTextBoxWrite":
                         Int32 nDataLength = tbox.Text.Length;
-                        if (VM.B01GroupRWTextBoxLength == String.Empty) { B01GroupRWTextBoxLength.Focus(); goto GotFocus; }
+                        if (String.IsNullOrEmpty(VM.B01GroupRWTextBoxLength)) { B01GroupRWTextBoxLength.Focus(); goto GotFocus; }
                         Int32 nWordsLength = Convert.ToInt32(VM.B01GroupRWTextBoxLength, 16);
                         
                         if (nWordsLength * 4 == nDataLength)
@@ -1434,7 +1472,7 @@ namespace RFID.Utility
                         break;
                     case "B01GroupLockTextBoxMask":
                     case "B01GroupLockTextBoxAction":
-                        if (tbox.Text == String.Empty || tbox.Text.Length != 3 || Convert.ToInt32(tbox.Text, 16) > 0x3FF)
+                        if (String.IsNullOrEmpty(tbox.Text) || tbox.Text.Length != 3 || Convert.ToInt32(tbox.Text, 16) > 0x3FF)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1448,7 +1486,7 @@ namespace RFID.Utility
                     case "B01TextBoxKillPassword":
                     case "B01GroupPreSetAccessPassword":
                     case "B02GroupPreSetAccessPassword":
-                        if (tbox.Text == String.Empty)
+                        if (String.IsNullOrEmpty(tbox.Text))
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1460,7 +1498,7 @@ namespace RFID.Utility
                         }
                         break;
                     case "B03GroupTagWindowTime":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text, 16) > 0xFF || Convert.ToInt32(tbox.Text, 16) == 0)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, 16) > 0xFF || Convert.ToInt32(tbox.Text, 16) == 0)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1480,7 +1518,7 @@ namespace RFID.Utility
                     case "B04Antenna7RunTimes":
                     case "B04Antenna8RunTimes":
                     case "B04AntennaLoopTimes":
-                        if (tbox.Text == String.Empty || Convert.ToInt32(tbox.Text) > 1000 || Convert.ToInt32(tbox.Text) <= 0)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToInt32(tbox.Text, CultureInfo.CurrentCulture) > 1000 || Convert.ToInt32(tbox.Text, CultureInfo.CurrentCulture) <= 0)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1528,7 +1566,7 @@ namespace RFID.Utility
                 switch (tbox.Name)
                 {
                     case "B04AntennaLoopDelayTime":
-                        if (tbox.Text == String.Empty || Convert.ToDouble(tbox.Text) > 86400 || Convert.ToDouble(tbox.Text) < 0.1)
+                        if (String.IsNullOrEmpty(tbox.Text) || Convert.ToDouble(tbox.Text, CultureInfo.CurrentCulture) > 86400 || Convert.ToDouble(tbox.Text, CultureInfo.CurrentCulture) < 0.1)
                         {
                             tbox.Style = (Style)FindResource("TextBoxErrorStyle");
                             ValidationState[tbox.Name] = ValidationStates.ERROR;
@@ -1593,19 +1631,22 @@ namespace RFID.Utility
             switch (this._ConnectType)
             {
                 case ReaderService.ConnectType.COM:
-                    this._ICOM.CombineDataReceiveEvent -= this._CombineDataHandler;
+                    this._ICOM.CombineDataReceiveEventHandler -= this._CombineDataHandler;
                     //this._ICOM.RawDataReceiveEvent -= null;
                     break;
                 case ReaderService.ConnectType.USB:
                     this._IUSB.USBDataReceiveEvent -= this._USBDataHandler;
                     break;
                 case ReaderService.ConnectType.NET:
-                    this._INet.NetTCPDataReceiveEvent -= this._NetTCPDataHandler;
+                    this._INet.NetTCPDataReceiveEventHandler -= this._NetTCPDataHandler;
+                    break;
+                case ReaderService.ConnectType.BLE:
+                    this._IBLE.BLEDataReceiveEvent -= this._BLEDataHandler;
                     break;
             }
 
 
-            this.DoProcess = CommandStates.REGULATION;
+            this.DoProcess = CommandStatus.REGULATION;
             try
             {
                 this._RegulationDialog = new RegulationDialog(ReaderService, this._ConnectType, this._VersionFW, this._BaudRate, this.BorderComboBoxCulture.SelectedItem as CultureInfo);
@@ -1623,28 +1664,33 @@ namespace RFID.Utility
 
                             this.ReaderService.COM = this._ICOM;
                         }
-                        this._CombineDataHandler = new ICOM.CombineDataHandler(DoReceiveDataWork);
-                        this._ICOM.CombineDataReceiveEvent += this._CombineDataHandler;
+                        this._CombineDataHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
+                        this._ICOM.CombineDataReceiveEventHandler += this._CombineDataHandler;
                         //this._ICOM.RawDataReceiveEvent += new ICOM.RawDataHandler(DoRawReceiveDataWork);
                         break;
                     case ReaderService.ConnectType.USB:
                         this._BaudRate = this._RegulationDialog.GetBaudRate();
-                        this._USBDataHandler = new IUSB.USBDataHandler(DoReceiveDataWork);
+                        this._USBDataHandler = new IUSB.USBDataEventHandler(DoReceiveDataWork);
                         this._IUSB.USBDataReceiveEvent += this._USBDataHandler;
                         break;
                     case ReaderService.ConnectType.NET:
-                        this._NetTCPDataHandler = new INET.NetTCPDataHandler(DoReceiveDataWork);
-                        this._INet.NetTCPDataReceiveEvent += _NetTCPDataHandler;
+                        this._NetTCPDataHandler = new INET.NetTCPDataEventHandler(DoReceiveDataWork);
+                        this._INet.NetTCPDataReceiveEventHandler += _NetTCPDataHandler;
+                        break;
+                    case ReaderService.ConnectType.BLE:
+                        this._BaudRate = this._RegulationDialog.GetBaudRate();
+                        this._BLEDataHandler = new IBLE.BLEDataEventHandler(DoReceiveDataWork);
+                        this._IBLE.BLEDataReceiveEvent += this._BLEDataHandler;
                         break;
                 }
                 //this._RegulationDialog.Close();
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 MessageBox.Show(ex.ToString());
             }
             
-            this.DoProcess = CommandStates.DEFAULT;
+            this.DoProcess = CommandStatus.DEFAULT;
             this.SettingThread = new Thread(DoInfoWork) {
                 IsBackground = true
             };
@@ -1664,13 +1710,16 @@ namespace RFID.Utility
                 {
                     case ReaderService.ConnectType.COM:
                         this._ICOM.Close();
-                    break;
+                        break;
                     case ReaderService.ConnectType.NET:
                         this._INet.Close();
-                    break;
+                        break;
                     case ReaderService.ConnectType.USB:
                         this._IUSB.Close();
-                    break;
+                        break;
+                    case ReaderService.ConnectType.BLE:
+                        this._IBLE.Close();
+                        break;
                 }
 
 
@@ -1717,6 +1766,9 @@ namespace RFID.Utility
                     case ReaderService.ConnectType.NET:
                         this._ConnectDialog = new ConnectDialog(this._BaudRate, this._INetInfo);
                         break;
+                    case ReaderService.ConnectType.BLE:
+                        this._ConnectDialog = new ConnectDialog(this._BaudRate, this._IBLE);
+                        break;
                 }
 
                 //this._ConnectDialog = new ConnectDialog(this._BaudRate);
@@ -1734,11 +1786,11 @@ namespace RFID.Utility
                             this._ICOM = this._ConnectDialog.GetICOM();
                             this._SerialPort = this._ICOM.GetSerialPort();
                             this._BaudRate = ICOM.GetBaudRate(this._SerialPort.BaudRate);
-                            this._CombineDataHandler = new ICOM.CombineDataHandler(DoReceiveDataWork);
-                            this._ICOM.CombineDataReceiveEvent += this._CombineDataHandler;
+                            this._CombineDataHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
+                            this._ICOM.CombineDataReceiveEventHandler += this._CombineDataHandler;
                             //this._ICOM.RawDataReceiveEvent += new ICOM.RawDataHandler(DoRawReceiveDataWork);
                             this.ReaderService.COM = this._ICOM;
-                            VM.BorderTextBlockStatus = String.Format("{0} ({1},{2},{3},{4})",
+                            VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0} ({1},{2},{3},{4})",
                                                                         this._SerialPort.PortName,
                                                                         this._SerialPort.BaudRate,
                                                                         this._SerialPort.DataBits,
@@ -1748,10 +1800,10 @@ namespace RFID.Utility
                         case ReaderService.ConnectType.NET:
                             _ConnectType = ReaderService.ConnectType.NET;
                             this._INet = this._ConnectDialog.GetINET();
-                            this._NetTCPDataHandler = new INET.NetTCPDataHandler(DoReceiveDataWork);
-                            this._INet.NetTCPDataReceiveEvent += _NetTCPDataHandler;
+                            this._NetTCPDataHandler = new INET.NetTCPDataEventHandler(DoReceiveDataWork);
+                            this._INet.NetTCPDataReceiveEventHandler += _NetTCPDataHandler;
                             this.ReaderService.NET = this._INet;
-                            VM.BorderTextBlockStatus = String.Format("{0}:{1}", this._INet.IP(), this._INet.Port());
+                            VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0}:{1}", this._INet.IP(), this._INet.Port());
 
                             _INetInfo.IP = this._INet.IP();
                             _INetInfo.Port = this._INet.Port();
@@ -1759,10 +1811,18 @@ namespace RFID.Utility
                         case ReaderService.ConnectType.USB:
                             _ConnectType = ReaderService.ConnectType.USB;
                             this._IUSB = this._ConnectDialog.GetIUSB();
-                            this._USBDataHandler = new IUSB.USBDataHandler(DoReceiveDataWork);
+                            this._USBDataHandler = new IUSB.USBDataEventHandler(DoReceiveDataWork);
                             this._IUSB.USBDataReceiveEvent += this._USBDataHandler;
                             this.ReaderService.USB = this._IUSB;
-                            VM.BorderTextBlockStatus = String.Format("{0}, VID:{1},PID:{2}", this._IUSB.ProductName, this._IUSB.VendorId, this._IUSB.ProductID);
+                            VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0}, VID:{1},PID:{2}", this._IUSB.ProductName, this._IUSB.VendorId, this._IUSB.ProductID);
+                            break;
+                        case ReaderService.ConnectType.BLE:
+                            this._ConnectType = ReaderService.ConnectType.BLE;
+                            this._IBLE = _ConnectDialog.GetIBLE();
+                            this._BLEDataHandler = new IBLE.BLEDataEventHandler(DoReceiveDataWork);
+                            this._IBLE.BLEDataReceiveEvent += this._BLEDataHandler;
+                            this.ReaderService.BLE = this._IBLE;
+                            VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0}/ {1}", this._IBLE.DeviceName, this._IBLE.DeviceId);
                             break;
                     }
 
@@ -1806,7 +1866,7 @@ namespace RFID.Utility
 
             if (TabControlPage == null) return;
 
-            switch (Convert.ToInt32(radioButton.Tag.ToString()))
+            switch (Convert.ToInt32(radioButton.Tag.ToString(), CultureInfo.CurrentCulture))
             {
                 case 1:
                     TabControlPage.SelectedIndex = 0;
@@ -1822,7 +1882,7 @@ namespace RFID.Utility
                     break;
             }
             MessageShow(String.Empty, false);
-            DoProcess = CommandStates.DEFAULT;
+            DoProcess = CommandStatus.DEFAULT;
         }
 
         /// <summary>
@@ -1845,6 +1905,9 @@ namespace RFID.Utility
                     break;
                 case ReaderService.ConnectType.NET:
                     if (this._INet.IsConnected()) this._INet.Close();
+                    break;
+                case ReaderService.ConnectType.BLE:
+                    if (this._IBLE.IsConnected) this._IBLE.Close();
                     break;
             }
             this.Close();
@@ -1874,22 +1937,26 @@ namespace RFID.Utility
 
             try
             {
-                this.DoProcess = CommandStates.INFO;
+                this.DoProcess = CommandStatus.INFO;
                 switch (_ConnectType)
                 {
                     default:
                     case ReaderService.ConnectType.DEFAULT:
                     case ReaderService.ConnectType.COM:
-                        this._ICOM.Send(this.ReaderService.Command_V(), Module.CommandType.Normal);
+                        this._ICOM.Send(this.ReaderService.CommandV(), ReaderModule.CommandType.Normal);
                         b = this._ICOM.Receive();
                         break;
                     case ReaderService.ConnectType.USB:
-                        this._IUSB.Send(this.ReaderService.Command_V(), Module.CommandType.Normal);
+                        this._IUSB.Send(this.ReaderService.CommandV(), ReaderModule.CommandType.Normal);
                         b = _IUSB.Receive();
                         break;
                     case ReaderService.ConnectType.NET:
-                        this._INet.Send(this.ReaderService.Command_V(), Module.CommandType.Normal);
+                        this._INet.Send(this.ReaderService.CommandV(), ReaderModule.CommandType.Normal);
                         b = this._INet.Receive();
+                        break;
+                    case ReaderService.ConnectType.BLE:
+                        this._IBLE.Send(this.ReaderService.CommandV(), ReaderModule.CommandType.Normal);
+                        b = this._IBLE.Receive();
                         break;
                 }
                 if (b == null)
@@ -1901,11 +1968,11 @@ namespace RFID.Utility
                 {
                     s = Format.RemoveCRLF(Format.BytesToString(b));
                     VM.BorderFirmwareVersion = s;
-                    this._VersionFW = Module.Check(Format.HexStringToInt(s.Substring(1, 4)));
+                    this._VersionFW = ReaderModule.Check(Format.HexStringToInt(s.Substring(1, 4)));
 
                     switch (this._VersionFW)
                     {
-                        case Module.Version.FI_R3008:
+                        case ReaderModule.Version.FIR3008:
                             UIControPackets.Clear();
                             UIControPackets.Add(new UIControl(GroupStatus.GB01PRESET_SELECT, false));
                             UIControPackets.Add(new UIControl(GroupStatus.GB01GPIO, false));
@@ -1924,7 +1991,7 @@ namespace RFID.Utility
 
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "the Reader version isn't support Select, compound multi command" : "此版本Reader不支援Select, 複合multi指令操作", false);
                             break;
-                        case Module.Version.FI_R300A_C1:
+                        case ReaderModule.Version.FIR300AC1:
                             UIControPackets.Clear();
                             UIControPackets.Add(new UIControl(GroupStatus.GB01GPIO, false));
                             UIControPackets.Add(new UIControl(GroupStatus.GB02SlotQ, false));
@@ -1938,69 +2005,73 @@ namespace RFID.Utility
                             UIControlStatus(UIControPackets, true);
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "the Reader version isn't support compound multi command" : "此版本Reader不支援複合multi指令操作", false);
                             break;
-                        case Module.Version.FI_R300A_C2:
-                        case Module.Version.FI_R300T_D1:
-                        case Module.Version.FI_R300T_D2:
-                        case Module.Version.FI_A300S:
+                        case ReaderModule.Version.FIR300AC2:
+                        case ReaderModule.Version.FIR300TD1:
+                        case ReaderModule.Version.FIR300TD2:
+                        case ReaderModule.Version.FIA300S:
                             UIControPackets.Clear();
                             UIControPackets.Add(new UIControl(GroupStatus.GB01GPIO, false));
                             UIControPackets.Add(new UIControl(GroupStatus.GB03, false));
                             UIControPackets.Add(new UIControl(GroupStatus.GB04, false));
                             UIControlStatus(UIControPackets, true);
                             break;
-                        case Module.Version.FI_R300A_C2C4:
-                        case Module.Version.FI_R300A_C3:
-                        case Module.Version.FI_R300A_C2C5:
-                        case Module.Version.FI_R300A_C2C6:
-                        case Module.Version.FI_R300A_C3C5:
-                        case Module.Version.FI_R300T_D204:
-                        case Module.Version.FI_R300T_D205:
-                        case Module.Version.FI_R300T_D206:
-                        case Module.Version.FI_R300S_D305:
-                        case Module.Version.FI_R300S_D306:
+                        case ReaderModule.Version.FIR300AC2C4:
+                        case ReaderModule.Version.FIR300AC3:
+                        case ReaderModule.Version.FIR300AC2C5:
+                        case ReaderModule.Version.FIR300AC2C6:
+                        case ReaderModule.Version.FIR300AC3C5:
+                        case ReaderModule.Version.FIR300TD204:
+                        case ReaderModule.Version.FIR300TD205:
+                        case ReaderModule.Version.FIR300TD206:
+                        case ReaderModule.Version.FIR300SD305:
+                        case ReaderModule.Version.FIR300SD306:
                         //case Module.Version.FI_R300V_D405:
-                        case Module.Version.FI_R300V_D406:
-                        case Module.Version.FI_R300S:
-                        case Module.Version.FI_R300A_H:
-                        case Module.Version.FI_R300S_H:
-                        case Module.Version.FI_R300T_H:
-                        case Module.Version.FI_R300V_H:
+                        case ReaderModule.Version.FIR300VD406:
+                        case ReaderModule.Version.FIR300S:
+                        case ReaderModule.Version.FIR300AH:
+                        case ReaderModule.Version.FIR300SH:
+                        case ReaderModule.Version.FIR300TH:
+                        case ReaderModule.Version.FIR300VH:
                             GroupStatusControl(GroupStatus.ALL, true);
                             break;
-                        case Module.Version.FI_RXXXX:
+                        case ReaderModule.Version.FIRXXXX:
                             GroupStatusControl(GroupStatus.ALL, false);
                             UIControPackets.Clear();
                             UIControPackets.Add(new UIControl(GroupStatus.GB01CUSTOM, false));
                             UIControlStatus(UIControPackets, true);
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                String.Format("Unknown the Reader module version: {0}", s.Substring(1, 4)) : 
-                                String.Format("未知的Reader版本: {0}", s.Substring(1, 4)), false);
+                                String.Format(CultureInfo.CurrentCulture, "Unknown the Reader module version: {0}", s.Substring(1, 4)) :
+                                String.Format(CultureInfo.CurrentCulture, "未知的Reader版本: {0}", s.Substring(1, 4)), false);
                             break;
                     }
                 }
 
-                this.DoProcess = CommandStates.INFO;
+                this.DoProcess = CommandStatus.INFO;
                 switch (_ConnectType)
                 {
                     default:
                     case ReaderService.ConnectType.DEFAULT:
                     case ReaderService.ConnectType.COM:
-                        this._ICOM.Send(this.ReaderService.Command_S(), Module.CommandType.Normal);
+                        this._ICOM.Send(this.ReaderService.CommandS(), ReaderModule.CommandType.Normal);
                         b = this._ICOM.Receive();
-                        VM.BorderTextBlockStatus = String.Format("{0} ({1},{2},{3},{4})",
+                        VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0} ({1},{2},{3},{4})",
                                                     this._SerialPort.PortName,
                                                     this._SerialPort.BaudRate,
                                                     this._SerialPort.DataBits,
                                                     this._SerialPort.Parity,
                                                     this._SerialPort.StopBits);
-                    break;
+                        break;
                     case ReaderService.ConnectType.USB:
-                        this._IUSB.Send(this.ReaderService.Command_S(), Module.CommandType.Normal);
+                        this._IUSB.Send(this.ReaderService.CommandS(), ReaderModule.CommandType.Normal);
                         b = this._IUSB.Receive();
                         break;
                     case ReaderService.ConnectType.NET:
-                        this._INet.Send(this.ReaderService.Command_S(), Module.CommandType.Normal);
+                        this._INet.Send(this.ReaderService.CommandS(), ReaderModule.CommandType.Normal);
                         b = this._INet.Receive();
+                        break;
+                    case ReaderService.ConnectType.BLE:
+                        this._IBLE.Send(this.ReaderService.CommandS(), ReaderModule.CommandType.Normal);
+                        b = this._IBLE.Receive();
                         break;
                 }
                 if (b == null)
@@ -2025,12 +2096,20 @@ namespace RFID.Utility
                         b = this._INet.Receive(10);
                         break;
                 }*/
-                this.DoProcess = CommandStates.DEFAULT;
+                this.DoProcess = CommandStatus.DEFAULT;
 
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 MessageShow(ex.Message, false);
+            }
+            catch (ArgumentNullException ane)
+            {
+                MessageShow(ane.Message, false);
+            }
+            catch (SocketException se)
+            {
+                MessageShow(se.Message, false);
             }
 
             
@@ -2144,11 +2223,11 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="command"></param>
         /// <param name="process"></param>
-        private Boolean DoB01SendWork(Byte[] command, CommandStates process)
+        private Boolean DoB01SendWork(Byte[] command, CommandStatus process)
         {
             if (!IsReceiveDataWork)
             {
-                if (process != CommandStates.CUSTOM)
+                if (process != CommandStatus.CUSTOM)
                     IsReceiveDataWork = true;
 
                 this.DoProcess = process;
@@ -2161,19 +2240,32 @@ namespace RFID.Utility
                         case ReaderService.ConnectType.DEFAULT:
                             break;
                         case ReaderService.ConnectType.COM:
-                            this._ICOM.Send(command, Module.CommandType.Normal);
+                            this._ICOM.Send(command, ReaderModule.CommandType.Normal);
                             break;
                         case ReaderService.ConnectType.USB:
-                            this._IUSB.Send(command, Module.CommandType.Normal);
+                            this._IUSB.Send(command, ReaderModule.CommandType.Normal);
                             break;
                         case ReaderService.ConnectType.NET:
-                            this._INet.Send(command, Module.CommandType.Normal);
+                            this._INet.Send(command, ReaderModule.CommandType.Normal);
+                            break;
+                        case ReaderService.ConnectType.BLE:
+                            this._IBLE.Send(command, ReaderModule.CommandType.Normal);
                             break;
                     }
                 }
-                catch (Exception ex)
+                catch (InvalidOperationException ex)
                 {
                     MessageShow(ex.Message, true);
+                    return false;
+                }
+                catch (ArgumentNullException ane)
+                {
+                    MessageShow(ane.Message, false);
+                    return false;
+                }
+                catch (SocketException se)
+                {
+                    MessageShow(se.Message, false);
                     return false;
                 }
                 return true;
@@ -2231,11 +2323,11 @@ namespace RFID.Utility
                     if ((nBitsLength < nMin) || (nBitsLength > nMax))
                     {
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Bit length and data field isn't match, data={0}, the length value range is: 0x{1} ~ 0x{2}",
+                            String.Format(CultureInfo.CurrentCulture, "Bit length and data field isn't match, data={0}, the length value range is: 0x{1} ~ 0x{2}",
                             VM.B01GroupPreSetSelectBitData,
                             nMin.ToString("X2", new CultureInfo("en-us")),
                             nMax.ToString("X2", new CultureInfo("en-us"))) :
-                            String.Format("位元長度與資料不符合,資料={0},對應的長度值範圍應為: 0x{1} ~ 0x{2}",
+                            String.Format(CultureInfo.CurrentCulture, "位元長度與資料不符合,資料={0},對應的長度值範圍應為: 0x{1} ~ 0x{2}",
                             VM.B01GroupPreSetSelectBitData,
                             nMin.ToString("X2", new CultureInfo("en-us")),
                             nMax.ToString("X2", new CultureInfo("en-us"))), true);
@@ -2258,13 +2350,13 @@ namespace RFID.Utility
         /// <summary>
         /// Pager1 Timeout = 2048ms
         /// </summary>
-        private Boolean DoB01SelectWork(CommandStates cs)
+        private Boolean DoB01SelectWork(CommandStatus cs)
         {
             int _index = 0;
             bool _f = false;
             //try
             //{
-                if (DoB01SendWork(this.ReaderService.Command_T(VM.B01GroupPreSetSelectMemBank.Tag, VM.B01GroupPreSetSelectBitAddress, VM.B01GroupPreSetSelectBitLength, VM.B01GroupPreSetSelectBitData), cs))
+                if (DoB01SendWork(this.ReaderService.CommandT(VM.B01GroupPreSetSelectMemBank.Tag, VM.B01GroupPreSetSelectBitAddress, VM.B01GroupPreSetSelectBitLength, VM.B01GroupPreSetSelectBitData), cs))
                 {
                     _f = true;
                     while (IsReceiveDataWork)
@@ -2296,7 +2388,7 @@ namespace RFID.Utility
         {
             if (DoB01SelectInfoCheck())
             {
-                if (DoB01SelectWork(CommandStates.SELECT)) return true;
+                if (DoB01SelectWork(CommandStatus.SELECT)) return true;
                 else return false;
             }
             else return false;
@@ -2310,7 +2402,7 @@ namespace RFID.Utility
         #region === #Group EPC/TID ===
         private void DoSinglePreSelectAccessEPCWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 IsReceiveDataWork = false;
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
@@ -2320,7 +2412,7 @@ namespace RFID.Utility
 
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2334,7 +2426,7 @@ namespace RFID.Utility
                 }
 
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_Q(), CommandStates.EPC))
+            if (DoB01SendWork(this.ReaderService.CommandQ(), CommandStatus.EPC))
             {
                 while (IsReceiveDataWork) 
                 {
@@ -2354,7 +2446,7 @@ namespace RFID.Utility
         private void DoSinglePreSelectEPCWork()
         {
             Int32 _index = 0;
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
@@ -2363,7 +2455,7 @@ namespace RFID.Utility
             else
             {
 
-                if (DoB01SendWork(this.ReaderService.Command_Q(), CommandStates.EPC))
+                if (DoB01SendWork(this.ReaderService.CommandQ(), CommandStatus.EPC))
                     while (IsReceiveDataWork)   
                     {
                         Thread.Sleep(4);
@@ -2382,7 +2474,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD);
+            DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD);
             while (IsReceiveDataWork)
             {
                 Thread.Sleep(4);
@@ -2396,7 +2488,7 @@ namespace RFID.Utility
             }
 
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_Q(), CommandStates.EPC))
+            if (DoB01SendWork(this.ReaderService.CommandQ(), CommandStatus.EPC))
             {
                 while (IsReceiveDataWork)  
                 {
@@ -2416,7 +2508,7 @@ namespace RFID.Utility
         private void DoSingleEPCWork()
         {
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_Q(), CommandStates.EPC))
+            if (DoB01SendWork(this.ReaderService.CommandQ(), CommandStatus.EPC))
             {
                 while (IsReceiveDataWork)
                 {
@@ -2435,7 +2527,7 @@ namespace RFID.Utility
 
         private void DoSinglePreSelectAccessTIDWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
@@ -2445,7 +2537,7 @@ namespace RFID.Utility
             {
                 Int32 _index = 0;
                 VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-                DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD);
+                DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD);
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2458,7 +2550,7 @@ namespace RFID.Utility
                     }
                 }
 
-                if (DoB01SendWork(this.ReaderService.Command_R("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStates.TID))
+                if (DoB01SendWork(this.ReaderService.CommandR("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStatus.TID))
                 {
                     _index = 0;
                     while (IsReceiveDataWork) 
@@ -2480,7 +2572,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
 
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
@@ -2488,7 +2580,7 @@ namespace RFID.Utility
             }
             else
             {
-                if (DoB01SendWork(this.ReaderService.Command_R("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStates.TID))
+                if (DoB01SendWork(this.ReaderService.CommandR("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStatus.TID))
                 {
                     while (IsReceiveDataWork)
                     {
@@ -2509,7 +2601,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD);
+            DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD);
             while (IsReceiveDataWork)
             {
                 Thread.Sleep(4);
@@ -2523,7 +2615,7 @@ namespace RFID.Utility
             }
 
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_R("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStates.TID))
+            if (DoB01SendWork(this.ReaderService.CommandR("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStatus.TID))
             {
                 while (IsReceiveDataWork)
                 {
@@ -2544,7 +2636,7 @@ namespace RFID.Utility
         private void DoSingleTIDWork()
         {
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_R("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStates.TID))
+            if (DoB01SendWork(this.ReaderService.CommandR("2", "0", VM.B01GroupEPCTextBoxTIDLength), CommandStatus.TID))
             {
                 while (IsReceiveDataWork)
                 {
@@ -2664,7 +2756,7 @@ namespace RFID.Utility
                     {
                         if (VM.B01GroupPreSetAccessheckBoxIsChecked)
                         {
-                            if (VM.B01GroupPreSetAccessPassword == String.Empty)
+                            if (String.IsNullOrEmpty(VM.B01GroupPreSetAccessPassword))
                             {
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                     "Access(P) command is pre-processed, the field is null" :
@@ -2734,7 +2826,7 @@ namespace RFID.Utility
         #region === #Group Read/Write ===
         private void DoPreSelectAccessReadWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
@@ -2742,7 +2834,7 @@ namespace RFID.Utility
             }
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2755,8 +2847,8 @@ namespace RFID.Utility
                     }
                 }
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_R(VM.B01GroupRWComboBoxMemBank.Tag,
-                VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStates.READ))
+            if (DoB01SendWork(this.ReaderService.CommandR(VM.B01GroupRWComboBoxMemBank.Tag,
+                VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStatus.READ))
                 while (IsReceiveDataWork) 
                 {
                     Thread.Sleep(4);
@@ -2774,15 +2866,15 @@ namespace RFID.Utility
 
         private void DoPreSelectReadWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
                 goto PreSelectReadEXIT;
             }
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_R(VM.B01GroupRWComboBoxMemBank.Tag,
-                VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStates.READ))
+            if (DoB01SendWork(this.ReaderService.CommandR(VM.B01GroupRWComboBoxMemBank.Tag,
+                VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStatus.READ))
                 while (IsReceiveDataWork)   
                 {
                     Thread.Sleep(4);
@@ -2802,7 +2894,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2815,8 +2907,8 @@ namespace RFID.Utility
                     }
                 }
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_R(VM.B01GroupRWComboBoxMemBank.Tag,
-                VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStates.READ))
+            if (DoB01SendWork(this.ReaderService.CommandR(VM.B01GroupRWComboBoxMemBank.Tag,
+                VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStatus.READ))
                 while (IsReceiveDataWork)  
                 {
                     Thread.Sleep(4);
@@ -2834,7 +2926,7 @@ namespace RFID.Utility
 
         private void DoPreSelectAccessWriteWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
@@ -2842,7 +2934,7 @@ namespace RFID.Utility
             }
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2855,11 +2947,11 @@ namespace RFID.Utility
                     }
                 }
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_W(
+            if (DoB01SendWork(this.ReaderService.CommandW(
                 VM.B01GroupRWComboBoxMemBank.Tag,
                 VM.B01GroupRWTextBoxAddress,
                 VM.B01GroupRWTextBoxLength,
-                VM.B01GroupRWTextBoxWrite), CommandStates.WRITE))
+                VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)   
                 {
                     Thread.Sleep(4);
@@ -2877,18 +2969,18 @@ namespace RFID.Utility
 
         private void DoPreSelectWriteWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
                 goto PreSelectWriteEXIT;
             }
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_W(
+            if (DoB01SendWork(this.ReaderService.CommandW(
                 VM.B01GroupRWComboBoxMemBank.Tag,
                 VM.B01GroupRWTextBoxAddress,
                 VM.B01GroupRWTextBoxLength,
-                VM.B01GroupRWTextBoxWrite), CommandStates.WRITE))
+                VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)   
                 {
                     Thread.Sleep(4);
@@ -2908,7 +3000,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2921,11 +3013,11 @@ namespace RFID.Utility
                     }
                 }
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_W(
+            if (DoB01SendWork(this.ReaderService.CommandW(
                 VM.B01GroupRWComboBoxMemBank.Tag,
                 VM.B01GroupRWTextBoxAddress,
                 VM.B01GroupRWTextBoxLength,
-                VM.B01GroupRWTextBoxWrite), CommandStates.WRITE))
+                VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)   
                 {
                     Thread.Sleep(4);
@@ -2944,11 +3036,11 @@ namespace RFID.Utility
         private void DoWriteWork()
         {
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_W(
+            if (DoB01SendWork(this.ReaderService.CommandW(
                 VM.B01GroupRWComboBoxMemBank.Tag,
                 VM.B01GroupRWTextBoxAddress,
                 VM.B01GroupRWTextBoxLength,
-                VM.B01GroupRWTextBoxWrite), CommandStates.WRITE))
+                VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2966,8 +3058,8 @@ namespace RFID.Utility
         private void DoReadWork()
         {
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_R(VM.B01GroupRWComboBoxMemBank.Tag, VM.B01GroupRWTextBoxAddress, 
-                VM.B01GroupRWTextBoxLength), CommandStates.READ))
+            if (DoB01SendWork(this.ReaderService.CommandR(VM.B01GroupRWComboBoxMemBank.Tag, VM.B01GroupRWTextBoxAddress, 
+                VM.B01GroupRWTextBoxLength), CommandStatus.READ))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -2986,13 +3078,34 @@ namespace RFID.Utility
         {
             switch ((sender as ComboBox).SelectedIndex)
             {
-                case 0: B01GroupRWTextBoxAddress.Text = "0"; B01GroupRWTextBoxLength.Text = "4"; break;
-                case 1: B01GroupRWTextBoxAddress.Text = "2"; B01GroupRWTextBoxLength.Text = "6"; break;
-                case 2: B01GroupRWTextBoxAddress.Text = "0"; B01GroupRWTextBoxLength.Text = "4"; break;
-                case 3: B01GroupRWTextBoxAddress.Text = "0"; B01GroupRWTextBoxLength.Text = "1"; break;
-                case 4: B01GroupRWTextBoxAddress.Text = ""; B01GroupRWTextBoxLength.Text = ""; break;
-                case 5: B01GroupRWTextBoxAddress.Text = "0"; B01GroupRWTextBoxLength.Text = "2"; break;
-                case 6: B01GroupRWTextBoxAddress.Text = "2"; B01GroupRWTextBoxLength.Text = "2"; break;
+                case 0: 
+                    B01GroupRWTextBoxAddress.Text = String.Format(CultureInfo.CurrentCulture, "0"); 
+                    B01GroupRWTextBoxLength.Text = String.Format(CultureInfo.CurrentCulture, "4"); 
+                    break;
+                case 1: 
+                    B01GroupRWTextBoxAddress.Text = String.Format(CultureInfo.CurrentCulture, "2"); 
+                    B01GroupRWTextBoxLength.Text = String.Format(CultureInfo.CurrentCulture, "6"); 
+                    break;
+                case 2: 
+                    B01GroupRWTextBoxAddress.Text = String.Format(CultureInfo.CurrentCulture, "0"); 
+                    B01GroupRWTextBoxLength.Text = String.Format(CultureInfo.CurrentCulture, "4"); 
+                    break;
+                case 3: 
+                    B01GroupRWTextBoxAddress.Text = String.Format(CultureInfo.CurrentCulture, "0"); 
+                    B01GroupRWTextBoxLength.Text = String.Format(CultureInfo.CurrentCulture, "1"); 
+                    break;
+                case 4: 
+                    B01GroupRWTextBoxAddress.Text = ""; 
+                    B01GroupRWTextBoxLength.Text = ""; 
+                    break;
+                case 5: 
+                    B01GroupRWTextBoxAddress.Text = String.Format(CultureInfo.CurrentCulture, "0"); 
+                    B01GroupRWTextBoxLength.Text = String.Format(CultureInfo.CurrentCulture, "2"); 
+                    break;
+                case 6: 
+                    B01GroupRWTextBoxAddress.Text = String.Format(CultureInfo.CurrentCulture, "2"); 
+                    B01GroupRWTextBoxLength.Text = String.Format(CultureInfo.CurrentCulture, "2"); 
+                    break;
             }
         }
 
@@ -3007,7 +3120,7 @@ namespace RFID.Utility
             {
                 this.IsRunning = true;
                 MessageShow(String.Empty, false);
-                if (VM.B01GroupRWComboBoxMemBank.Tag.Equals("X"))
+                if (VM.B01GroupRWComboBoxMemBank.Tag.Equals("X", StringComparison.CurrentCulture))
                 {
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                             "Bank choice error" :
@@ -3057,12 +3170,12 @@ namespace RFID.Utility
                         {
                             if (nWordsLength * 4 > nDataLength)
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                    String.Format("Length and data field is not match, data field must be fill {0} char.", (nWordsLength * 4 - nDataLength)) :
-                                    String.Format("位元組長度值與資料內容不匹配，資料欄位應再填入{0}字元", (nWordsLength * 4 - nDataLength)), true);
+                                    String.Format(CultureInfo.CurrentCulture, "Length and data field is not match, data field must be fill {0} char.", (nWordsLength * 4 - nDataLength)) :
+                                    String.Format(CultureInfo.CurrentCulture, "位元組長度值與資料內容不匹配，資料欄位應再填入{0}字元", (nWordsLength * 4 - nDataLength)), true);
                             else
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                    String.Format("Length and data field is not match, data field must be remove {0} char.", (nDataLength - nWordsLength * 4)) :
-                                    String.Format("位元組長度值與資料內容不匹配，資料欄位應再移除{0}字元", (nDataLength - nWordsLength * 4)), true);
+                                    String.Format(CultureInfo.CurrentCulture, "Length and data field is not match, data field must be remove {0} char.", (nDataLength - nWordsLength * 4)) :
+                                    String.Format(CultureInfo.CurrentCulture, "位元組長度值與資料內容不匹配，資料欄位應再移除{0}字元", (nDataLength - nWordsLength * 4)), true);
                             this.IsFocus = true;
                             this.IsRunning = false;
                             this.B01GroupRWTextBoxWrite.Focus();
@@ -3148,7 +3261,7 @@ namespace RFID.Utility
                 this.IsRunning = true;
                 MessageShow(String.Empty, false);
 
-                if (VM.B01GroupRWComboBoxMemBank.Tag.Equals("X"))
+                if (VM.B01GroupRWComboBoxMemBank.Tag.Equals("X", StringComparison.CurrentCulture))
                 {
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Bank choice error" :
@@ -3265,7 +3378,7 @@ namespace RFID.Utility
 
         private void NoName()
         {
-            if (VM.B01GroupLockTextBoxMask == String.Empty || VM.B01GroupLockTextBoxAction == String.Empty)
+            if (String.IsNullOrEmpty(VM.B01GroupLockTextBoxMask) || String.IsNullOrEmpty(VM.B01GroupLockTextBoxAction))
                 return;
 
             var mask = Format.HexStringToInt(VM.B01GroupLockTextBoxMask);
@@ -3302,16 +3415,16 @@ namespace RFID.Utility
             this.MaskField = 0;
             this.ActionField = 0;
 
-            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockKillPwd.SelectedItem).Tag.ToString()), 8);
-            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockAccessPwd.SelectedItem).Tag.ToString()), 6);
-            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockEPC.SelectedItem).Tag.ToString()), 4);
-            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockTID.SelectedItem).Tag.ToString()), 2);
-            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockUser.SelectedItem).Tag.ToString()), 0);
-            B01GroupLockTextBoxMask.Text = this.MaskField.ToString("X3");
+            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockKillPwd.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 8);
+            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockAccessPwd.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 6);
+            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockEPC.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 4);
+            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockTID.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 2);
+            this.MaskField |= LockPayloadMask(Convert.ToInt32(((ComboBoxItem)B01ComboBoxLockUser.SelectedItem).Tag.ToString(), CultureInfo.CurrentCulture), 0);
+            B01GroupLockTextBoxMask.Text = this.MaskField.ToString("X3", CultureInfo.CurrentCulture);
             TextBoxGotFocusValidation(B01GroupLockTextBoxMask, null);
             TextBoxKeyUpValidation(B01GroupLockTextBoxMask, null);
 
-            B01GroupLockTextBoxAction.Text = this.ActionField.ToString("X3");
+            B01GroupLockTextBoxAction.Text = this.ActionField.ToString("X3", CultureInfo.CurrentCulture);
             TextBoxGotFocusValidation(B01GroupLockTextBoxAction, null);
             TextBoxKeyUpValidation(B01GroupLockTextBoxAction, null);
         }
@@ -3319,7 +3432,7 @@ namespace RFID.Utility
 
         private void DoPreSelectAccessLockWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." :
@@ -3328,7 +3441,7 @@ namespace RFID.Utility
             }
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3342,7 +3455,7 @@ namespace RFID.Utility
                 }
             _index = 0;
 
-            if (DoB01SendWork(this.ReaderService.Command_L(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStates.LOCK))
+            if (DoB01SendWork(this.ReaderService.CommandL(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStatus.LOCK))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3360,7 +3473,7 @@ namespace RFID.Utility
 
         private void DoPreSelectLockWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                         "Select(T) command timeout(2048ms) or parameter error." :
@@ -3368,7 +3481,7 @@ namespace RFID.Utility
                 goto PreSelectLockEXIT;
             }
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_L(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStates.LOCK))
+            if (DoB01SendWork(this.ReaderService.CommandL(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStatus.LOCK))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3388,7 +3501,7 @@ namespace RFID.Utility
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
 
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3401,7 +3514,7 @@ namespace RFID.Utility
                     }
                 }
 
-            if (DoB01SendWork(this.ReaderService.Command_L(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStates.LOCK))
+            if (DoB01SendWork(this.ReaderService.CommandL(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStatus.LOCK))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3419,7 +3532,7 @@ namespace RFID.Utility
         private void DoLockWork()
         {
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Command_L(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStates.LOCK))
+            if (DoB01SendWork(this.ReaderService.CommandL(VM.B01GroupLockTextBoxMask, VM.B01GroupLockTextBoxAction), CommandStatus.LOCK))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3556,7 +3669,7 @@ namespace RFID.Utility
             }
 
 
-            DoB01SendWork(this.ReaderService.Command_K(VM.B01TextBoxKillPassword, "0"), CommandStates.KILL);
+            DoB01SendWork(this.ReaderService.CommandK(VM.B01TextBoxKillPassword, "0"), CommandStatus.KILL);
 
             KILLEXIT:;
         }
@@ -3574,7 +3687,7 @@ namespace RFID.Utility
 
             if (!IsGetGPIOConfiguration10)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("44"), CommandStates.GPIO_CONFIG_10C);
+                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("44"), CommandStatus.GPIOCONFIG10C);
             }
             IsGetGPIOConfiguration10 = false;
             GPIOConfigurMask |= 0x04;
@@ -3591,7 +3704,7 @@ namespace RFID.Utility
 
             if (!IsGetGPIOConfiguration10)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("40"), CommandStates.GPIO_CONFIG_10UC);
+                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("40"), CommandStatus.GPIOCONFIG10UC);
             }
             IsGetGPIOConfiguration10 = false;
             GPIOConfigurMask &= 0xFB;
@@ -3607,7 +3720,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOConfiguration11)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("22"), CommandStates.GPIO_CONFIG_11C);
+                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("22"), CommandStatus.GPIOCONFIG11C);
             }
             IsGetGPIOConfiguration11 = false;
             GPIOConfigurMask |= 0x02;
@@ -3623,7 +3736,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOConfiguration11)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("20"), CommandStates.GPIO_CONFIG_11UC);
+                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("20"), CommandStatus.GPIOCONFIG11UC);
             }
             IsGetGPIOConfiguration11 = false;
             GPIOConfigurMask &= 0xFD;
@@ -3639,7 +3752,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOConfiguration14)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("11"), CommandStates.GPIO_CONFIG_14C);
+                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("11"), CommandStatus.GPIOCONFIG14C);
             }
             IsGetGPIOConfiguration14 = false;
             GPIOConfigurMask |= 0x01;
@@ -3655,7 +3768,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOConfiguration14)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("10"), CommandStates.GPIO_CONFIG_14UC);
+                DoB01SendWork(this.ReaderService.SetGPIOConfiguration("10"), CommandStatus.GPIOCONFIG14UC);
             }
             IsGetGPIOConfiguration14 = false;
             GPIOConfigurMask &= 0xFE;
@@ -3672,7 +3785,7 @@ namespace RFID.Utility
             String str = "7" + gval;
 
             MessageShow(String.Empty, false);
-            DoB01SendWork(this.ReaderService.SetGPIOConfiguration(str), CommandStates.GPIO_CONFIG);
+            DoB01SendWork(this.ReaderService.SetGPIOConfiguration(str), CommandStatus.GPIOCONFIG);
         }
 
         /// <summary>
@@ -3683,7 +3796,7 @@ namespace RFID.Utility
         private void OnB01GroupGPIOButtonGetConfigurationClick(object sender, RoutedEventArgs e)
         {
             MessageShow(String.Empty, false);
-            DoB01SendWork(this.ReaderService.GetGPIOConfiguration(), CommandStates.GPIO_CONFIG);
+            DoB01SendWork(this.ReaderService.GetGPIOConfiguration(), CommandStatus.GPIOCONFIG);
         }
 
         /// <summary>
@@ -3696,7 +3809,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOPin10)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOPins("44"), CommandStates.GPIO_PIN_10C);
+                DoB01SendWork(this.ReaderService.SetGPIOPins("44"), CommandStatus.GPIOPIN10C);
             }
             IsGetGPIOPin10 = false;
         }
@@ -3711,7 +3824,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOPin10)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOPins("40"), CommandStates.GPIO_PIN_10UC);
+                DoB01SendWork(this.ReaderService.SetGPIOPins("40"), CommandStatus.GPIOPIN10UC);
             }
             IsGetGPIOPin10 = false;
         }
@@ -3726,7 +3839,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOPin11)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOPins("22"), CommandStates.GPIO_PIN_11C);
+                DoB01SendWork(this.ReaderService.SetGPIOPins("22"), CommandStatus.GPIOPIN11C);
             }
             IsGetGPIOPin11 = false;
         }
@@ -3741,7 +3854,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOPin11)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOPins("20"), CommandStates.GPIO_PIN_11UC);
+                DoB01SendWork(this.ReaderService.SetGPIOPins("20"), CommandStatus.GPIOPIN11UC);
             }
             IsGetGPIOPin11 = false;
         }
@@ -3756,7 +3869,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOPin14)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOPins("11"), CommandStates.GPIO_PIN_14C);
+                DoB01SendWork(this.ReaderService.SetGPIOPins("11"), CommandStatus.GPIOPIN14C);
             }
             IsGetGPIOPin14 = false;
         }
@@ -3771,7 +3884,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
             if (!IsGetGPIOPin14)
             {
-                DoB01SendWork(this.ReaderService.SetGPIOPins("10"), CommandStates.GPIO_PIN_14UC);
+                DoB01SendWork(this.ReaderService.SetGPIOPins("10"), CommandStatus.GPIOPIN14UC);
             }
             IsGetGPIOPin14 = false;
         }
@@ -3787,7 +3900,7 @@ namespace RFID.Utility
             String str = "7" + gval;
 
             MessageShow(String.Empty, false);
-            DoB01SendWork(this.ReaderService.SetGPIOPins(str), CommandStates.GPIO_PINS);
+            DoB01SendWork(this.ReaderService.SetGPIOPins(str), CommandStatus.GPIOPINS);
         }
 
         /// <summary>
@@ -3798,7 +3911,7 @@ namespace RFID.Utility
         private void OnB01GroupGPIOButtonGetPortClick(object sender, RoutedEventArgs e)
         {
             MessageShow(String.Empty, false);
-            DoB01SendWork(this.ReaderService.GetGPIOPins(), CommandStates.GPIO_GET_PINS);
+            DoB01SendWork(this.ReaderService.GetGPIOPins(), CommandStatus.GPIOGETPINS);
 
         }
 
@@ -3808,7 +3921,7 @@ namespace RFID.Utility
         #region === #Group Custom ===
         private void DoPreSelectAccessCustomWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
 					"Select(T) command timeout(2048ms) or parameter error." :
@@ -3818,7 +3931,7 @@ namespace RFID.Utility
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
 
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3832,7 +3945,7 @@ namespace RFID.Utility
                 }
 
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStates.CUSTOM))
+            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStatus.CUSTOM))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3849,7 +3962,7 @@ namespace RFID.Utility
 
         private void DoPreSelectCustomWork()
         {
-            if (!DoB01SelectWork(CommandStates.SELECT))
+            if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
 					"Select(T) command timeout(2048ms) or parameter error." :
@@ -3857,7 +3970,7 @@ namespace RFID.Utility
                 goto PreSelectCustomEXIT;
             }
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStates.CUSTOM))
+            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStatus.CUSTOM))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3877,7 +3990,7 @@ namespace RFID.Utility
             Int32 _index = 0;
             VM.B01GroupPreSetAccessPassword = Format.MakesUpZero(VM.B01GroupPreSetAccessPassword, 8);
 
-            if (DoB01SendWork(this.ReaderService.Command_P(VM.B01GroupPreSetAccessPassword), CommandStates.PASSWORD))
+            if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(10);
@@ -3890,7 +4003,7 @@ namespace RFID.Utility
                     }
                 }
             _index = 0;
-            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStates.CUSTOM))
+            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStatus.CUSTOM))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -3908,7 +4021,7 @@ namespace RFID.Utility
         private void DoCustomWork()
         {
             Int32 _index = 0;
-            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStates.CUSTOM))
+            if (DoB01SendWork(this.ReaderService.Custom(VM.B01GroupMsgTextBoxCustom), CommandStatus.CUSTOM))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -4067,7 +4180,7 @@ namespace RFID.Utility
 
                         item.HandlerColor = Brushes.SeaGreen;
                         item.ContentColor = Brushes.SeaGreen;
-                        item.Handler = String.Format("{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff"), str);
+                        item.Handler = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff", CultureInfo.CurrentCulture), str);
                         item.Content = Format.ShowCRLF(data);
                         break;
                     case "RX":
@@ -4076,7 +4189,7 @@ namespace RFID.Utility
 
                         if (this.IsDateTimeStamp)
                         {
-                            item.Handler = String.Format("{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff"), str);
+                            item.Handler = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff", CultureInfo.CurrentCulture), str);
                             item.Content = Format.ShowCRLF(data);
                         }
                         else
@@ -4085,14 +4198,14 @@ namespace RFID.Utility
                             if (IsReceiveDataWork)
                                 item.Content = Format.ShowCRLF(data);
                             else
-                                item.Content = String.Format("{0}  -- {1}", Format.ShowCRLF(data), DateTime.Now.ToString("H:mm:ss.fff"));
+                                item.Content = String.Format(CultureInfo.CurrentCulture, "{0}  -- {1}", Format.ShowCRLF(data), DateTime.Now.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture));
                         }
                         this.IsDateTimeStamp = false;
                         break;
                     case "Error":
                         item.HandlerColor = Brushes.DarkRed;
                         item.ContentColor = Brushes.DarkRed;
-                        item.Handler = String.Format("{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff"), str);
+                        item.Handler = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff", CultureInfo.CurrentCulture), str);
                         item.Content = Format.ShowCRLF(data);
                         this.IsDateTimeStamp = false;
                         break;
@@ -4136,7 +4249,7 @@ namespace RFID.Utility
                 if (this.IsDateTimeStamp)
                 {
                     if (str == "RX") this.IsDateTimeStamp = false;
-                    s1 = String.Format("{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff"), str);
+                    s1 = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - ", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff", CultureInfo.CurrentCulture), str);
                     s2 = Format.ShowCRLF(buffer);
                 }
                 else
@@ -4190,25 +4303,25 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="command">data</param>
         /// <param name="process">command type</param>
-		private Boolean DoB02SendWork(Byte[] command, CommandStates process)
+		private Boolean DoB02SendWork(Byte[] command, CommandStatus process)
         {
             if (!IsReceiveDataWork)
             {
                 IsReceiveDataWork = true;
                 switch (process)
                 {
-                    case CommandStates.B02_U:
-                    case CommandStates.B02_UR:
-                    case CommandStates.B02_U_SLOTQ:
-                    case CommandStates.B02_UR_SLOTQ:
-                    case CommandStates.B02_QR:
-                    case CommandStates.B02_Q:
-                    case CommandStates.B02ITEM02_U:
-                    case CommandStates.B02ITEM02_UR:
-                    case CommandStates.B02ITEM02_U_SLOTQ:
-                    case CommandStates.B02ITEM02_UR_SLOTQ:
-                    case CommandStates.B02ITEM02_QR:
-                    case CommandStates.B02ITEM02_Q:
+                    case CommandStatus.B02U:
+                    case CommandStatus.B02UR:
+                    case CommandStatus.B02USLOTQ:
+                    case CommandStatus.B02URSLOTQ:
+                    case CommandStatus.B02QR:
+                    case CommandStatus.B02Q:
+                    case CommandStatus.B02ITEM02U:
+                    case CommandStatus.B02ITEM02UR:
+                    case CommandStatus.B02ITEM02USLOTQ:
+                    case CommandStatus.B02ITEM02URSLOTQ:
+                    case CommandStatus.B02ITEM02QR:
+                    case CommandStatus.B02ITEM02Q:
                         this.B02ListViewRunCount++;
                         break;
                 }
@@ -4225,19 +4338,27 @@ namespace RFID.Utility
                         case ReaderService.ConnectType.DEFAULT:
                             break;
                         case ReaderService.ConnectType.COM:
-                            this._ICOM.Send(command, Module.CommandType.Normal);
+                            this._ICOM.Send(command, ReaderModule.CommandType.Normal);
                             break;
                         case ReaderService.ConnectType.USB:
-                            this._IUSB.Send(command, Module.CommandType.Normal);
+                            this._IUSB.Send(command, ReaderModule.CommandType.Normal);
                             break;
                         case ReaderService.ConnectType.NET:
-                            this._INet.Send(command, Module.CommandType.Normal);
+                            this._INet.Send(command, ReaderModule.CommandType.Normal);
+                            break;
+                        case ReaderService.ConnectType.BLE:
+                            this._IBLE.Send(command, ReaderModule.CommandType.Normal);
                             break;
                     }
                 }
-                catch (Exception ex)
+                catch (ArgumentNullException ex)
                 {
                     MessageShow(ex.Message, false);
+                    return false;
+                }
+                catch (SocketException sx)
+                {
+                    MessageShow(sx.Message, false);
                     return false;
                 }
                 return true;
@@ -4267,23 +4388,23 @@ namespace RFID.Utility
                 {
                     if (str == "RX") this.IsDateTimeStamp = false;
                     if (data == null)
-                        itm.Content = String.Format("{0} [{1}] - ", dt.ToString("H:mm:ss.fff"), str);
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - ", dt.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture), str);
                     else
-                        itm.Content = String.Format("{0} [{1}] - {2}", dt.ToString("H:mm:ss.fff"), str, Format.ShowCRLF(data));
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - {2}", dt.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture), str, Format.ShowCRLF(data));
                 }
                 else
                 {
                     if (data == null)
-                        itm.Content = String.Format("[{0}] - ", str);
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "[{0}] - ", str);
                     else if (IsReceiveDataWork)
                     {
                         if (b)
-                            itm.Content = String.Format("{0}      - {1}", dt.ToString("H:mm:ss.fff"), Format.ShowCRLF(data));
+                            itm.Content = String.Format(CultureInfo.CurrentCulture, "{0}      - {1}", dt.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture), Format.ShowCRLF(data));
                         else
                             itm.Content = Format.ShowCRLF(data);
                     }  
                     else
-                        itm.Content = String.Format("{0}  -- {1}", Format.ShowCRLF(data), dt.ToString("H:mm:ss.fff"));
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "{0}  -- {1}", Format.ShowCRLF(data), dt.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture));
                 }
                 if (this.B02ListBox.Items.Count > 2000)
                     this.B02ListBox.Items.Clear();
@@ -4308,10 +4429,17 @@ namespace RFID.Utility
             String[] data = str.Split(',');
             Int32 number = data[0].Length;
 
-
-            if (Format.CRC16(Format.HexStringToBytes(data[0])) == 0x1D0F) isCRC = true;
-            else
-                isCRC = false;
+            try
+            {
+                if (Format.CRC16(Format.HexStringToBytes(data[0])) == 0x1D0F) isCRC = true;
+                else
+                    isCRC = false;
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+            
 
             if (!IsMenuRecordMode && !isCRC) return;
 
@@ -4332,12 +4460,12 @@ namespace RFID.Utility
                 {
                     for (Int32 j = 0; j < VM.B02ListViewItemsSource.Count; j++)
                     {
-                        number = Convert.ToInt32(VM.B02ListViewItemsSource[j].B02Count);
-                        if (VM.B02ListViewItemsSource[j].B02CRC16.Equals(newBank.B02CRC16) 
-                            && VM.B02ListViewItemsSource[j].B02Read.Equals(newBank.B02Read))
+                        number = Convert.ToInt32(VM.B02ListViewItemsSource[j].B02Count, CultureInfo.CurrentCulture);
+                        if (VM.B02ListViewItemsSource[j].B02CRC16.Equals(newBank.B02CRC16, StringComparison.CurrentCulture) 
+                            && VM.B02ListViewItemsSource[j].B02Read.Equals(newBank.B02Read, StringComparison.CurrentCulture))
                         {
                             number++;
-                            VM.B02ListViewItemsSource[j].B02Count = number.ToString();
+                            VM.B02ListViewItemsSource[j].B02Count = number.ToString(CultureInfo.CurrentCulture);
                             bCompare = true;
                             break;
                         }
@@ -4346,7 +4474,7 @@ namespace RFID.Utility
 
                         /*if (B02ListViewRunCount > 0)
                             VM.B02ListViewItemsSource[j].B02Percentage = 
-                                String.Format("{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
+                                String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
 
                         if (bCompare) break;*/
                             
@@ -4358,11 +4486,11 @@ namespace RFID.Utility
                     newBank.B02Count = "1";
                     VM.B02ListViewAddNewItem(newBank);
                     B02ListViewList.Add(data[0]);
-                    VM.B02GroupRecordTextBlockCount = B02ListViewList.Distinct().Count().ToString();
+                    VM.B02GroupRecordTextBlockCount = B02ListViewList.Distinct().Count().ToString(CultureInfo.CurrentCulture);
                 }
 
                 B02ListViewTagCount++;
-                VM.B02GroupRecordTextBlockTagCount = B02ListViewTagCount.ToString();
+                VM.B02GroupRecordTextBlockTagCount = B02ListViewTagCount.ToString(CultureInfo.CurrentCulture);
             }
             else
             {
@@ -4370,13 +4498,13 @@ namespace RFID.Utility
                 {
                     for (Int32 j = 0; j < VM.B02ListViewItemsSource.Count; j++)
                     { 
-                        number = Convert.ToInt32(VM.B02ListViewItemsSource[j].B02Count);
+                        number = Convert.ToInt32(VM.B02ListViewItemsSource[j].B02Count, CultureInfo.CurrentCulture);
                         if (this.B02ListViewRunCount > 0)
-                            VM.B02ListViewItemsSource[j].B02Percentage = String.Format("{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
+                            VM.B02ListViewItemsSource[j].B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
                     }
                 }
             }
-            VM.B02GroupRecordTextBlockRunCount = this.B02ListViewRunCount.ToString();    
+            VM.B02GroupRecordTextBlockRunCount = this.B02ListViewRunCount.ToString(CultureInfo.CurrentCulture);    
         }
 
         /// <summary>
@@ -4429,11 +4557,11 @@ namespace RFID.Utility
                     if ((nBitsLength < nMin) || (nBitsLength > nMax))
                     {
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Bit length and data field isn't match, data={0}, the length value range is: 0x{1} ~ 0x{2}",
+                            String.Format(CultureInfo.CurrentCulture, "Bit length and data field isn't match, data={0}, the length value range is: 0x{1} ~ 0x{2}",
                                 VM.B02GroupPreSetSelectBitData,
                                 nMin.ToString("X2", new CultureInfo("en-us")),
                                 nMax.ToString("X2", new CultureInfo("en-us"))) :
-                            String.Format("位元長度與資料不符合,資料={0},對應的長度值範圍應為: 0x{1} ~ 0x{2}",
+                            String.Format(CultureInfo.CurrentCulture, "位元長度與資料不符合,資料={0},對應的長度值範圍應為: 0x{1} ~ 0x{2}",
                                 VM.B02GroupPreSetSelectBitData,
                                 nMin.ToString("X2", new CultureInfo("en-us")),
                                 nMax.ToString("X2", new CultureInfo("en-us"))), true);
@@ -4455,12 +4583,12 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="cs">command state</param>
         /// <returns></returns>
-        private Boolean DoB02SelectWork(CommandStates cs)
+        private Boolean DoB02SelectWork(CommandStatus cs)
         {
             Int32 _index = 0;
             Boolean _f = false;
 
-            if (DoB02SendWork(this.ReaderService.Command_T(VM.B02GroupPreSetSelectMemBank.Tag,
+            if (DoB02SendWork(this.ReaderService.CommandT(VM.B02GroupPreSetSelectMemBank.Tag,
                 VM.B02GroupPreSetSelectBitAddress, VM.B02GroupPreSetSelectBitLength, VM.B02GroupPreSetSelectBitData), cs))
             {
                 _f = true;
@@ -4489,7 +4617,7 @@ namespace RFID.Utility
 
             while (this.IsB02ThreadRunCtrl)
             {
-                if (!DoB02SelectWork(CommandStates.B02_T))
+                if (!DoB02SelectWork(CommandStatus.B02T))
                 {
                     this.IsB02Repeat = false;
                     UIControlStatus(UITempControPackets, false);
@@ -4509,7 +4637,7 @@ namespace RFID.Utility
                     _index = 0;
                     VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
                     
-                    if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+                    if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                         while (IsReceiveDataWork)
                         {
                             Thread.Sleep(4);
@@ -4524,25 +4652,25 @@ namespace RFID.Utility
 
                     switch (DoFakeProcess)
                     {
-                        case CommandStates.B02_UR_SLOTQ:
+                        case CommandStatus.B02URSLOTQ:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                                this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
                                 VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                                CommandStates.B02_UR_SLOTQ);
+                                CommandStatus.B02URSLOTQ);
                             break;
-                        case CommandStates.B02_UR:
+                        case CommandStatus.B02UR:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                                this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
                                 VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                                CommandStates.B02_UR);
+                                CommandStatus.B02UR);
                             break;
-                        case CommandStates.B02_U_SLOTQ:
+                        case CommandStatus.B02USLOTQ:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                                this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                             break;
-                        case CommandStates.B02_U:
+                        case CommandStatus.B02U:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_U(), CommandStates.B02_U);
+                                this.ReaderService.CommandU(), CommandStatus.B02U);
                             break;
                         default:
                             _callback = false;
@@ -4590,7 +4718,7 @@ namespace RFID.Utility
 
             while (this.IsB02ThreadRunCtrl)
             {
-                if (!DoB02SelectWork(CommandStates.B02_T))
+                if (!DoB02SelectWork(CommandStatus.B02T))
                 {
                     this.IsB02Repeat = false;
                     UIControlStatus(UITempControPackets, false);
@@ -4609,25 +4737,25 @@ namespace RFID.Utility
                 {
                     switch (DoFakeProcess)
                     {
-                        case CommandStates.B02_UR_SLOTQ:
+                        case CommandStatus.B02URSLOTQ:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                                this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
                                 VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                                CommandStates.B02_UR_SLOTQ);
+                                CommandStatus.B02URSLOTQ);
                             break;
-                        case CommandStates.B02_UR:
+                        case CommandStatus.B02UR:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                                this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
                                 VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                                CommandStates.B02_UR);
+                                CommandStatus.B02UR);
                             break;
-                        case CommandStates.B02_U_SLOTQ:
+                        case CommandStatus.B02USLOTQ:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                                this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                             break;
-                        case CommandStates.B02_U:
+                        case CommandStatus.B02U:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_U(), CommandStates.B02_U);
+                                this.ReaderService.CommandU(), CommandStatus.B02U);
                             break;
                         default:
                             _callback = false;
@@ -4679,7 +4807,7 @@ namespace RFID.Utility
                 _index = 0;
                 VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
 
-                if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+                if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                     while (IsReceiveDataWork)
                     {
                         Thread.Sleep(4);
@@ -4694,25 +4822,25 @@ namespace RFID.Utility
 
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_UR_SLOTQ:
+                    case CommandStatus.B02URSLOTQ:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                            this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
                             VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_UR_SLOTQ);
+                            CommandStatus.B02URSLOTQ);
                         break;
-                    case CommandStates.B02_UR:
+                    case CommandStatus.B02UR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                            this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
                             VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_UR);
+                            CommandStatus.B02UR);
                         break;
-                    case CommandStates.B02_U_SLOTQ:
+                    case CommandStatus.B02USLOTQ:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                            this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                         break;
-                    case CommandStates.B02_U:
+                    case CommandStatus.B02U:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_U(), CommandStates.B02_U);
+                            this.ReaderService.CommandU(), CommandStatus.B02U);
                         break;
                     default:
                         _callback = false;
@@ -4762,25 +4890,25 @@ namespace RFID.Utility
             {
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_UR_SLOTQ:
+                    case CommandStatus.B02URSLOTQ:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                            this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
                             VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_UR_SLOTQ);
+                            CommandStatus.B02URSLOTQ);
                         break;
-                    case CommandStates.B02_UR:
+                    case CommandStatus.B02UR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                            this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
                             VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_UR);
+                            CommandStatus.B02UR);
                         break;
-                    case CommandStates.B02_U_SLOTQ:
+                    case CommandStatus.B02USLOTQ:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                            this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                         break;
-                    case CommandStates.B02_U:
+                    case CommandStatus.B02U:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_U(), CommandStates.B02_U);
+                            this.ReaderService.CommandU(), CommandStatus.B02U);
                         break;
                     default:
                         _callback = false;
@@ -4825,7 +4953,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
             Boolean _callback = false;
-            if (!DoB02SelectWork(CommandStates.B02_T))
+            if (!DoB02SelectWork(CommandStatus.B02T))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
 					"Select(T) command timeout(2048ms) or parameter error." :
@@ -4837,7 +4965,7 @@ namespace RFID.Utility
                 _index = 0;
                 VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
 
-                if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+                if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                     while (IsReceiveDataWork)
                     {
                         Thread.Sleep(4);
@@ -4852,23 +4980,23 @@ namespace RFID.Utility
 
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_UR_SLOTQ:
+                    case CommandStatus.B02URSLOTQ:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
-                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR_SLOTQ);
+                            this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02URSLOTQ);
                         break;
-                    case CommandStates.B02_UR:
+                    case CommandStatus.B02UR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
-                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR);
+                            this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02UR);
                         break;
-                    case CommandStates.B02_U_SLOTQ:
+                    case CommandStatus.B02USLOTQ:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                            this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                         break;
-                    case CommandStates.B02_U:
+                    case CommandStatus.B02U:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_U(), CommandStates.B02_U);
+                            this.ReaderService.CommandU(), CommandStatus.B02U);
                         break;
                     default:
                         _callback = false;
@@ -4915,7 +5043,7 @@ namespace RFID.Utility
             Int32 _index = 0;
             Boolean _callback = false;
 
-            if (!DoB02SelectWork(CommandStates.B02_T))
+            if (!DoB02SelectWork(CommandStatus.B02T))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                     "Select(T) command timeout(2048ms) or parameter error." :
@@ -4926,21 +5054,21 @@ namespace RFID.Utility
             {
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_UR_SLOTQ:
+                    case CommandStatus.B02URSLOTQ:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
-                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR_SLOTQ);
+                            this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02URSLOTQ);
                         break;
-                    case CommandStates.B02_UR:
+                    case CommandStatus.B02UR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
-                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR);
+                            this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                            VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02UR);
                         break;
-                    case CommandStates.B02_U_SLOTQ:
-                        _callback = DoB02SendWork(this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                    case CommandStatus.B02USLOTQ:
+                        _callback = DoB02SendWork(this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                         break;
-                    case CommandStates.B02_U:
-                        _callback = DoB02SendWork(this.ReaderService.Command_U(), CommandStates.B02_U);
+                    case CommandStatus.B02U:
+                        _callback = DoB02SendWork(this.ReaderService.CommandU(), CommandStatus.B02U);
                         break;
                     default:
                         _callback = false;
@@ -4989,7 +5117,7 @@ namespace RFID.Utility
           
             VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
 
-            if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+            if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
             while (IsReceiveDataWork)
             {
                 Thread.Sleep(4);
@@ -5004,23 +5132,23 @@ namespace RFID.Utility
 
             switch (DoFakeProcess)
             {
-                case CommandStates.B02_UR_SLOTQ:
+                case CommandStatus.B02URSLOTQ:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
-                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR_SLOTQ);
+                        this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02URSLOTQ);
                     break;
-                case CommandStates.B02_UR:
+                case CommandStatus.B02UR:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
-                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR);
+                        this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02UR);
                     break;
-                case CommandStates.B02_U_SLOTQ:
+                case CommandStatus.B02USLOTQ:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                        this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                     break;
-                case CommandStates.B02_U:
+                case CommandStatus.B02U:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_U(), CommandStates.B02_U);
+                        this.ReaderService.CommandU(), CommandStatus.B02U);
                     break;
                 default:
                     _callback = false;
@@ -5068,21 +5196,21 @@ namespace RFID.Utility
 
             switch (DoFakeProcess)
             {
-                case CommandStates.B02_UR_SLOTQ:
+                case CommandStatus.B02URSLOTQ:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_UR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
-                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR_SLOTQ);
+                        this.ReaderService.CommandUR(VM.B02GroupUSlotQComboBox.Tag, VM.B02GroupPreSetReadMemBank.Tag,
+                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02URSLOTQ);
                     break;
-                case CommandStates.B02_UR:
+                case CommandStatus.B02UR:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_UR(null, VM.B02GroupPreSetReadMemBank.Tag,
-                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStates.B02_UR);
+                        this.ReaderService.CommandUR(null, VM.B02GroupPreSetReadMemBank.Tag,
+                        VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), CommandStatus.B02UR);
                     break;
-                case CommandStates.B02_U_SLOTQ:
-                    _callback = DoB02SendWork(this.ReaderService.Command_U(VM.B02GroupUSlotQComboBox.Tag), CommandStates.B02_U_SLOTQ);
+                case CommandStatus.B02USLOTQ:
+                    _callback = DoB02SendWork(this.ReaderService.CommandU(VM.B02GroupUSlotQComboBox.Tag), CommandStatus.B02USLOTQ);
                     break;
-                case CommandStates.B02_U:
-                    _callback = DoB02SendWork(this.ReaderService.Command_U(), CommandStates.B02_U);
+                case CommandStatus.B02U:
+                    _callback = DoB02SendWork(this.ReaderService.CommandU(), CommandStatus.B02U);
                     break;
                 default:
                     _callback = false;
@@ -5131,7 +5259,7 @@ namespace RFID.Utility
 
             while (this.IsB02ThreadRunCtrl)
             {
-                if (!DoB02SelectWork(CommandStates.B02_T))
+                if (!DoB02SelectWork(CommandStatus.B02T))
                 {
                     this.IsB02Repeat = false;
                     UIControlStatus(UITempControPackets, false);
@@ -5151,7 +5279,7 @@ namespace RFID.Utility
                     _index = 0;
                     VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
 
-                    if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+                    if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                         while (IsReceiveDataWork)
                         {
                             Thread.Sleep(4);
@@ -5166,13 +5294,13 @@ namespace RFID.Utility
 
                     switch (DoFakeProcess)
                     {
-                        case CommandStates.B02_QR:
+                        case CommandStatus.B02QR:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), 
-                                CommandStates.B02_QR);
+                                this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength), 
+                                CommandStatus.B02QR);
                             break;
-                        case CommandStates.B02_Q:
-                            _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                        case CommandStatus.B02Q:
+                            _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                             break;
                         default:
                             _callback = false;
@@ -5216,7 +5344,7 @@ namespace RFID.Utility
 
             while (this.IsB02ThreadRunCtrl)
             {
-                if (!DoB02SelectWork(CommandStates.B02_T))
+                if (!DoB02SelectWork(CommandStatus.B02T))
                 {
                     this.IsB02Repeat = false;
                     UIControlStatus(UITempControPackets, false);
@@ -5235,13 +5363,13 @@ namespace RFID.Utility
                 {
                     switch (DoFakeProcess)
                     {
-                        case CommandStates.B02_QR:
+                        case CommandStatus.B02QR:
                             _callback = DoB02SendWork(
-                                this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                                CommandStates.B02_QR);
+                                this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
+                                CommandStatus.B02QR);
                             break;
-                        case CommandStates.B02_Q:
-                            _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                        case CommandStatus.B02Q:
+                            _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                             break;
                         default:
                             _callback = false;
@@ -5288,7 +5416,7 @@ namespace RFID.Utility
                 _index = 0;
                 VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
 
-                if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+                if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -5303,13 +5431,13 @@ namespace RFID.Utility
 
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_QR:
+                    case CommandStatus.B02QR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_QR);
+                            this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
+                            CommandStatus.B02QR);
                         break;
-                    case CommandStates.B02_Q:
-                        _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                    case CommandStatus.B02Q:
+                        _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                         break;
                     default:
                         _callback = false;
@@ -5354,13 +5482,13 @@ namespace RFID.Utility
             {
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_QR:
+                    case CommandStatus.B02QR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_QR);
+                            this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
+                            CommandStatus.B02QR);
                         break;
-                    case CommandStates.B02_Q:
-                        _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                    case CommandStatus.B02Q:
+                        _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                         break;
                     default:
                         _callback = false;
@@ -5400,7 +5528,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
             Boolean _callback = false;
-            if (!DoB02SelectWork(CommandStates.B02_T))
+            if (!DoB02SelectWork(CommandStatus.B02T))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                     "Select(T) command timeout(2048ms) or parameter error." :
@@ -5412,7 +5540,7 @@ namespace RFID.Utility
                 _index = 0;
                 VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
 
-                if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+                if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                     while (IsReceiveDataWork)
                     {
                         Thread.Sleep(4);
@@ -5427,13 +5555,13 @@ namespace RFID.Utility
 
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_QR:
+                    case CommandStatus.B02QR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_QR);
+                            this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
+                            CommandStatus.B02QR);
                         break;
-                    case CommandStates.B02_Q:
-                        _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                    case CommandStatus.B02Q:
+                        _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                         break;
                     default:
                         _callback = false;
@@ -5465,7 +5593,7 @@ namespace RFID.Utility
         {
             Int32 _index = 0;
             Boolean _callback = false;
-            if (!DoB02SelectWork(CommandStates.B02_T))
+            if (!DoB02SelectWork(CommandStatus.B02T))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                     "Select(T) command timeout(2048ms) or parameter error." :
@@ -5476,13 +5604,13 @@ namespace RFID.Utility
             { 
                 switch (DoFakeProcess)
                 {
-                    case CommandStates.B02_QR:
+                    case CommandStatus.B02QR:
                         _callback = DoB02SendWork(
-                            this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                            CommandStates.B02_QR);
+                            this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
+                            CommandStatus.B02QR);
                         break;
-                    case CommandStates.B02_Q:
-                        _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                    case CommandStatus.B02Q:
+                        _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                         break;
                     default:
                         _callback = false;
@@ -5517,7 +5645,7 @@ namespace RFID.Utility
            
             VM.B02GroupPreSetAccessPassword = Format.MakesUpZero(VM.B02GroupPreSetAccessPassword, 8);
 
-            if (DoB02SendWork(this.ReaderService.Command_P(VM.B02GroupPreSetAccessPassword), CommandStates.B02_P))
+            if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                 while (IsReceiveDataWork)
                 {
                     Thread.Sleep(4);
@@ -5532,13 +5660,13 @@ namespace RFID.Utility
 
             switch (DoFakeProcess)
             {
-                case CommandStates.B02_QR:
+                case CommandStatus.B02QR:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                        CommandStates.B02_QR);
+                        this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
+                        CommandStatus.B02QR);
                     break;
-                case CommandStates.B02_Q:
-                    _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                case CommandStatus.B02Q:
+                    _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                     break;
                 default:
                     _callback = false;
@@ -5573,13 +5701,13 @@ namespace RFID.Utility
 
             switch (DoFakeProcess)
             {
-                case CommandStates.B02_QR:
+                case CommandStatus.B02QR:
                     _callback = DoB02SendWork(
-                        this.ReaderService.Command_QR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
-                        CommandStates.B02_QR);
+                        this.ReaderService.CommandQR(VM.B02GroupPreSetReadMemBank.Tag, VM.B02GroupPreSetReadAddress, VM.B02GroupPreSetReadLength),
+                        CommandStatus.B02QR);
                     break;
-                case CommandStates.B02_Q:
-                    _callback = DoB02SendWork(this.ReaderService.Command_Q(), CommandStates.B02_Q);
+                case CommandStatus.B02Q:
+                    _callback = DoB02SendWork(this.ReaderService.CommandQ(), CommandStatus.B02Q);
                     break;
                 default:
                     _callback = false;
@@ -5682,7 +5810,7 @@ namespace RFID.Utility
                         {
                             if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                             {
-                                if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                                if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                                 {
                                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                         "Access(P) command is pre-processed, the field is null" :
@@ -5714,16 +5842,16 @@ namespace RFID.Utility
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_UR;
+                                        this.DoFakeProcess = CommandStatus.B02UR;
                                 }
                                 else
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_U;
+                                        this.DoFakeProcess = CommandStatus.B02U;
                                 }
 
                                 this.IsB02ThreadRunCtrl = true;
@@ -5756,16 +5884,16 @@ namespace RFID.Utility
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_UR;
+                                        this.DoFakeProcess = CommandStatus.B02UR;
                                 }
                                 else
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_U;
+                                        this.DoFakeProcess = CommandStatus.B02U;
                                 }
 
                                 this.IsB02ThreadRunCtrl = true;
@@ -5780,7 +5908,7 @@ namespace RFID.Utility
                     {
                         if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                         {
-                            if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                            if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                             {
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                     "Access(P) command is pre-processed, the field is null" :
@@ -5813,16 +5941,16 @@ namespace RFID.Utility
                             if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                             {
                                 if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                    this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                    this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                 else
-                                    this.DoFakeProcess = CommandStates.B02_UR;
+                                    this.DoFakeProcess = CommandStatus.B02UR;
                             }
                             else
                             {
                                 if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                    this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                    this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                 else
-                                    this.DoFakeProcess = CommandStates.B02_U;
+                                    this.DoFakeProcess = CommandStatus.B02U;
                             }
                             this.IsB02ThreadRunCtrl = true;
                             this.SettingThread = new Thread(DoB02PreAccessURWork) {
@@ -5855,16 +5983,16 @@ namespace RFID.Utility
                             if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                             {
                                 if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                    this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                    this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                 else
-                                    this.DoFakeProcess = CommandStates.B02_UR;
+                                    this.DoFakeProcess = CommandStatus.B02UR;
                             }
                             else
                             {
                                 if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                    this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                    this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                 else
-                                    this.DoFakeProcess = CommandStates.B02_U;
+                                    this.DoFakeProcess = CommandStatus.B02U;
                             }
                             this.IsB02ThreadRunCtrl = true;
                             this.SettingThread = new Thread(DoB02URWork) {
@@ -5895,7 +6023,7 @@ namespace RFID.Utility
                             {
                                 if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                                 {
-                                    if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                                    if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                                     {
                                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                             "Access(P) command is pre-processed, the field is null" :
@@ -5909,16 +6037,16 @@ namespace RFID.Utility
                                     if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                     {
                                         if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                            this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                            this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                         else
-                                            this.DoFakeProcess = CommandStates.B02_UR;
+                                            this.DoFakeProcess = CommandStatus.B02UR;
                                     }
                                     else
                                     {
                                         if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                            this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                            this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                         else
-                                            this.DoFakeProcess = CommandStates.B02_U;
+                                            this.DoFakeProcess = CommandStatus.B02U;
                                     }
                                     this.SettingThread = new Thread(DoB02SinglePreSelectAccessURWork)
                                     {
@@ -5931,16 +6059,16 @@ namespace RFID.Utility
                                     if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                     {
                                         if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                            this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                            this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                         else
-                                            this.DoFakeProcess = CommandStates.B02_UR;
+                                            this.DoFakeProcess = CommandStatus.B02UR;
                                     }
                                     else
                                     {
                                         if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                            this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                            this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                         else
-                                            this.DoFakeProcess = CommandStates.B02_U;
+                                            this.DoFakeProcess = CommandStatus.B02U;
                                     }
                                     this.SettingThread = new Thread(DoB02SinglePreSelectURWork)
                                     {
@@ -5955,7 +6083,7 @@ namespace RFID.Utility
                         {
                             if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                             {
-                                if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                                if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                                 {
                                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                         "Access(P) command is pre-processed, the field is null" :
@@ -5969,16 +6097,16 @@ namespace RFID.Utility
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_UR;
+                                        this.DoFakeProcess = CommandStatus.B02UR;
                                 }
                                 else
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_U;
+                                        this.DoFakeProcess = CommandStatus.B02U;
                                 }
                                 this.SettingThread = new Thread(DoB02SinglePreAccessURWork)
                                 {
@@ -5991,16 +6119,16 @@ namespace RFID.Utility
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_UR_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02URSLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_UR;
+                                        this.DoFakeProcess = CommandStatus.B02UR;
                                 }
                                 else
                                 {
                                     if (VM.B02GroupUSlotQCheckBoxIsChecked)
-                                        this.DoFakeProcess = CommandStates.B02_U_SLOTQ;
+                                        this.DoFakeProcess = CommandStatus.B02USLOTQ;
                                     else
-                                        this.DoFakeProcess = CommandStates.B02_U;
+                                        this.DoFakeProcess = CommandStatus.B02U;
                                 }
                                 this.SettingThread = new Thread(DoB02SingleURWork)
                                 {
@@ -6067,7 +6195,7 @@ namespace RFID.Utility
                         {
                             if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                             {
-                                if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                                if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                                 {
                                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                         "Access(P) command is pre-processed, the field is null" :
@@ -6098,11 +6226,11 @@ namespace RFID.Utility
                                 UIControlStatus(UITempControPackets, true);
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                 {
-                                    this.DoFakeProcess = CommandStates.B02_QR;
+                                    this.DoFakeProcess = CommandStatus.B02QR;
                                 }
                                 else
                                 {
-                                    this.DoFakeProcess = CommandStates.B02_Q;
+                                    this.DoFakeProcess = CommandStatus.B02Q;
                                 }
 
                                 this.IsB02ThreadRunCtrl = true;
@@ -6133,10 +6261,10 @@ namespace RFID.Utility
                                 UITempControPackets.Add(new UIControl(GroupStatus.GB02TABCONTROLITEM, false));
                                 UIControlStatus(UITempControPackets, true);
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked) {
-                                   this.DoFakeProcess = CommandStates.B02_QR;
+                                   this.DoFakeProcess = CommandStatus.B02QR;
                                 }
                                 else {
-                                    this.DoFakeProcess = CommandStates.B02_Q;
+                                    this.DoFakeProcess = CommandStatus.B02Q;
                                 }
 
                                 this.IsB02ThreadRunCtrl = true;
@@ -6151,7 +6279,7 @@ namespace RFID.Utility
                     {
                         if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                         {
-                            if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                            if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                             {
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                     "Access(P) command is pre-processed, the field is null" :
@@ -6182,10 +6310,10 @@ namespace RFID.Utility
                             UIControlStatus(UITempControPackets, true);
 
                             if (VM.B02GroupReadCtrlCheckBoxIsChecked) {
-                                this.DoFakeProcess = CommandStates.B02_QR;
+                                this.DoFakeProcess = CommandStatus.B02QR;
                             }
                             else {
-                                this.DoFakeProcess = CommandStates.B02_Q;
+                                this.DoFakeProcess = CommandStatus.B02Q;
                             }
                             this.IsB02ThreadRunCtrl = true;
                             this.SettingThread = new Thread(DoB02PreAccessQRWork) {
@@ -6216,10 +6344,10 @@ namespace RFID.Utility
                             UIControlStatus(UITempControPackets, true);
 
                             if (VM.B02GroupReadCtrlCheckBoxIsChecked) {
-                                this.DoFakeProcess = CommandStates.B02_QR;
+                                this.DoFakeProcess = CommandStatus.B02QR;
                             }
                             else {
-                                this.DoFakeProcess = CommandStates.B02_Q;
+                                this.DoFakeProcess = CommandStatus.B02Q;
                             }
                             this.IsB02ThreadRunCtrl = true;
                             this.SettingThread = new Thread(DoB02QRWork) {
@@ -6241,7 +6369,7 @@ namespace RFID.Utility
                             {
                                 if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                                 {
-                                    if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                                    if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                                     {
                                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                             "Access(P) command is pre-processed, the field is null" :
@@ -6254,11 +6382,11 @@ namespace RFID.Utility
 
                                     if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                     {
-                                        this.DoFakeProcess = CommandStates.B02_QR;
+                                        this.DoFakeProcess = CommandStatus.B02QR;
                                     }
                                     else
                                     {
-                                        this.DoFakeProcess = CommandStates.B02_Q;
+                                        this.DoFakeProcess = CommandStatus.B02Q;
                                     }
                                     this.SettingThread = new Thread(DoB02SinglePreSelectAccessQRWork)
                                     {
@@ -6270,11 +6398,11 @@ namespace RFID.Utility
                                 {
                                     if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                     {
-                                        this.DoFakeProcess = CommandStates.B02_QR;
+                                        this.DoFakeProcess = CommandStatus.B02QR;
                                     }
                                     else
                                     {
-                                        this.DoFakeProcess = CommandStates.B02_Q;
+                                        this.DoFakeProcess = CommandStatus.B02Q;
                                     }
                                     this.SettingThread = new Thread(DoB02SinglePreSelectQRWork)
                                     {
@@ -6289,7 +6417,7 @@ namespace RFID.Utility
                         {
                             if (B02GroupPreSetAccessCheckBox.IsChecked.Value)
                             {
-                                if (this.B02GroupPreSetAccessPassword.Text == String.Empty)
+                                if (String.IsNullOrEmpty(this.B02GroupPreSetAccessPassword.Text))
                                 {
                                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                         "Access(P) command is pre-processed, the field is null" :
@@ -6302,11 +6430,11 @@ namespace RFID.Utility
 
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                 {
-                                    this.DoFakeProcess = CommandStates.B02_QR;
+                                    this.DoFakeProcess = CommandStatus.B02QR;
                                 }
                                 else
                                 {
-                                    this.DoFakeProcess = CommandStates.B02_Q;
+                                    this.DoFakeProcess = CommandStatus.B02Q;
                                 }
                                 this.SettingThread = new Thread(DoB02SinglePreAccessQRWork)
                                 {
@@ -6318,11 +6446,11 @@ namespace RFID.Utility
                             {
                                 if (VM.B02GroupReadCtrlCheckBoxIsChecked)
                                 {
-                                    this.DoFakeProcess = CommandStates.B02_QR;
+                                    this.DoFakeProcess = CommandStatus.B02QR;
                                 }
                                 else
                                 {
-                                    this.DoFakeProcess = CommandStates.B02_Q;
+                                    this.DoFakeProcess = CommandStatus.B02Q;
                                 }
                                 this.SettingThread = new Thread(DoB02SingleQRWork)
                                 {
@@ -6356,7 +6484,7 @@ namespace RFID.Utility
 		private void OnB02ButtonSaveClick(object sender, RoutedEventArgs e)
         {
             var _path = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + "log\\";
-            var _file = "MultiOperatorSummary_" + DateTime.Now.ToString("yyyy-MM-dd") + ".log";
+            var _file = "MultiOperatorSummary_" + DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.CurrentCulture) + ".log";
             var _filePath = _path + _file;
             StreamWriter swStream;
 			String str = String.Empty;
@@ -6380,8 +6508,8 @@ namespace RFID.Utility
             //title
             swStream.WriteLine("===============================================");
             swStream.WriteLine("欄位定義: PC,EPC,CRC16,Read Command,Count");
-            swStream.WriteLine(String.Format("標籤張數: {0}", VM.B02ListViewItemsSource.Count));
-            swStream.WriteLine(String.Format("執行次數: {0}", VM.B02GroupRecordTextBlockRunCount));
+            swStream.WriteLine(String.Format(CultureInfo.CurrentCulture, "標籤張數: {0}", VM.B02ListViewItemsSource.Count));
+            swStream.WriteLine(String.Format(CultureInfo.CurrentCulture, "執行次數: {0}", VM.B02GroupRecordTextBlockRunCount));
             swStream.WriteLine("===============================================");
             for (Int32 i = 0; i < VM.B02ListViewItemsSource.Count; i++) {
 				str = VM.B02ListViewItemsSource[i].B02PC + ",\t" +
@@ -6545,7 +6673,7 @@ namespace RFID.Utility
 
             if (B02TabControlItem == null) return;
 
-            switch (Convert.ToInt32(radioButton.Tag.ToString()))
+            switch (Convert.ToInt32(radioButton.Tag.ToString(), CultureInfo.CurrentCulture))
             {
                 case 1:
                     B02TabControlItem.SelectedIndex = 0;
@@ -6556,7 +6684,7 @@ namespace RFID.Utility
             }
             MessageShow(String.Empty, false);
             
-            DoProcess = CommandStates.DEFAULT;
+            DoProcess = CommandStatus.DEFAULT;
 
         }
 
@@ -6570,7 +6698,7 @@ namespace RFID.Utility
             Button button = sender as Button;
             B02Item02Command _cmd = button.DataContext as B02Item02Command;
 
-            if (_cmd.Command == null || _cmd.Command.Equals(String.Empty))
+            if (String.IsNullOrEmpty(_cmd.Command))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Command is null." : "指令內容為空.", true);
             }
@@ -6662,7 +6790,7 @@ namespace RFID.Utility
             {
                 B02Item02Commands.Clear();
                 this.B02Item02ListBox.Items.Refresh();
-                this.ProfileXml = new Xml(_openFileDialog.FileName);
+                this.ProfileXml = new XmlFormat(_openFileDialog.FileName);
 
 
                 var _section = ProfileXml.GetSectionNames();
@@ -6680,9 +6808,9 @@ namespace RFID.Utility
                             (_check is "true") ? true : false,
                             (_type is "true") ? true : false,
                             _name,
-                            (CommandStates)Enum.ToObject(typeof(CommandStates), Int32.Parse(_commandstate)),
+                            (CommandStatus)Enum.ToObject(typeof(CommandStatus), Int32.Parse(_commandstate, CultureInfo.CurrentCulture)),
                             _command,
-                            Int32.Parse(_idx),
+                            Int32.Parse(_idx, CultureInfo.CurrentCulture),
                             false));
                     }
                     B02Item02Commands.Add(new B02Item02Command());
@@ -6716,11 +6844,11 @@ namespace RFID.Utility
             var _result = _saveFileDialog.ShowDialog();
             if (_result == true)
             {
-                if (ProfileXmlName != null && ProfileXmlName.Equals(_saveFileDialog.FileName))
+                if (ProfileXmlName != null && ProfileXmlName.Equals(_saveFileDialog.FileName, StringComparison.CurrentCulture))
                 {
 
                     if (ProfileXml == null)
-                        ProfileXml = new Xml(_saveFileDialog.FileName);
+                        ProfileXml = new XmlFormat(_saveFileDialog.FileName);
 
                     var sections = ProfileXml.GetSectionNames();
 
@@ -6732,21 +6860,20 @@ namespace RFID.Utility
 
                     for (int i = 0; i < B02Item02Commands.Count - 1; i++)
                     {
-                        var _section = i.ToString();
+                        var _section = i.ToString(CultureInfo.CurrentCulture);
                         ProfileXml.SetValue(_section, "CHECK", (B02Item02Commands[i].Check is true) ? "true" : "false");
                         ProfileXml.SetValue(_section, "TYPE", (B02Item02Commands[i].Type is true) ? "true" : "false");
                         ProfileXml.SetValue(_section, "NAME", B02Item02Commands[i].Name);
-                        ProfileXml.SetValue(_section, "COMMANDSTATE", ((Int32)(B02Item02Commands[i].CommandState)).ToString());
+                        ProfileXml.SetValue(_section, "COMMANDSTATE", ((Int32)(B02Item02Commands[i].CommandState)).ToString(CultureInfo.CurrentCulture));
                         ProfileXml.SetValue(_section, "COMMAND", B02Item02Commands[i].Command);
-                        ProfileXml.SetValue(_section, "TABINDEX", B02Item02Commands[i].TabIndex.ToString());
+                        ProfileXml.SetValue(_section, "TABINDEX", B02Item02Commands[i].TabIndex.ToString(CultureInfo.CurrentCulture));
                     }
                    
                 }
                 else
                 {
 
-                    this.ProfileXml = new Xml(_saveFileDialog.FileName);
-
+                    this.ProfileXml = new XmlFormat(_saveFileDialog.FileName);
                     try
                     {
                         var sections = ProfileXml.GetSectionNames();
@@ -6759,16 +6886,16 @@ namespace RFID.Utility
 
                         for (int i = 0; i < B02Item02Commands.Count - 1; i++)
                         {
-                            var _section = i.ToString();
+                            var _section = i.ToString(CultureInfo.CurrentCulture);
                             ProfileXml.SetValue(_section, "CHECK", (B02Item02Commands[i].Check is true) ? "true" : "false");
                             ProfileXml.SetValue(_section, "TYPE", (B02Item02Commands[i].Type is true) ? "true" : "false");
                             ProfileXml.SetValue(_section, "NAME", B02Item02Commands[i].Name);
-                            ProfileXml.SetValue(_section, "COMMANDSTATE", ((Int32)(B02Item02Commands[i].CommandState)).ToString());
+                            ProfileXml.SetValue(_section, "COMMANDSTATE", ((Int32)(B02Item02Commands[i].CommandState)).ToString(CultureInfo.CurrentCulture));
                             ProfileXml.SetValue(_section, "COMMAND", B02Item02Commands[i].Command);
-                            ProfileXml.SetValue(_section, "TABINDEX", B02Item02Commands[i].TabIndex.ToString());
+                            ProfileXml.SetValue(_section, "TABINDEX", B02Item02Commands[i].TabIndex.ToString(CultureInfo.CurrentCulture));
                         }
                     }
-                    catch (Exception ex)
+                    catch (XPathException ex)
                     {
                         MessageShow(ex.Message, false);
                     }
@@ -6792,7 +6919,7 @@ namespace RFID.Utility
             //title
             for (Int32 i = 0; i < B02Item02Commands.Count - 1; i++)
             {
-                swStream.WriteLine(String.Format("Name:{0}, \tCommand:{1}", B02Item02Commands[i].Name, B02Item02Commands[i].Command));
+                swStream.WriteLine(String.Format(CultureInfo.CurrentCulture, "Name:{0}, \tCommand:{1}", B02Item02Commands[i].Name, B02Item02Commands[i].Command));
             }
 
             swStream.Flush();
@@ -6909,7 +7036,7 @@ namespace RFID.Utility
             if (e.ClickCount == 2)
             {
                 this._EditCommandDialog = new EditCommandDialog(B02Item02Commands, B02Item02SelectIdx);
-                this._EditCommandDialog.EditCommandPassValuesEvent += new EditCommandDialog.PassValuesHandler(EditCommandDialogReceiveValues);
+                this._EditCommandDialog.EditCommandPassValuesEventHandler += new EditCommandDialog.PassValuesEventHandler(EditCommandDialogReceiveValues);
                 this._EditCommandDialog.Owner = this;
                 this._EditCommandDialog.ShowInTaskbar = false;
                 this._EditCommandDialog.ShowDialog();
@@ -6997,7 +7124,7 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="command"></param>
         /// <param name="process"></param>
-		private Boolean DoB03SendReceiveWork(Byte[] command, CommandStates process)
+		private Boolean DoB03SendReceiveWork(Byte[] command, CommandStatus process)
         {
             if (!IsReceiveDataWork)
             {
@@ -7012,19 +7139,32 @@ namespace RFID.Utility
                         case ReaderService.ConnectType.DEFAULT:
                             break;
                         case ReaderService.ConnectType.COM:
-                            this._ICOM.Send(command, Module.CommandType.Normal);
+                            this._ICOM.Send(command, ReaderModule.CommandType.Normal);
                             break;
                         case ReaderService.ConnectType.USB:
-                            this._IUSB.Send(command, Module.CommandType.Normal);
+                            this._IUSB.Send(command, ReaderModule.CommandType.Normal);
                             break;
                         case ReaderService.ConnectType.NET:
-                            this._INet.Send(command, Module.CommandType.Normal);
+                            this._INet.Send(command, ReaderModule.CommandType.Normal);
+                            break;
+                        case ReaderService.ConnectType.BLE:
+                            this._IBLE.Send(command, ReaderModule.CommandType.Normal);
                             break;
                     }
                 }
-                catch (Exception ex)
+                catch (ArgumentNullException ane)
+                {
+                    MessageShow(ane.Message, false);
+                    return false;
+                }
+                catch (InvalidOperationException ex)
                 {
                     MessageShow(ex.Message, false);
+                    return false;
+                }
+                catch (SocketException se)
+                {
+                    MessageShow(se.Message, false);
                     return false;
                 }
 
@@ -7037,17 +7177,17 @@ namespace RFID.Utility
         /// 
         /// </summary>
         /// <param name="o"></param>
-        private void DoB03TagRunLightWork(object sender, EventArgs e, B03ListViewItem item)
+        /*private static void DoB03TagRunLightWork(object sender, EventArgs e, B03ListViewItem item)
         {
             item.Times--;
-            item.B03ListViewTagWindowLightsTimes = item.Times.ToString();
+            item.B03ListViewTagWindowLightsTimes = item.Times.ToString(CultureInfo.CurrentCulture);
 
             if(item.Times == 0)
             {
                 item.B03ListViewTagWindowLights = false;
                 (sender as System.Timers.Timer).Enabled = false;
             }
-        }
+        }*/
 
         /// <summary>
         /// 
@@ -7061,7 +7201,7 @@ namespace RFID.Utility
                 Thread.Sleep(1000);
 
                 item.Times--;
-                item.B03ListViewTagWindowLightsTimes = item.Times.ToString();
+                item.B03ListViewTagWindowLightsTimes = item.Times.ToString(CultureInfo.CurrentCulture);
                 
                 if (item.Times == 0)
                 {
@@ -7083,7 +7223,7 @@ namespace RFID.Utility
             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
 				"Pre-Select EM Tag: TID E280B04" : 
 				"Pre-Select EM標籤: TID E280B04", false);
-            if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "0", "1A", "E280B04"), CommandStates.B03_SELECT))
+            if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "0", "1A", "E280B04"), CommandStatus.B03SELECT))
             {
                 _f = true;
                 while (IsReceiveDataWork)
@@ -7109,7 +7249,7 @@ namespace RFID.Utility
             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
 			   "Send UR command" : 
 			   "執行UR指令", false);
-            DoB03SendReceiveWork(this.ReaderService.Command_UR(null, "2", "3", "3"), CommandStates.B03_GET);
+            DoB03SendReceiveWork(this.ReaderService.CommandUR(null, "2", "3", "3"), CommandStatus.B03GET);
         }
              
         /// <summary>
@@ -7128,7 +7268,7 @@ namespace RFID.Utility
                     VM.B03ListViewItemsSource[j].B03ListViewTagWindowStatus = String.Empty;
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStates.B03_SELECT))
+                    if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStatus.B03SELECT))
                     {
                         _f = true;
                         while (IsReceiveDataWork)
@@ -7149,8 +7289,8 @@ namespace RFID.Utility
                             "Select command timeout or parameter error.":
                             "Select指令超時或參數錯誤。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                         continue;
                     }
 
@@ -7158,7 +7298,7 @@ namespace RFID.Utility
                     EMFlashTime = Format.HexStringToInt(_time);
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.EM_Flash(_time), CommandStates.CUSTOM_EM))
+                    if (DoB03SendReceiveWork(this.ReaderService.EMFlash(_time), CommandStatus.CUSTOMEM))
                     {
                         _f = true;
                         while (IsReceiveDataWork)   //1000ms timeout
@@ -7178,16 +7318,16 @@ namespace RFID.Utility
                                 "EM flash command timeout." :
                                 "EM LED flash指令超時。";
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                String.Format("EM flash command timeout. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                                String.Format("EM LED flash指令超時。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                                String.Format(CultureInfo.CurrentCulture, "EM flash command timeout. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                                String.Format(CultureInfo.CurrentCulture, "EM LED flash指令超時。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                         }
                         else {
-                            if (_time.Equals(EMTemp)) {
+                            if (_time.Equals(EMTemp, StringComparison.CurrentCulture)) {
                                 if (!VM.B03ListViewItemsSource[j].B03ListViewTagWindowLights)
                                 {
                                     VM.B03ListViewItemsSource[j].B03ListViewTagWindowLights = true;
                                     VM.B03ListViewItemsSource[j].Times = EMFlashTime;
-                                    VM.B03ListViewItemsSource[j].B03ListViewTagWindowLightsTimes = EMFlashTime.ToString();
+                                    VM.B03ListViewItemsSource[j].B03ListViewTagWindowLightsTimes = EMFlashTime.ToString(CultureInfo.CurrentCulture);
 
                                     var _thread = new Thread(new ParameterizedThreadStart(DoB03TagPollingRunLightWork)) {
                                         IsBackground = true
@@ -7199,7 +7339,7 @@ namespace RFID.Utility
                                     //lock(VM.B03ListViewItemsSource[j].B03ListViewTagWindowLightsTimes)
                                     //{
                                         VM.B03ListViewItemsSource[j].Times = EMFlashTime;
-                                        VM.B03ListViewItemsSource[j].B03ListViewTagWindowLightsTimes = EMFlashTime.ToString();
+                                        VM.B03ListViewItemsSource[j].B03ListViewTagWindowLightsTimes = EMFlashTime.ToString(CultureInfo.CurrentCulture);
                                     //}  
                                 }
                             } 
@@ -7209,8 +7349,8 @@ namespace RFID.Utility
                                     "The received telegrams is not same as transmission." :
                                     "接收的flash second與傳送的不同。";
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                    String.Format("The received telegrams is not same as transmission. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                                    String.Format("接收的flash second與傳送的不同 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                                    String.Format(CultureInfo.CurrentCulture, "The received telegrams is not same as transmission. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                                    String.Format(CultureInfo.CurrentCulture, "接收的flash second與傳送的不同 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                             }
                         }
                     }
@@ -7220,8 +7360,8 @@ namespace RFID.Utility
                             "EM LED flash command send fail." :
                             "EM LED flash傳送失敗。 [{0}]";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("EM LED flash command send fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("EM LED flash傳送失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "EM LED flash command send fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "EM LED flash傳送失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                     }
                 }
             }
@@ -7254,7 +7394,7 @@ namespace RFID.Utility
                     //VM.B03ListViewItemsSource[j].B03ListViewTagWindowStatus = String.Empty;
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStates.B03_SELECT))
+                    if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStatus.B03SELECT))
                     {
                         _f = true;
                         while (IsReceiveDataWork)   //400ms timeout
@@ -7275,13 +7415,13 @@ namespace RFID.Utility
                             "Select command timeout or parameter error.":
                             "Select指令超時或參數錯誤。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                         continue;
                     }
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.Command_W("3", "100", "1", "0000"), CommandStates.B03_WRITE))
+                    if (DoB03SendReceiveWork(this.ReaderService.CommandW("3", "100", "1", "0000"), CommandStatus.B03WRITE))
                     {
                         _f = true;
                         while (IsReceiveDataWork)   //1000ms timeout
@@ -7302,24 +7442,24 @@ namespace RFID.Utility
                             "Write command timeout.":
                             "Write指令寫入失敗。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Write command timeout . [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("Write指令寫入失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "Write command timeout . [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "Write指令寫入失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                         continue;
                     }
 
-                    if (!EMTemp.Equals("W<OK>"))
+                    if (!EMTemp.Equals("W<OK>", StringComparison.CurrentCulture))
                     {
                         VM.B03ListViewItemsSource[j].B03ListViewTagWindowStatus = (this.Culture.IetfLanguageTag == "en-US") ?
                             "Write command no success." :
                             "Write指令寫入失敗。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Write command no success. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("Write指令寫入失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "Write command no success. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "Write指令寫入失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                         continue;
                     }
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStates.B03_SELECT))
+                    if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStatus.B03SELECT))
                     {
                         _f = true;
                         while (IsReceiveDataWork)   //400ms timeout
@@ -7340,14 +7480,14 @@ namespace RFID.Utility
                             "Select command timeout or parameter error." :
                             "Select指令超時或參數錯誤。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                         continue;
                     }
 
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.Command_R("3", "100", "1"), CommandStates.B03_READ))
+                    if (DoB03SendReceiveWork(this.ReaderService.CommandR("3", "100", "1"), CommandStatus.B03READ))
                     {
                         _f = true;
                         while (IsReceiveDataWork)   //1000ms timeout
@@ -7367,8 +7507,8 @@ namespace RFID.Utility
                                 "EM Battery Alarm and Temperature command timeout.":
                                 "EM Battery Alarm and Temperature指令超時。";
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                String.Format("EM Battery Alarm and Temperature command timeout. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                                String.Format("EM Battery Alarm and Temperature指令超時。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                                String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature command timeout. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                                String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature指令超時。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                             continue;
                         }
                         else
@@ -7384,7 +7524,7 @@ namespace RFID.Utility
                                 if ((_ba[0] & 0x01) > 0)
                                     _degree -= 256;
 
-                                _battAlarmTemp += (_degree * 0.25).ToString("##.00");
+                                _battAlarmTemp += (_degree * 0.25).ToString("##.00", CultureInfo.CurrentCulture);
                                 VM.B03ListViewItemsSource[j].B03ListViewBattAlarmTemp = _battAlarmTemp;
                             }
                             else
@@ -7393,8 +7533,8 @@ namespace RFID.Utility
                                     "EM Battery Alarm and Temperature command receive fail.":
                                     "EM Battery Alarm and Temperature接收失敗。";
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                    String.Format("EM Battery Alarm and Temperature command receive fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                                    String.Format("EM Battery Alarm and Temperature接收失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                                    String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature command receive fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                                    String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature接收失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                                 continue;
                             }
                         }
@@ -7406,8 +7546,8 @@ namespace RFID.Utility
                             "EM Battery Alarm and Temperature command send fail.":
                             "EM Battery Alarm and Temperature傳送失敗。 [{0}]";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("EM Battery Alarm and Temperature command send fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("EM Battery Alarm and Temperature傳送失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature command send fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature傳送失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                     }
                         
                 }
@@ -7442,7 +7582,7 @@ namespace RFID.Utility
                     
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStates.B03_SELECT))
+                    if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), CommandStatus.B03SELECT))
                     {
                         _f = true;
                         while (IsReceiveDataWork)   //400ms timeout
@@ -7463,14 +7603,14 @@ namespace RFID.Utility
                             "Select command timeout or parameter error." :
                             "Select指令超時或參數錯誤。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                         continue;
                     }
 
 
                     _f = false; _index = 0;
-                    if (DoB03SendReceiveWork(this.ReaderService.EM_GetBattVolt(), CommandStates.CUSTOM_EM))
+                    if (DoB03SendReceiveWork(this.ReaderService.EMGetBattVolt(), CommandStatus.CUSTOMEM))
                     {
                         _f = true;
                         while (IsReceiveDataWork)   //1000ms timeout
@@ -7490,8 +7630,8 @@ namespace RFID.Utility
                                 "EM Battery Voltage command timeout." :
                                 "EM Battery Voltage指令超時。";
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                String.Format("EM Battery Voltage command timeout. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                                String.Format("EM Battery Voltage指令超時。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                                String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage command timeout. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                                String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage指令超時。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                             continue;
                         }
                         else
@@ -7503,7 +7643,7 @@ namespace RFID.Utility
                                 if (_ba == 0)
                                     _battAlarmTemp = "0";
                                 else
-                                    _battAlarmTemp = (0x00100000 / _ba).ToString("0");
+                                    _battAlarmTemp = (0x00100000 / _ba).ToString("0", CultureInfo.CurrentCulture);
                                 VM.B03ListViewItemsSource[j].B03ListViewBattVolt = _battAlarmTemp;
                             }
                             else
@@ -7512,8 +7652,8 @@ namespace RFID.Utility
                                     "EM Battery Voltage command receive fail." :
                                     "EM Battery Voltage接收失敗。";
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                    String.Format("EM Battery Voltage command receive fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                                    String.Format("EM Battery Voltage接收失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                                    String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage command receive fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                                    String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage接收失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                                 continue;
                             }
                         }    
@@ -7525,8 +7665,8 @@ namespace RFID.Utility
                             "EM Battery Voltage command send fail." :
                             "EM Battery Voltage傳送失敗。 [{0}]";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("EMBattery Voltage command send fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
-                            String.Format("EM Battery Voltage傳送失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "EMBattery Voltage command send fail. [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage傳送失敗。 [{0}]", VM.B03ListViewItemsSource[j].B03ListViewTagWindowData), true);
                     }
                 }
             }//for
@@ -7546,7 +7686,7 @@ namespace RFID.Utility
 
             item.B03ListViewTagWindowStatus = String.Empty;
 
-            if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", item.B03ListViewTagWindowData), CommandStates.B03_SELECT))
+            if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", item.B03ListViewTagWindowData), CommandStatus.B03SELECT))
             {
                 _f = true;
                 while (IsReceiveDataWork)
@@ -7567,8 +7707,8 @@ namespace RFID.Utility
                             "Select command timeout or parameter error." :
                             "Select指令超時或參數錯誤。";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
                 IsB03EMWork = false;
                 return;
             }
@@ -7577,7 +7717,7 @@ namespace RFID.Utility
             EMFlashTime = Format.HexStringToInt(_time);
 
             _f = false; _index = 0;
-            if (DoB03SendReceiveWork(this.ReaderService.EM_Flash(_time), CommandStates.CUSTOM_EM))
+            if (DoB03SendReceiveWork(this.ReaderService.EMFlash(_time), CommandStatus.CUSTOMEM))
             {
                 _f = true;
                 while (IsReceiveDataWork)   //1000ms timeout
@@ -7597,29 +7737,40 @@ namespace RFID.Utility
                         "EM LED flash command timeout." :
                         "EM LED flash指令超時。";
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        String.Format("EM LED flash command timeout. [{0}]", item.B03ListViewTagWindowData) :
-                        String.Format("EM LED flash指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
+                        String.Format(CultureInfo.CurrentCulture, "EM LED flash command timeout. [{0}]", item.B03ListViewTagWindowData) :
+                        String.Format(CultureInfo.CurrentCulture, "EM LED flash指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
                 }
                 else
                 {
-                    if (_time.Equals(EMTemp))
+                    if (_time.Equals(EMTemp, StringComparison.CurrentCulture))
                     {
                         if (!item.B03ListViewTagWindowLights)
                         {
                             item.B03ListViewTagWindowLights = true;
                             item.Times = EMFlashTime;
-                            item.B03ListViewTagWindowLightsTimes = EMFlashTime.ToString();
+                            item.B03ListViewTagWindowLightsTimes = EMFlashTime.ToString(CultureInfo.CurrentCulture);
 
-                            var _lightTimeEvent = new System.Timers.Timer();
-                            _lightTimeEvent.Elapsed += (sender, e) => { DoB03TagRunLightWork(sender, e, item); };
-                            _lightTimeEvent.Interval = 1000;
-                            _lightTimeEvent.Enabled = true;
+                            B03LightTimeEvent.Elapsed += (sender, e) => {
+                                //DoB03TagRunLightWork(sender, e, item); 
+                                item.Times--;
+                                item.B03ListViewTagWindowLightsTimes = item.Times.ToString(CultureInfo.CurrentCulture);
+
+                                if (item.Times == 0)
+                                {
+                                    item.B03ListViewTagWindowLights = false;
+                                    (sender as System.Timers.Timer).Enabled = false;
+                                }
+                            };
+                            B03LightTimeEvent.Interval = 1000;
+                            B03LightTimeEvent.Enabled = true;
                             //_lightTimeEvent.Start();
+
+                            
                         }
                         else
                         {
                             item.Times = EMFlashTime;
-                            item.B03ListViewTagWindowLightsTimes = EMFlashTime.ToString();
+                            item.B03ListViewTagWindowLightsTimes = EMFlashTime.ToString(CultureInfo.CurrentCulture);
                         }
                     }
                     else
@@ -7628,8 +7779,8 @@ namespace RFID.Utility
                             "The received telegrams is not same as transmission." :
                             "接收的flash second與傳送的不同。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("The received telegrams is not same as transmission. [{0}]", item.B03ListViewTagWindowData) :
-                            String.Format("接收的flash second與傳送的不同 [{0}]", item.B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "The received telegrams is not same as transmission. [{0}]", item.B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "接收的flash second與傳送的不同 [{0}]", item.B03ListViewTagWindowData), true);
                     }
                 }
             }
@@ -7639,8 +7790,8 @@ namespace RFID.Utility
                     "EM LED flash command send fail." :
                     "EM LED flash傳送失敗。 [{0}]";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("EM LED flash command send fail. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("EM LED flash傳送失敗。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "EM LED flash command send fail. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "EM LED flash傳送失敗。 [{0}]", item.B03ListViewTagWindowData), true);
             }
 
 
@@ -7662,7 +7813,7 @@ namespace RFID.Utility
             item.B03ListViewBattAlarmTemp = String.Empty;
 
 
-            if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", item.B03ListViewTagWindowData), CommandStates.B03_SELECT))
+            if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", item.B03ListViewTagWindowData), CommandStatus.B03SELECT))
             {
                 _f = true;
                 while (IsReceiveDataWork)   //400ms timeout
@@ -7683,15 +7834,15 @@ namespace RFID.Utility
                     "Select command timeout or parameter error." :
                     "Select指令超時或參數錯誤。";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
                 IsB03EMVoltTempWork = false;
                 return;
             }
 
 
             _f = false; _index = 0;
-            if (DoB03SendReceiveWork(this.ReaderService.Command_W("3", "100", "1", "0000"), CommandStates.B03_WRITE))
+            if (DoB03SendReceiveWork(this.ReaderService.CommandW("3", "100", "1", "0000"), CommandStatus.B03WRITE))
             {
                 _f = true;
                 while (IsReceiveDataWork)   //1000ms timeout
@@ -7712,26 +7863,26 @@ namespace RFID.Utility
                     "Write command timeout." :
                     "Write指令超時。";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("Write command timeout. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("Write指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "Write command timeout. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "Write指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
                 IsB03EMVoltTempWork = false;
                 return;
             }
 
-            if (!EMTemp.Equals("W<OK>"))
+            if (!EMTemp.Equals("W<OK>", StringComparison.CurrentCulture))
             {
                 item.B03ListViewTagWindowStatus = (this.Culture.IetfLanguageTag == "en-US") ?
                     "Write command no success." :
                     "Write指令寫入失敗。";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("Write command no success. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("Write指令寫入失敗。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "Write command no success. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "Write指令寫入失敗。 [{0}]", item.B03ListViewTagWindowData), true);
                 IsB03EMVoltTempWork = false;
                 return;
             }
 
             _f = false; _index = 0;
-            if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", item.B03ListViewTagWindowData), CommandStates.B03_SELECT))
+            if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", item.B03ListViewTagWindowData), CommandStatus.B03SELECT))
             {
                 _f = true;
                 while (IsReceiveDataWork)   //400ms timeout
@@ -7752,15 +7903,15 @@ namespace RFID.Utility
                     "Select command timeout or parameter error." :
                     "Select指令超時或參數錯誤。";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
                 IsB03EMVoltTempWork = false;
                 return;
             }
 
 
             _f = false; _index = 0;
-            if (DoB03SendReceiveWork(this.ReaderService.Command_R("3", "100", "1"), CommandStates.B03_READ))
+            if (DoB03SendReceiveWork(this.ReaderService.CommandR("3", "100", "1"), CommandStatus.B03READ))
             {
                 _f = true;
                 while (IsReceiveDataWork)   //1000ms timeout
@@ -7780,8 +7931,8 @@ namespace RFID.Utility
                         "EM Battery Alarm and Temperature command timeout." :
                         "EM Battery Alarm and Temperature指令超時。";
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        String.Format("EM Battery Alarm and Temperature command timeout. [{0}]", item.B03ListViewTagWindowData) :
-                        String.Format("EM Battery Alarm and Temperature指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
+                        String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature command timeout. [{0}]", item.B03ListViewTagWindowData) :
+                        String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
                     IsB03EMVoltTempWork = false;
                     return;
                 }
@@ -7798,7 +7949,7 @@ namespace RFID.Utility
                         if ((_ba[0] & 0x01) > 0)
                             _degree -= 256;
 
-                        _battAlarmTemp += (_degree * 0.25).ToString("##.00");
+                        _battAlarmTemp += (_degree * 0.25).ToString("##.00", CultureInfo.CurrentCulture);
                         item.B03ListViewBattAlarmTemp = _battAlarmTemp;
                     }
                     else
@@ -7807,8 +7958,8 @@ namespace RFID.Utility
                             "EM Battery Alarm and Temperature command receive fail." :
                             "EM Battery Alarm and Temperature接收失敗。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("EM Battery Alarm and Temperature command receive fail. [{0}]", item.B03ListViewTagWindowData) :
-                            String.Format("EM Battery Alarm and Temperature接收失敗。 [{0}]", item.B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature command receive fail. [{0}]", item.B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature接收失敗。 [{0}]", item.B03ListViewTagWindowData), true);
                         IsB03EMVoltTempWork = false;
                         return;
                     }
@@ -7821,8 +7972,8 @@ namespace RFID.Utility
                     "EM Battery Alarm and Temperature command send fail." :
                     "EM Battery Alarm and Temperature傳送失敗。 [{0}]";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("EM Battery Alarm and Temperature command send fail. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("EM Battery Alarm and Temperature傳送失敗。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature command send fail. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "EM Battery Alarm and Temperature傳送失敗。 [{0}]", item.B03ListViewTagWindowData), true);
             }
 
             IsB03EMVoltTempWork = false;
@@ -7843,7 +7994,7 @@ namespace RFID.Utility
             item.B03ListViewBattVolt = String.Empty;
 
 
-            if (DoB03SendReceiveWork(this.ReaderService.Command_T("2", "30", "30", item.B03ListViewTagWindowData), CommandStates.B03_SELECT))
+            if (DoB03SendReceiveWork(this.ReaderService.CommandT("2", "30", "30", item.B03ListViewTagWindowData), CommandStatus.B03SELECT))
             {
                 _f = true;
                 while (IsReceiveDataWork)   //400ms timeout
@@ -7864,8 +8015,8 @@ namespace RFID.Utility
                     "Select command timeout or parameter error." :
                     "Select指令超時或參數錯誤。";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "Select command timeout or parameter error. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "Select指令超時或參數錯誤。 [{0}]", item.B03ListViewTagWindowData), true);
                 IsB03EMVoltTempWork = false;
                 return;
             }
@@ -7873,7 +8024,7 @@ namespace RFID.Utility
 
 
             _f = false; _index = 0;
-            if (DoB03SendReceiveWork(this.ReaderService.EM_GetBattVolt(), CommandStates.CUSTOM_EM))
+            if (DoB03SendReceiveWork(this.ReaderService.EMGetBattVolt(), CommandStatus.CUSTOMEM))
             {
                 _f = true;
                 while (IsReceiveDataWork)   //1000ms timeout
@@ -7893,8 +8044,8 @@ namespace RFID.Utility
                         "EM Battery Voltage command timeout." :
                         "EM Battery Voltage指令超時。";
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        String.Format("EM Battery Voltage command timeout. [{0}]", item.B03ListViewTagWindowData) :
-                        String.Format("EM Battery Voltage指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
+                        String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage command timeout. [{0}]", item.B03ListViewTagWindowData) :
+                        String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage指令超時。 [{0}]", item.B03ListViewTagWindowData), true);
                     IsB03EMVoltTempWork = false;
                     return;
                 }
@@ -7907,7 +8058,7 @@ namespace RFID.Utility
                         if (_ba == 0)
                             _battAlarmTemp = "0";
                         else
-                            _battAlarmTemp = (0x00100000 / _ba).ToString("0");
+                            _battAlarmTemp = (0x00100000 / _ba).ToString("0", CultureInfo.CurrentCulture);
                         item.B03ListViewBattVolt = _battAlarmTemp;
                     }
                     else
@@ -7916,8 +8067,8 @@ namespace RFID.Utility
                             "EM Battery Voltage command receive fail." :
                             "EM Battery Voltage接收失敗。";
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            String.Format("EM Battery Voltage command receive fail. [{0}]", item.B03ListViewTagWindowData) :
-                            String.Format("EM Battery Voltage接收失敗。 [{0}]", item.B03ListViewTagWindowData), true);
+                            String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage command receive fail. [{0}]", item.B03ListViewTagWindowData) :
+                            String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage接收失敗。 [{0}]", item.B03ListViewTagWindowData), true);
                         IsB03EMVoltTempWork = false;
                         return;
                     }
@@ -7930,8 +8081,8 @@ namespace RFID.Utility
                     "EM Battery Voltage command send fail." :
                     "EM Battery Voltage傳送失敗。 [{0}]";
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    String.Format("EMBattery Voltage command send fail. [{0}]", item.B03ListViewTagWindowData) :
-                    String.Format("EM Battery Voltage傳送失敗。 [{0}]", item.B03ListViewTagWindowData), true);
+                    String.Format(CultureInfo.CurrentCulture, "EMBattery Voltage command send fail. [{0}]", item.B03ListViewTagWindowData) :
+                    String.Format(CultureInfo.CurrentCulture, "EM Battery Voltage傳送失敗。 [{0}]", item.B03ListViewTagWindowData), true);
             }
 
             IsB03EMVoltTempWork = false;
@@ -7967,7 +8118,7 @@ namespace RFID.Utility
             MessageShow(String.Empty, false);
 
 
-            if (VM.B03GroupTagWindowTime == String.Empty)
+            if (String.IsNullOrEmpty(VM.B03GroupTagWindowTime))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Time field is null" : "時間欄位不得為空", true);
                 this.B03GroupTagWindowTime.Focus();
@@ -8070,7 +8221,7 @@ namespace RFID.Utility
                 return;
             }
 
-            if (VM.B03GroupTagWindowTime == String.Empty)
+            if (String.IsNullOrEmpty(VM.B03GroupTagWindowTime))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Time field is null" : "時間欄位不得為空", true);
                 this.B03GroupTagWindowTime.Focus();
@@ -8266,23 +8417,23 @@ namespace RFID.Utility
                 {
                     if (str == "RX") this.IsDateTimeStamp = false;
                     if (data == null)
-                        itm.Content = String.Format("{0} [{1}] - ", DateTime.Now.ToString("H:mm:ss.fff"), str);
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - ", DateTime.Now.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture), str);
                     else
-                        itm.Content = String.Format("{0} [{1}] - {2}", DateTime.Now.ToString("H:mm:ss.fff"), str, Format.ShowCRLF(data));
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - {2}", DateTime.Now.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture), str, Format.ShowCRLF(data));
                 }
                 else
                 {
                     if (data == null)
-                        itm.Content = String.Format("[{0}] - ", str);
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "[{0}] - ", str);
                     else if (IsReceiveDataWork)
                     {
                         if (b)
-                            itm.Content = String.Format("{0}      - {1}", DateTime.Now.ToString("H:mm:ss.fff"), Format.ShowCRLF(data));
+                            itm.Content = String.Format(CultureInfo.CurrentCulture, "{0}      - {1}", DateTime.Now.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture), Format.ShowCRLF(data));
                         else
                             itm.Content = Format.ShowCRLF(data);
                     }
                     else
-                        itm.Content = String.Format("{0}  -- {1}", Format.ShowCRLF(data), DateTime.Now.ToString("H:mm:ss.fff"));
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "{0}  -- {1}", Format.ShowCRLF(data), DateTime.Now.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture));
                 }
                 if (this.B03ListBox.Items.Count > 1000)
                     this.B03ListBox.Items.Clear();
@@ -8414,7 +8565,7 @@ namespace RFID.Utility
                     TagValue = str
                 };
 
-                VM.B04TagReadCount = (Convert.ToInt32(VM.B04TagReadCount.Equals(String.Empty) ? "0" : VM.B04TagReadCount) + 1).ToString();
+                VM.B04TagReadCount = (Convert.ToInt32(String.IsNullOrEmpty(VM.B04TagReadCount) ? "0" : VM.B04TagReadCount, CultureInfo.CurrentCulture) + 1).ToString(CultureInfo.CurrentCulture);
                 if (VM.B04ListViewItemsSource.Count > 0)
                 {
                     for (int j = 0; j < VM.B04ListViewItemsSource.Count; j++)
@@ -8423,52 +8574,52 @@ namespace RFID.Utility
                         {
                             switch (this.DoProcess)
                             {
-                                case CommandStates.B04_ANTENNA01:
-                                    number = VM.B04ListViewItemsSource[j].A1Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A1Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A1Count = number.ToString();
+                                case CommandStatus.B04ANTENNA01:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A1Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A1Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A1Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A1RR = VM.B04ListViewItemsSource[j].A1Count;
                                     break;
-                                case CommandStates.B04_ANTENNA02:
-                                    number = VM.B04ListViewItemsSource[j].A2Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A2Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A2Count = number.ToString();
+                                case CommandStatus.B04ANTENNA02:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A2Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A2Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A2Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A2RR = VM.B04ListViewItemsSource[j].A2Count;
                                     break;
-                                case CommandStates.B04_ANTENNA03:
-                                    number = VM.B04ListViewItemsSource[j].A3Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A3Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A3Count = number.ToString();
+                                case CommandStatus.B04ANTENNA03:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A3Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A3Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A3Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A3RR = VM.B04ListViewItemsSource[j].A3Count;
                                     break;
-                                case CommandStates.B04_ANTENNA04:
-                                    number = VM.B04ListViewItemsSource[j].A4Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A4Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A4Count = number.ToString();
+                                case CommandStatus.B04ANTENNA04:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A4Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A4Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A4Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A4RR = VM.B04ListViewItemsSource[j].A4Count;
                                     break;
-                                case CommandStates.B04_ANTENNA05:
-                                    number = VM.B04ListViewItemsSource[j].A5Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A5Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A5Count = number.ToString();
+                                case CommandStatus.B04ANTENNA05:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A5Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A5Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A5Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A5RR = VM.B04ListViewItemsSource[j].A5Count;
                                     break;
-                                case CommandStates.B04_ANTENNA06:
-                                    number = VM.B04ListViewItemsSource[j].A6Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A6Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A6Count = number.ToString();
+                                case CommandStatus.B04ANTENNA06:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A6Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A6Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A6Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A6RR = VM.B04ListViewItemsSource[j].A6Count;
                                     break;
-                                case CommandStates.B04_ANTENNA07:
-                                    number = VM.B04ListViewItemsSource[j].A7Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A7Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A7Count = number.ToString();
+                                case CommandStatus.B04ANTENNA07:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A7Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A7Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A7Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A7RR = VM.B04ListViewItemsSource[j].A7Count;
                                     break;
-                                case CommandStates.B04_ANTENNA08:
-                                    number = VM.B04ListViewItemsSource[j].A8Count == String.Empty ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A8Count) + 1;
-                                    VM.B04ListViewItemsSource[j].A8Count = number.ToString();
+                                case CommandStatus.B04ANTENNA08:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A8Count) ?
+                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A8Count, CultureInfo.CurrentCulture) + 1;
+                                    VM.B04ListViewItemsSource[j].A8Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A8RR = VM.B04ListViewItemsSource[j].A8Count;
                                     break;
                             }
@@ -8478,45 +8629,45 @@ namespace RFID.Utility
                         {
                             switch (this.DoProcess)
                             {
-                                case CommandStates.B04_ANTENNA01:
-                                    number = VM.B04ListViewItemsSource[j].A1Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A1Count);
-                                    VM.B04ListViewItemsSource[j].A1RR = number.ToString();
+                                case CommandStatus.B04ANTENNA01:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A1Count) ?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A1Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A1RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStates.B04_ANTENNA02:
-                                    number = VM.B04ListViewItemsSource[j].A2Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A2Count);
-                                    VM.B04ListViewItemsSource[j].A2RR = number.ToString();
+                                case CommandStatus.B04ANTENNA02:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A2Count) ?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A2Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A2RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStates.B04_ANTENNA03:
-                                    number = VM.B04ListViewItemsSource[j].A3Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A3Count);
-                                    VM.B04ListViewItemsSource[j].A3RR = number.ToString();
+                                case CommandStatus.B04ANTENNA03:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A3Count)?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A3Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A3RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStates.B04_ANTENNA04:
-                                    number = VM.B04ListViewItemsSource[j].A4Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A4Count);
-                                    VM.B04ListViewItemsSource[j].A4RR = number.ToString();
+                                case CommandStatus.B04ANTENNA04:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A4Count) ?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A4Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A4RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStates.B04_ANTENNA05:
-                                    number = VM.B04ListViewItemsSource[j].A5Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A5Count);
-                                    VM.B04ListViewItemsSource[j].A5RR = number.ToString();
+                                case CommandStatus.B04ANTENNA05:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A5Count) ?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A5Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A5RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStates.B04_ANTENNA06:
-                                    number = VM.B04ListViewItemsSource[j].A6Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A6Count);
-                                    VM.B04ListViewItemsSource[j].A6RR = number.ToString();
+                                case CommandStatus.B04ANTENNA06:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A6Count) ?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A6Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A6RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStates.B04_ANTENNA07:
-                                    number = VM.B04ListViewItemsSource[j].A7Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A7Count);
-                                    VM.B04ListViewItemsSource[j].A7RR = number.ToString();
+                                case CommandStatus.B04ANTENNA07:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A7Count)?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A7Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A7RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStates.B04_ANTENNA08:
-                                    number = VM.B04ListViewItemsSource[j].A8Count == String.Empty ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A8Count);
-                                    VM.B04ListViewItemsSource[j].A8RR = number.ToString();
+                                case CommandStatus.B04ANTENNA08:
+                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A8Count) ?
+                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A8Count, CultureInfo.CurrentCulture);
+                                    VM.B04ListViewItemsSource[j].A8RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
                             }
                             bCompare = false;
@@ -8534,49 +8685,49 @@ namespace RFID.Utility
                     
                     switch (this.DoOldProcess)
                     {
-                        case CommandStates.B04_ANTENNA01:
+                        case CommandStatus.B04ANTENNA01:
                             newItems.A1Count = "0"; newItems.A1RR = "0"; break;
-                        case CommandStates.B04_ANTENNA02:
+                        case CommandStatus.B04ANTENNA02:
                             newItems.A2Count = "0"; newItems.A2RR = "0"; break;
-                        case CommandStates.B04_ANTENNA03:
+                        case CommandStatus.B04ANTENNA03:
                             newItems.A3Count = "0"; newItems.A3RR = "0"; break;
-                        case CommandStates.B04_ANTENNA04:
+                        case CommandStatus.B04ANTENNA04:
                             newItems.A4Count = "0"; newItems.A4RR = "0"; break;
-                        case CommandStates.B04_ANTENNA05:
+                        case CommandStatus.B04ANTENNA05:
                             newItems.A5Count = "0"; newItems.A5RR = "0"; break;
-                        case CommandStates.B04_ANTENNA06:
+                        case CommandStatus.B04ANTENNA06:
                             newItems.A6Count = "0"; newItems.A6RR = "0"; break;
-                        case CommandStates.B04_ANTENNA07:
+                        case CommandStatus.B04ANTENNA07:
                             newItems.A7Count = "0"; newItems.A7RR = "0"; break;
-                        case CommandStates.B04_ANTENNA08:
+                        case CommandStatus.B04ANTENNA08:
                             newItems.A8Count = "0"; newItems.A8RR = "0"; break;
                         default: break;
                     }
                     switch (this.DoProcess)
                     {
-                        case CommandStates.B04_ANTENNA01:
+                        case CommandStatus.B04ANTENNA01:
                             newItems.A1Count = "1"; newItems.A1RR = "1"; break;
-                        case CommandStates.B04_ANTENNA02:
+                        case CommandStatus.B04ANTENNA02:
                             newItems.A2Count = "1"; newItems.A2RR = "1"; break;
-                        case CommandStates.B04_ANTENNA03:
+                        case CommandStatus.B04ANTENNA03:
                             newItems.A3Count = "1"; newItems.A3RR = "1"; break;
-                        case CommandStates.B04_ANTENNA04:
+                        case CommandStatus.B04ANTENNA04:
                             newItems.A4Count = "1"; newItems.A4RR = "1"; break;
-                        case CommandStates.B04_ANTENNA05:
+                        case CommandStatus.B04ANTENNA05:
                             newItems.A5Count = "1"; newItems.A5RR = "1"; break;
-                        case CommandStates.B04_ANTENNA06:
+                        case CommandStatus.B04ANTENNA06:
                             newItems.A6Count = "1"; newItems.A6RR = "1"; break;
-                        case CommandStates.B04_ANTENNA07:
+                        case CommandStatus.B04ANTENNA07:
                             newItems.A7Count = "1"; newItems.A7RR = "1"; break;
-                        case CommandStates.B04_ANTENNA08:
+                        case CommandStatus.B04ANTENNA08:
                             newItems.A8Count = "1"; newItems.A8RR = "1"; break;
                     }
                     VM.B04ListViewAddNewItem(newItems);
                     B04ListViewList.Add(data[0]);
                 }
 
-                VM.B04TagCount = B04ListViewList.Distinct().Count().ToString();
-                //(VM.B04ListViewItemsSource.Count).ToString();
+                VM.B04TagCount = B04ListViewList.Distinct().Count().ToString(CultureInfo.CurrentCulture);
+                //(VM.B04ListViewItemsSource.Count).ToString(CultureInfo.CurrentCulture);
             }
         }
 
@@ -8586,7 +8737,7 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="command"></param>
         /// <param name="process"></param>
-        private Boolean DoB04AntennaChangeWork(CommandStates idx)
+        private Boolean DoB04AntennaChangeWork(CommandStatus idx)
         {
             Int32 _index = 0;
             Boolean _f = false;
@@ -8596,7 +8747,7 @@ namespace RFID.Utility
             if (!IsReceiveDataWork)
             {
                 IsReceiveDataWork = true;
-                this.DoProcess = CommandStates.B04_GPIO_PINS;
+                this.DoProcess = CommandStatus.B04GPIOPINS;
 
                 try
                 {
@@ -8604,19 +8755,19 @@ namespace RFID.Utility
                     {
                         switch (idx)
                         {
-                            case CommandStates.B04_ANTENNA01:
+                            case CommandStatus.B04ANTENNA01:
                                 B04RAWLOG("天線A1");
                                 B04AntennaTempData = (Byte)0x4; _ant = "74"; break;
-                            case CommandStates.B04_ANTENNA02:
+                            case CommandStatus.B04ANTENNA02:
                                 B04RAWLOG("天線A2");
                                 B04AntennaTempData = (Byte)0x2; _ant = "72"; break;
-                            case CommandStates.B04_ANTENNA03:
+                            case CommandStatus.B04ANTENNA03:
                                 B04RAWLOG("天線A3");
                                 B04AntennaTempData = (Byte)0x1; _ant = "71"; break;
-                            case CommandStates.B04_ANTENNA04:
+                            case CommandStatus.B04ANTENNA04:
                                 B04RAWLOG("天線A4");
                                 B04AntennaTempData = (Byte)0x5; _ant = "75"; break;
-                            case CommandStates.B04_ANTENNA05:
+                            case CommandStatus.B04ANTENNA05:
                                 B04RAWLOG("天線A5");
                                 B04AntennaTempData = (Byte)0x7; _ant = "77"; break;
                         }
@@ -8629,13 +8780,16 @@ namespace RFID.Utility
                             case ReaderService.ConnectType.DEFAULT:
                                 break;
                             case ReaderService.ConnectType.COM:
-                                this._ICOM.Send(_data, Module.CommandType.Normal);
+                                this._ICOM.Send(_data, ReaderModule.CommandType.Normal);
                                 break;
                             case ReaderService.ConnectType.USB:
-                                this._IUSB.Send(_data, Module.CommandType.Normal);
+                                this._IUSB.Send(_data, ReaderModule.CommandType.Normal);
                                 break;
                             case ReaderService.ConnectType.NET:
-                                this._INet.Send(_data, Module.CommandType.Normal);
+                                this._INet.Send(_data, ReaderModule.CommandType.Normal);
+                                break;
+                            case ReaderService.ConnectType.BLE:
+                                this._IBLE.Send(_data, ReaderModule.CommandType.Normal);
                                 break;
                         }
                     }
@@ -8643,28 +8797,28 @@ namespace RFID.Utility
                     {
                         switch (idx)
                         {
-                            case CommandStates.B04_ANTENNA01:
+                            case CommandStatus.B04ANTENNA01:
                                 B04RAWLOG("天線A1");
                                 B04AntennaTempData = (Byte)0x0; _ant = "70"; break;
-                            case CommandStates.B04_ANTENNA02:
+                            case CommandStatus.B04ANTENNA02:
                                 B04RAWLOG("天線A2");
                                 B04AntennaTempData = (Byte)0x1; _ant = "71"; break;
-                            case CommandStates.B04_ANTENNA03:
+                            case CommandStatus.B04ANTENNA03:
                                 B04RAWLOG("天線A3");
                                 B04AntennaTempData = (Byte)0x2; _ant = "72"; break;
-                            case CommandStates.B04_ANTENNA04:
+                            case CommandStatus.B04ANTENNA04:
                                 B04RAWLOG("天線A4");
                                 B04AntennaTempData = (Byte)0x3; _ant = "73"; break;
-                            case CommandStates.B04_ANTENNA05:
+                            case CommandStatus.B04ANTENNA05:
                                 B04RAWLOG("天線A5");
                                 B04AntennaTempData = (Byte)0x4; _ant = "74"; break;
-                            case CommandStates.B04_ANTENNA06:
+                            case CommandStatus.B04ANTENNA06:
                                 B04RAWLOG("天線A6");
                                 B04AntennaTempData = (Byte)0x5; _ant = "75"; break;
-                            case CommandStates.B04_ANTENNA07:
+                            case CommandStatus.B04ANTENNA07:
                                 B04RAWLOG("天線A7");
                                 B04AntennaTempData = (Byte)0x6; _ant = "76"; break;
-                            case CommandStates.B04_ANTENNA08:
+                            case CommandStatus.B04ANTENNA08:
                                 B04RAWLOG("天線A8");
                                 B04AntennaTempData = (Byte)0x7; _ant = "77"; break;
                         }
@@ -8677,25 +8831,38 @@ namespace RFID.Utility
                             case ReaderService.ConnectType.DEFAULT:
                                 break;
                             case ReaderService.ConnectType.COM:
-                                this._ICOM.Send(_data, Module.CommandType.Normal);
+                                this._ICOM.Send(_data, ReaderModule.CommandType.Normal);
                                 break;
                             case ReaderService.ConnectType.USB:
-                                this._IUSB.Send(_data, Module.CommandType.Normal);
+                                this._IUSB.Send(_data, ReaderModule.CommandType.Normal);
                                 break;
                             case ReaderService.ConnectType.NET:
-                                this._INet.Send(_data, Module.CommandType.Normal);
+                                this._INet.Send(_data, ReaderModule.CommandType.Normal);
+                                break;
+                            case ReaderService.ConnectType.BLE:
+                                this._IBLE.Send(_data, ReaderModule.CommandType.Normal);
                                 break;
                         }
                     }
                     
                 }
-                catch (Exception ex)
+                catch (InvalidOperationException ex)
                 {
                     MessageShow(ex.Message, true);
                     return false;
                 }
-                
-                    
+                catch (ArgumentNullException anx)
+                {
+                    MessageShow(anx.Message, true);
+                    return false;
+                }
+                catch (SocketException se)
+                {
+                    MessageShow(se.Message, true);
+                    return false;
+                }
+
+
                 _f = true;
                 while (IsReceiveDataWork)
                 {
@@ -8778,20 +8945,20 @@ namespace RFID.Utility
                             {
                                 this.IsB04BtnAntennaRun = false;
                                 B04RAWLOG("================= Test Infomation =============");
-                                B04RAWLOG(String.Format("天線形式: {0}", (B04AntennaType == 1) ? 5 : 8));
-                                B04RAWLOG(String.Format("選擇天線: {0}", _selAntenna));
-                                B04RAWLOG(String.Format("執行次數: {0}", _selRunTimes));
-                                B04RAWLOG(String.Format("循環次數: {0}", VM.B04AntennaLoopTimes));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "天線形式: {0}", (B04AntennaType == 1) ? 5 : 8));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "選擇天線: {0}", _selAntenna));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "執行次數: {0}", _selRunTimes));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "循環次數: {0}", VM.B04AntennaLoopTimes));
                                 B04RAWLOG("");
                                 B04RAWLOG("=================");
-                                B04RAWLOG(String.Format("循環次數: {0}", B04AntennaLoopIndex + 1));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "循環次數: {0}", B04AntennaLoopIndex + 1));
                                 B04RAWLOG("=================");
 
                             }
                             else {
                                 B04RAWLOG("");
                                 B04RAWLOG("=================");
-                                B04RAWLOG(String.Format("循環次數: {0}", B04AntennaLoopIndex + 1));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "循環次數: {0}", B04AntennaLoopIndex + 1));
                                 B04RAWLOG("=================");
 
 
@@ -8812,16 +8979,16 @@ namespace RFID.Utility
                                     FRAGMENTSUMMARYLOG(_str);
                                     _str = String.Empty;
                                 }
-                                B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount) - B04AntennaTagIncreaseCount;
-                                FRAGMENTSUMMARYLOG(String.Format("標籤張數: {0},標籤讀取次數: {1}(+{2})", VM.B04TagCount, VM.B04TagReadCount, B04AntennaTagIncreaseCount));
-                                B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount);
+                                B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture) - B04AntennaTagIncreaseCount;
+                                FRAGMENTSUMMARYLOG(String.Format(CultureInfo.CurrentCulture, "標籤張數: {0},標籤讀取次數: {1}(+{2})", VM.B04TagCount, VM.B04TagReadCount, B04AntennaTagIncreaseCount));
+                                B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture);
                             }
                             
 
                             //FRAGMENTSUMMARYLOG("===============================================");
                             //FRAGMENTSUMMARYLOG("欄位定義: Tag, Antenna1,..,Antenna5(Antenna8)");
-                            //FRAGMENTSUMMARYLOG(String.Format("標籤張數: {0}", VM.B04TagCount));
-                            //FRAGMENTSUMMARYLOG(String.Format("標籤讀取次數: {0}", VM.B04TagReadCount));
+                            //FRAGMENTSUMMARYLOG(String.Format(CultureInfo.CurrentCulture, "標籤張數: {0}", VM.B04TagCount));
+                            //FRAGMENTSUMMARYLOG(String.Format(CultureInfo.CurrentCulture, "標籤讀取次數: {0}", VM.B04TagReadCount));
 
 
                             //B04AntennaDelayTimesIdx = 0;
@@ -8829,15 +8996,15 @@ namespace RFID.Utility
                         }
                         return;
                     case 0x01:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA01);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna1RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA01);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna1RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         _selAntenna += "A1";
                         _selRunTimes += VM.B04Antenna1RunTimes;
                         break;
                     case 0x02:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA02);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna2RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA02);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna2RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         if (B04AntennaRunIndex > 1)
                         {
@@ -8851,8 +9018,8 @@ namespace RFID.Utility
                         } 
                         break;
                     case 0x04:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA03);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna3RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA03);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna3RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         if (B04AntennaRunIndex > 1)
                         {
@@ -8866,8 +9033,8 @@ namespace RFID.Utility
                         }   
                         break;
                     case 0x08:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA04);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna4RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA04);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna4RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         if (B04AntennaRunIndex > 1)
                         {
@@ -8881,8 +9048,8 @@ namespace RFID.Utility
                         }   
                         break;
                     case 0x10:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA05);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna5RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA05);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna5RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         if (B04AntennaRunIndex > 1)
                         {
@@ -8896,8 +9063,8 @@ namespace RFID.Utility
                         }
                         break;
                     case 0x20:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA06);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna6RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA06);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna6RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         if (B04AntennaRunIndex > 1)
                         {
@@ -8911,8 +9078,8 @@ namespace RFID.Utility
                         }  
                         break;
                     case 0x40:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA07);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna7RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA07);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna7RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         if (B04AntennaRunIndex > 1)
                         {
@@ -8927,8 +9094,8 @@ namespace RFID.Utility
                             
                         break;
                     case 0x80:
-                        B04ProcessItem.Add(CommandStates.B04_ANTENNA08);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna8RunTimes));
+                        B04ProcessItem.Add(CommandStatus.B04ANTENNA08);
+                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna8RunTimes, CultureInfo.CurrentCulture));
                         this.B04AntennaRunIndex++;
                         if (B04AntennaRunIndex > 1)
                         {
@@ -8958,7 +9125,7 @@ namespace RFID.Utility
 
                 Thread.Sleep(500);
                 B04RAWLOG("");
-                B04RAWLOG(String.Format("標籤個數:{0}, 標籤讀取次數:{1}", VM.B04TagCount, VM.B04TagReadCount));
+                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "標籤個數:{0}, 標籤讀取次數:{1}", VM.B04TagCount, VM.B04TagReadCount));
                 B04RAWLOG("================= END =========================");
 
                 FRAGMENTSUMMARYLOG("===============================================");
@@ -8978,8 +9145,17 @@ namespace RFID.Utility
                     FRAGMENTSUMMARYLOG(_str);
                     _str = String.Empty;
                 }
-                B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount) - B04AntennaTagIncreaseCount;
-                FRAGMENTSUMMARYLOG(String.Format("標籤張數: {0},標籤讀取次數: {1}(+{2})", VM.B04TagCount, VM.B04TagReadCount, B04AntennaTagIncreaseCount));
+
+                try
+                {
+                    B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture) - B04AntennaTagIncreaseCount;
+                }
+                catch (FormatException)
+                {
+                    B04AntennaTagIncreaseCount = 0;
+                }
+                
+                FRAGMENTSUMMARYLOG(String.Format(CultureInfo.CurrentCulture, "標籤張數: {0},標籤讀取次數: {1}(+{2})", VM.B04TagCount, VM.B04TagReadCount, B04AntennaTagIncreaseCount));
                 
                
 
@@ -9041,29 +9217,29 @@ namespace RFID.Utility
 
                             switch (B04ProcessItem[0])
                             {
-                                case CommandStates.B04_ANTENNA01:
-                                    MessageShow(String.Format("Loop{0}, Antenna01...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA01:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna01...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
-                                case CommandStates.B04_ANTENNA02:
-                                    MessageShow(String.Format("Loop{0}, Antenna02...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA02:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna02...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
-                                case CommandStates.B04_ANTENNA03:
-                                    MessageShow(String.Format("Loop{0}, Antenna03...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA03:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna03...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
-                                case CommandStates.B04_ANTENNA04:
-                                    MessageShow(String.Format("Loop{0}, Antenna04...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA04:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna04...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
-                                case CommandStates.B04_ANTENNA05:
-                                    MessageShow(String.Format("Loop{0}, Antenna05...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA05:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna05...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
-                                case CommandStates.B04_ANTENNA06:
-                                    MessageShow(String.Format("Loop{0}, Antenna06...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA06:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna06...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
-                                case CommandStates.B04_ANTENNA07:
-                                    MessageShow(String.Format("Loop{0}, Antenna07...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA07:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna07...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
-                                case CommandStates.B04_ANTENNA08:
-                                    MessageShow(String.Format("Loop{0}, Antenna08...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
+                                case CommandStatus.B04ANTENNA08:
+                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna08...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
                             }
 
@@ -9073,17 +9249,17 @@ namespace RFID.Utility
                                 if (VM.B04GroupReadCtrlCheckBoxIsChecked)
                                 {
                                     if (VM.B04GroupUSlotQCheckBoxIsChecked)
-                                        _data = this.ReaderService.Command_UR(VM.B04GroupUSlotQComboBox.Tag, VM.B04GroupPreSetReadMemBank.Tag,
+                                        _data = this.ReaderService.CommandUR(VM.B04GroupUSlotQComboBox.Tag, VM.B04GroupPreSetReadMemBank.Tag,
                                             VM.B04GroupPreSetReadAddress, VM.B04GroupPreSetReadLength);
                                     else
-                                        _data = this.ReaderService.Command_UR(null, VM.B04GroupPreSetReadMemBank.Tag, VM.B04GroupPreSetReadAddress, VM.B04GroupPreSetReadLength);
+                                        _data = this.ReaderService.CommandUR(null, VM.B04GroupPreSetReadMemBank.Tag, VM.B04GroupPreSetReadAddress, VM.B04GroupPreSetReadLength);
                                 }
                                 else
                                 {
                                     if (VM.B04GroupUSlotQCheckBoxIsChecked)
-                                        _data = this.ReaderService.Command_U(VM.B04GroupUSlotQComboBox.Tag);
+                                        _data = this.ReaderService.CommandU(VM.B04GroupUSlotQComboBox.Tag);
                                     else
-                                        _data = this.ReaderService.Command_U();
+                                        _data = this.ReaderService.CommandU();
                                 }
 
                                 B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(_data)));
@@ -9093,23 +9269,38 @@ namespace RFID.Utility
                                     case ReaderService.ConnectType.DEFAULT:
                                         break;
                                     case ReaderService.ConnectType.COM:
-                                        this._ICOM.Send(_data, Module.CommandType.Normal);
+                                        this._ICOM.Send(_data, ReaderModule.CommandType.Normal);
                                         break;
                                     case ReaderService.ConnectType.USB:
-                                        this._IUSB.Send(_data, Module.CommandType.Normal);
+                                        this._IUSB.Send(_data, ReaderModule.CommandType.Normal);
                                         break;
                                     case ReaderService.ConnectType.NET:
-                                        this._INet.Send(_data, Module.CommandType.Normal);
+                                        this._INet.Send(_data, ReaderModule.CommandType.Normal);
+                                        break;
+                                    case ReaderService.ConnectType.BLE:
+                                        this._IBLE.Send(_data, ReaderModule.CommandType.Normal);
                                         break;
                                 }
 
                             }
-                            catch (Exception ex)
+                            catch (InvalidOperationException ex)
                             {
                                 MessageShow(ex.Message, true);
                                 this.IsReceiveDataWork = false;
                                 IsB04RepeatRunEnd = true;
-                            }   
+                            }
+                            catch (ArgumentNullException ane)
+                            {
+                                MessageShow(ane.Message, true);
+                                this.IsReceiveDataWork = false;
+                                IsB04RepeatRunEnd = true;
+                            }
+                            catch (SocketException se)
+                            {
+                                MessageShow(se.Message, true);
+                                this.IsReceiveDataWork = false;
+                                IsB04RepeatRunEnd = true;
+                            }
                         }
                     }
                     else
@@ -9130,7 +9321,7 @@ namespace RFID.Utility
                     {
                         MessageShow(String.Empty, false);
                         
-                        if (++this.B04AntennaLoopIndex == Int32.Parse(VM.B04AntennaLoopTimes))
+                        if (++this.B04AntennaLoopIndex == Int32.Parse(VM.B04AntennaLoopTimes, CultureInfo.CurrentCulture))
                         {
                             if (VM.B04AntennaRunRepeatCheckBoxIsChecked)
                             {
@@ -9138,7 +9329,7 @@ namespace RFID.Utility
                                 this.B04Process.Stop();
 
                                 B04RAWLOG("=========== DELAY ===================");
-                                B04RAWLOG(String.Format("Delay:{0}", VM.B04AntennaLoopDelayTime));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "Delay:{0}", VM.B04AntennaLoopDelayTime));
                                 B04RAWLOG("=====================================");
                                     
                                 this.B04AntennaDelayTimesIdx = 0;
@@ -9168,7 +9359,7 @@ namespace RFID.Utility
         private void DoB04ProcessDelayWork(object sender, EventArgs e)
         {
             this.B04AntennaDelayTimesIdx++;
-            MessageShow(String.Format("Delay: {0:0.0}s", ((float)B04AntennaDelayTimesIdx/10)), false);
+            MessageShow(String.Format(CultureInfo.CurrentCulture, "Delay: {0:0.0}s", ((float)B04AntennaDelayTimesIdx/10)), false);
 
             if (this.IsOnB04BtnAntennaClick == false)
             {
@@ -9193,7 +9384,7 @@ namespace RFID.Utility
         private void OnB04RadioButtonAntennaTypeChecked(object sender, RoutedEventArgs e) {
             if (!(sender is RadioButton rb)) return;
 
-            this.B04AntennaType = Convert.ToInt32(rb.Tag.ToString());
+            this.B04AntennaType = Convert.ToInt32(rb.Tag.ToString(), CultureInfo.CurrentCulture);
 
             if (this.B04AntennaType == 1)
             {
@@ -9335,22 +9526,28 @@ namespace RFID.Utility
                     case ReaderService.ConnectType.DEFAULT:
                         break;
                     case ReaderService.ConnectType.COM:
-                        this._ICOM.Send(tbs, Module.CommandType.Normal);
+                        this._ICOM.Send(tbs, ReaderModule.CommandType.Normal);
                         B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(tbs)));
                         bs = this._ICOM.Receive();
-                        B04RAWLOG(String.Format("[RX]{0}", Format.ShowCRLF(Format.BytesToString(bs))));
+                        B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "[RX]{0}", Format.ShowCRLF(Format.BytesToString(bs))));
                         break;
                     case ReaderService.ConnectType.USB:
-                        this._IUSB.Send(tbs, Module.CommandType.Normal);
+                        this._IUSB.Send(tbs, ReaderModule.CommandType.Normal);
                         B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(tbs)));
                         bs = _IUSB.Receive();
-                        B04RAWLOG(String.Format("[RX]{0}", Format.ShowCRLF(Format.BytesToString(bs))));
+                        B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "[RX]{0}", Format.ShowCRLF(Format.BytesToString(bs))));
                         break;
                     case ReaderService.ConnectType.NET:
-                        this._INet.Send(tbs, Module.CommandType.Normal);
+                        this._INet.Send(tbs, ReaderModule.CommandType.Normal);
                         B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(tbs)));
                         bs = _INet.Receive();
-                        B04RAWLOG(String.Format("[RX]{0}", Format.ShowCRLF(Format.BytesToString(bs))));
+                        B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "[RX]{0}", Format.ShowCRLF(Format.BytesToString(bs))));
+                        break;
+                    case ReaderService.ConnectType.BLE:
+                        this._IBLE.Send(tbs, ReaderModule.CommandType.Normal);
+                        B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(tbs)));
+                        bs = _IBLE.Receive();
+                        B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "[RX]{0}", Format.ShowCRLF(Format.BytesToString(bs))));
                         break;
                 }
                 B04RAWLOG("");
@@ -9362,7 +9559,7 @@ namespace RFID.Utility
                     return;
                 }
 
-                var val = Int32.Parse(Format.ByteToString(bs[2]));
+                var val = Int32.Parse(Format.ByteToString(bs[2]), CultureInfo.CurrentCulture);
                 if (!val.Equals((Byte)0x7))
                 {
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ? 
@@ -9421,12 +9618,12 @@ namespace RFID.Utility
 
                 this.B04AntennaItemsTemp = this.B04AntennaItems;
                 this.B04AntennaRunIndex = 0;
-                this.DoOldProcess = CommandStates.DEFAULT;
+                this.DoOldProcess = CommandStatus.DEFAULT;
                 this.IsOnB04BtnAntennaClick = true;
                 this.IsB04BtnAntennaRun = true;
                 this.B04AntennaLoopIndex = 0;
                 this.B04AntennaTagIncreaseCount = 0;//add in v3.5.6
-                this.B04AntennaDelayTimes = (Int32)(Double.Parse(VM.B04AntennaLoopDelayTime) * 10);
+                this.B04AntennaDelayTimes = (Int32)(Double.Parse(VM.B04AntennaLoopDelayTime, CultureInfo.CurrentCulture) * 10);
                 this.B04AntennaRunButton.Content = Properties.Resources.B04AntennaStop;
 
                 VM.B04ListViewItemsSource.Clear();
@@ -9474,7 +9671,7 @@ namespace RFID.Utility
             Boolean _b = true;
             for (int i = 1; i < 9; i++ )
             {
-                if ((ValidationStates)ValidationState[String.Format("B04Antenna{0}RunTimes", i)] != ValidationStates.OK)
+                if ((ValidationStates)ValidationState[String.Format(CultureInfo.CurrentCulture, "B04Antenna{0}RunTimes", i)] != ValidationStates.OK)
                 {
                     _b = false;
                     break;
@@ -9491,7 +9688,7 @@ namespace RFID.Utility
         private void OnB04AntennaRunLogClick(object sender, RoutedEventArgs e)
         {
             var _path = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + "log\\";
-            var _file = "MultiAntennaSummary_" + DateTime.Now.ToString("yyyy-MM-dd") + ".log";
+            var _file = "MultiAntennaSummary_" + DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.CurrentCulture) + ".log";
             var _filePath = _path + _file;
             StreamWriter swStream;
             String str = String.Empty;
@@ -9513,8 +9710,8 @@ namespace RFID.Utility
             //title
             swStream.WriteLine("===============================================");
             swStream.WriteLine("欄位定義: Tag, Antenna1,..,Antenna5(Antenna8)");
-            swStream.WriteLine(String.Format("標籤張數: {0}", VM.B04TagCount));
-            swStream.WriteLine(String.Format("標籤讀取次數: {0}", VM.B04TagReadCount));
+            swStream.WriteLine(String.Format(CultureInfo.CurrentCulture, "標籤張數: {0}", VM.B04TagCount));
+            swStream.WriteLine(String.Format(CultureInfo.CurrentCulture, "標籤讀取次數: {0}", VM.B04TagReadCount));
             swStream.WriteLine("===============================================");
             for (Int32 i = 0; i < VM.B04ListViewItemsSource.Count; i++)
             {
@@ -9584,7 +9781,7 @@ namespace RFID.Utility
         }
 
         #region IDisposable Support
-        private bool disposedValue = false; // 偵測多餘的呼叫
+        private bool disposedValue = false;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -9592,9 +9789,16 @@ namespace RFID.Utility
             {
                 if (disposing)
                 {
+                    if (_ICOM != null) _ICOM.Dispose();
+                    if (_INet != null) _INet.Dispose();
+                    if (_IUSB != null) _IUSB.Dispose();
+                    if (_IBLE != null) _IBLE.Dispose();
+                    if (_SerialPort != null) _SerialPort.Dispose();
                     if (_ConnectDialog != null) _ConnectDialog.Dispose();
                     if (_RegulationDialog != null) _RegulationDialog.Dispose();
                     if (ProfileXml != null) ProfileXml.Dispose();
+                    if (B03LightTimeEvent != null) B03LightTimeEvent.Dispose();
+                    
                 }
 
                 disposedValue = true;

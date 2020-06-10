@@ -34,6 +34,9 @@ using System.Xml;
 using System.Text;
 using System.IO;
 using System.Security;
+using System.Resources;
+using System.Reflection;
+using System.Globalization;
 
 namespace RFID.Utility.IClass
 {
@@ -41,17 +44,20 @@ namespace RFID.Utility.IClass
 	///   Abstract base class for all XML-based Profile classes. </summary>
 	/// <remarks>
 	///   This class provides common methods and properties for the XML-based Profile classes 
-	///   (<see cref="Xml" />, <see cref="Config" />). </remarks>
-	public abstract class XmlBased : Profile, IDisposable
+	///   (<see cref="XmlFormat" />, <see cref="Config" />). </remarks>
+	public abstract class XmlBased : ProfileX, IDisposable
     {
-		private Encoding m_encoding = Encoding.UTF8;
-		internal XmlBuffer m_buffer;
+		private Encoding		m_encoding = Encoding.UTF8;
+		private ResourceManager stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
+		internal XmlBuffer		m_buffer;
 
 		//protected XmlBased() { }
 		
 		protected XmlBased(String fileName) : base(fileName) { }
 
 		protected XmlBased(XmlBased profile) : base(profile) {
+			if (profile == null)
+				throw new ArgumentNullException(stringManager.GetString("profile argument is null", CultureInfo.CurrentCulture));
 			m_encoding = profile.Encoding;
 		}
 		
@@ -67,16 +73,37 @@ namespace RFID.Utility.IClass
 			if (!File.Exists(Name))
 				return null;
 
-			XmlDocument doc = new XmlDocument();
-			doc.Load(Name);
-			return doc;
+			//XmlDocument doc = new XmlDocument();
+			//doc.Load(Name);
+			XmlDocument doc = new XmlDocument() { XmlResolver = null };
+			System.IO.StringReader sreader = new System.IO.StringReader(Name);
+			XmlReader reader = null;
+			try
+			{
+				reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+				doc.Load(reader);
+				return doc;
+			}
+			finally
+			{
+				if (reader != null)
+				{
+					reader.Close();
+				}
+			}
+			
 		}
 		
 		protected void Save(XmlDocument doc) {
 			if (m_buffer != null)
 				m_buffer.m_needsFlushing = true;
 			else
+			{
+				if (doc == null)
+					throw new ArgumentNullException(stringManager.GetString("doc argument is null", CultureInfo.CurrentCulture));
 				doc.Save(Name);
+			}
+				
 
 		}
 
@@ -105,11 +132,11 @@ namespace RFID.Utility.IClass
 				if (m_encoding == value)
 					return;
 						
-				if (!RaiseChangeEvent(true, ProfileChangeType.Other, null, "Encoding", value))
+				if (!OnRaiseChangeEvtCase(true, ProfileChangeType.Other, null, "Encoding", value))
 					return;
 
 				m_encoding = value; 				
-				RaiseChangeEvent(false, ProfileChangeType.Other, null, "Encoding", value);				
+				OnRaiseChangeEvtCase(false, ProfileChangeType.Other, null, "Encoding", value);				
 			}
 		}
 
@@ -148,39 +175,75 @@ namespace RFID.Utility.IClass
 		private XmlDocument m_doc;
 		private FileStream m_file;
 		internal bool m_needsFlushing;
-		
+		private ResourceManager stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
+
 		internal XmlBuffer(XmlBased profile, bool lockFile) {
 			m_profile = profile;
 
 			if (lockFile) {
 				m_profile.VerifyName();
 				if (File.Exists(m_profile.Name))
-					m_file = new FileStream(m_profile.Name, FileMode.Open, m_profile.ReadOnly ? FileAccess.Read : FileAccess.ReadWrite, FileShare.Read);
+					m_file = new FileStream(m_profile.Name, FileMode.Open, m_profile.ReadOnlyValue ? FileAccess.Read : FileAccess.ReadWrite, FileShare.Read);
 			}
 		}
 		
 		internal void Load(XmlTextWriter writer) {
+			XmlReader reader = null;
 			writer.Flush();
 			writer.BaseStream.Position = 0;
-			m_doc.Load(writer.BaseStream);
+			try
+			{
+				reader = XmlReader.Create(writer.BaseStream);
+				m_doc.Load(reader);
 
-			m_needsFlushing = true;
+				m_needsFlushing = true;
+			}
+			finally
+			{
+				if (reader != null)
+				{
+					reader.Close();
+				}
+			}
+			
 		}
 		
 		internal XmlDocument XmlDocument {
 			get {
 				if (m_doc == null) {
-					m_doc = new XmlDocument();
+					XmlReader reader = null;
+					try
+					{
+						m_doc = new XmlDocument() { XmlResolver = null };
 
-					if (m_file != null) {
-						m_file.Position = 0;
-						m_doc.Load(m_file);
+						if (m_file != null)
+						{
+							m_file.Position = 0;
+							reader = XmlReader.Create(m_file);
+							m_doc.Load(reader);//m_file
+						}
+						else
+						{
+							m_profile.VerifyName();
+							if (File.Exists(m_profile.Name))
+							{
+								System.IO.StringReader sreader = new System.IO.StringReader(m_profile.Name);
+								reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+								m_doc.Load(reader); //m_profile.Name
+							}
+								
+						}
 					}
-					else {
-						m_profile.VerifyName();
-						if (File.Exists(m_profile.Name))
-							m_doc.Load(m_profile.Name);
+					catch (ArgumentNullException)
+					{
+						throw;
 					}
+					finally
+					{
+						if (reader != null)
+							reader.Close();
+					}
+					
 				}
 				return m_doc;
 			}
@@ -188,7 +251,7 @@ namespace RFID.Utility.IClass
 
 		internal bool IsEmpty {
 			get {
-				return XmlDocument.InnerXml == String.Empty;
+				return String.IsNullOrEmpty(XmlDocument.InnerXml);
 			}
 		}
 		
@@ -206,7 +269,7 @@ namespace RFID.Utility.IClass
 		
 		public void Flush() {
 			if (m_profile == null)
-				throw new InvalidOperationException("Cannot flush an XmlBuffer object that has been closed.");
+				throw new InvalidOperationException(stringManager.GetString("Cannot flush an XmlBuffer object that has been closed.", CultureInfo.CurrentCulture));
 
 			if (m_doc == null)
 				return;
@@ -223,7 +286,7 @@ namespace RFID.Utility.IClass
 		
 		public void Reset() {
 			if (m_profile == null)
-				throw new InvalidOperationException("Cannot reset an XmlBuffer object that has been closed.");
+				throw new InvalidOperationException(stringManager.GetString("Cannot reset an XmlBuffer object that has been closed.", CultureInfo.CurrentCulture));
 
 			m_doc = null;
 			m_needsFlushing = false;

@@ -13,17 +13,24 @@ using System.ComponentModel;
 using System.IO.Ports;
 using RFID.Utility.IClass;
 using RFID.Service;
-using RFID.Service.Interface.COM;
-using RFID.Service.Interface.NET;
-using RFID.Service.Interface.USB;
+using RFID.Service.IInterface.COM;
+using RFID.Service.IInterface.COM.Events;
+using RFID.Service.IInterface.NET;
+using RFID.Service.IInterface.USB;
 using RFID.Utility.VM;
+using RFID.Service.IInterface.USB.Events;
+using RFID.Service.IInterface.NET.Events;
+using System.Resources;
+using System.Reflection;
+using RFID.Service.IInterface.BLE;
+using RFID.Service.IInterface.BLE.Events;
 
 namespace RFID.Utility
 {
 	public partial class RegulationDialog : Window, IDisposable
     {
 
-        /*enum CommandStates
+        /*enum CommandStatus
         {
             DEFAULT, TESTRUN
         };*/
@@ -40,9 +47,9 @@ namespace RFID.Utility
 		private const int PROC_SET_MEASURE_FREQ			= 0X0A;
 		private const int PROC_SET_RESET				= 0x0B;
 		private const int PROC_FREQ_SET_RESET			= 0x0C;
-        private const int PROC_READ_GPIO_CONFIG         = 0x0D;
-        private const int PROC_READ_GPIO_PINS           = 0x0E;
-        private const int PROC_REBOOT					= 0xFF;
+        //private const int PROC_READ_GPIOCONFIG         = 0x0D;
+        //private const int PROC_READ_GPIOPINS           = 0x0E;
+        //private const int PROC_REBOOT					= 0xFF;
 
 		private readonly DispatcherTimer		RepeatEvent = new DispatcherTimer();
 		private readonly DispatcherTimer		ProcessEvent = new DispatcherTimer();
@@ -62,28 +69,30 @@ namespace RFID.Utility
         private ICOM                            _ICOM;
         private INET                            _INet;
         private IUSB                            _IUSB;
-        private ICOM.CombineDataHandler         _CombineDataHandler;
-        private INET.NetTCPDataHandler          _NetTCPDataHandler;
-        private IUSB.USBDataHandler             _USBDataHandler;
-        private Module.Version	                _Version;
-        private Module.BaudRate                 _BaudRate = Module.BaudRate.B38400;
+        private IBLE                            _IBLE;
+        private ICOM.CombineDataEventHandler    combineDataEventHandler;
+        private INET.NetTCPDataEventHandler     netTCPDataEventHandler;
+        private IUSB.USBDataEventHandler        uSBDataEventHandler;
+        private IBLE.BLEDataEventHandler        bLEDataEventHandler;
+        private ReaderModule.Version	        _Version;
+        private ReaderModule.BaudRate           _BaudRate = ReaderModule.BaudRate.B38400;
         private ReaderService.ConnectType       _ConnectType = ReaderService.ConnectType.DEFAULT;
         private Int32                           IRegulation = 8;
         private CultureInfo						Culture;
 		private Int32                           BasebandMode;
-        //private CommandStates                   DoProcess = CommandStates.DEFAULT;
+        //private CommandStatus                   DoProcess = CommandStatus.DEFAULT;
         private Boolean                         IsReceiveEvent = false;
         private volatile Boolean                IsSendPass = false;
         private String                          ReceiveEventData = String.Empty;
         private Boolean                         IsReceiveFake = false;
         private Thread                          SetThread;
         private RegulationVM                    VM = new RegulationVM();
-
+        private ResourceManager                 stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public Module.BaudRate GetBaudRate()
+        public ReaderModule.BaudRate GetBaudRate()
         {
             return _BaudRate;
         }
@@ -98,13 +107,13 @@ namespace RFID.Utility
         }
 
 
-        public RegulationDialog(ReaderService service, ReaderService.ConnectType type, Module.Version v, Module.BaudRate br, CultureInfo selected_culture) {
+        public RegulationDialog(ReaderService service, ReaderService.ConnectType type, ReaderModule.Version v, ReaderModule.BaudRate br, CultureInfo selectedCulture) {
 			InitializeComponent();
 
             this._ReaderService = service;
             this._ConnectType = type;
             this._Version = v;
-            this.Culture = selected_culture;
+            this.Culture = selectedCulture;
             this._BaudRate = br;
 
             UICtrlModify(this._Version);
@@ -114,22 +123,30 @@ namespace RFID.Utility
             BaudRateModify(this._BaudRate);
             DataContext = VM;
 
+            if (service == null)
+                throw new ArgumentNullException(stringManager.GetString("ReaderService is null", CultureInfo.CurrentCulture));
+
             switch (this._ConnectType)
             {
                 case ReaderService.ConnectType.COM:
                     this._ICOM = service.COM;
-                    this._CombineDataHandler = new ICOM.CombineDataHandler(DoReceiveDataWork);
-                    this._ICOM.CombineDataReceiveEvent += _CombineDataHandler;
+                    this.combineDataEventHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
+                    this._ICOM.CombineDataReceiveEventHandler += combineDataEventHandler;
                     break;
                 case ReaderService.ConnectType.NET:
                     this._INet = service.NET;
-                    this._NetTCPDataHandler = new INET.NetTCPDataHandler(DoReceiveDataWork);
-                    this._INet.NetTCPDataReceiveEvent += _NetTCPDataHandler;
+                    this.netTCPDataEventHandler = new INET.NetTCPDataEventHandler(DoReceiveDataWork);
+                    this._INet.NetTCPDataReceiveEventHandler += netTCPDataEventHandler;
                     break;
                 case ReaderService.ConnectType.USB:
                     this._IUSB = service.USB;
-                    this._USBDataHandler = new IUSB.USBDataHandler(DoReceiveDataWork);
-                    this._IUSB.USBDataReceiveEvent += _USBDataHandler;
+                    this.uSBDataEventHandler = new IUSB.USBDataEventHandler(DoReceiveDataWork);
+                    this._IUSB.USBDataReceiveEvent += uSBDataEventHandler;
+                    break;
+                case ReaderService.ConnectType.BLE:
+                    this._IBLE = service.BLE;
+                    this.bLEDataEventHandler = new IBLE.BLEDataEventHandler(DoReceiveDataWork);
+                    this._IBLE.BLEDataReceiveEvent += bLEDataEventHandler;
                     break;
             }
 
@@ -142,44 +159,44 @@ namespace RFID.Utility
         /// Add R300S_D306, R300V_D405, R300V_D405 (2017.9.4)
         /// </summary>
         /// <param name="v"></param>
-        private void UICtrlModify(Module.Version v)
+        private void UICtrlModify(ReaderModule.Version v)
         {
-            switch (this._Version)
+            switch (v)
             {
-                case Module.Version.FI_R3008:
-                case Module.Version.FI_RXXXX:
+                case ReaderModule.Version.FIR3008:
+                case ReaderModule.Version.FIRXXXX:
                     UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ?
                     "The Reader version is not support the advanced setting." :
                     "此版本Reader不支援此進階操作", false);
                     break;
-                case Module.Version.FI_R300A_C1:
-                case Module.Version.FI_R300A_C2:
-                case Module.Version.FI_R300T_D1:
-                case Module.Version.FI_R300T_D2:
-                case Module.Version.FI_A300S:
+                case ReaderModule.Version.FIR300AC1:
+                case ReaderModule.Version.FIR300AC2:
+                case ReaderModule.Version.FIR300TD1:
+                case ReaderModule.Version.FIR300TD2:
+                case ReaderModule.Version.FIA300S:
                     this.GroupBaudRate.IsEnabled = false;
                     EventInit();
                     break;
-                case Module.Version.FI_R300A_C2C4:
-                case Module.Version.FI_R300T_D204:
-                case Module.Version.FI_R300A_C2C5:
-                case Module.Version.FI_R300A_C2C6:
-                case Module.Version.FI_R300T_D205:
-                case Module.Version.FI_R300T_D206:
-                case Module.Version.FI_R300T_H:
+                case ReaderModule.Version.FIR300AC2C4:
+                case ReaderModule.Version.FIR300TD204:
+                case ReaderModule.Version.FIR300AC2C5:
+                case ReaderModule.Version.FIR300AC2C6:
+                case ReaderModule.Version.FIR300TD205:
+                case ReaderModule.Version.FIR300TD206:
+                case ReaderModule.Version.FIR300TH:
                     this.GroupBaudRate.IsEnabled = false;
                     EventInit();
                     break;
-                case Module.Version.FI_R300A_C3:
-                case Module.Version.FI_R300S:
-                case Module.Version.FI_R300S_D305:
-                case Module.Version.FI_R300S_D306:
-                case Module.Version.FI_R300A_C3C5:
+                case ReaderModule.Version.FIR300AC3:
+                case ReaderModule.Version.FIR300S:
+                case ReaderModule.Version.FIR300SD305:
+                case ReaderModule.Version.FIR300SD306:
+                case ReaderModule.Version.FIR300AC3C5:
                 //case Module.Version.FI_R300V_D405:
-                case Module.Version.FI_R300V_D406:
-                case Module.Version.FI_R300A_H:
-                case Module.Version.FI_R300S_H:
-                case Module.Version.FI_R300V_H:
+                case ReaderModule.Version.FIR300VD406:
+                case ReaderModule.Version.FIR300AH:
+                case ReaderModule.Version.FIR300SH:
+                case ReaderModule.Version.FIR300VH:
                     EventInit();
                     break;
             }
@@ -189,45 +206,45 @@ namespace RFID.Utility
         /// 
         /// </summary>
         /// <param name="v"></param>
-        private void AreaModify(Module.Version v)
+        private void AreaModify(ReaderModule.Version v)
         {
             ObservableCollection<String> list = new ObservableCollection<String>();
             switch (v)
             {
-                case Module.Version.FI_R300T_D1:
-                case Module.Version.FI_R300T_D2:
-                case Module.Version.FI_R300A_C1:
-                case Module.Version.FI_R300A_C2:
-                case Module.Version.FI_A300S:
-                case Module.Version.FI_RXXXX:
-                    foreach (Module.AreaItem area in Module.GetAreaGroups(Module.Version.FI_R300T_D1))
-                        list.Add(String.Format("{0}", area.LocationName));
+                case ReaderModule.Version.FIR300TD1:
+                case ReaderModule.Version.FIR300TD2:
+                case ReaderModule.Version.FIR300AC1:
+                case ReaderModule.Version.FIR300AC2:
+                case ReaderModule.Version.FIA300S:
+                case ReaderModule.Version.FIRXXXX:
+                    foreach (AreaItem area in ReaderModule.GetAreaGroups(ReaderModule.Version.FIR300TD1))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", area.LocationName));
                     break;
-                case Module.Version.FI_R300A_C2C4:
-                case Module.Version.FI_R300T_D204:
-                case Module.Version.FI_R300S:
-                case Module.Version.FI_R300A_C3:
-                    foreach (Module.AreaItem area in Module.GetAreaGroups(Module.Version.FI_R300A_C3))
-                        list.Add(String.Format("{0}", area.LocationName));
+                case ReaderModule.Version.FIR300AC2C4:
+                case ReaderModule.Version.FIR300TD204:
+                case ReaderModule.Version.FIR300S:
+                case ReaderModule.Version.FIR300AC3:
+                    foreach (AreaItem area in ReaderModule.GetAreaGroups(ReaderModule.Version.FIR300AC3))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", area.LocationName));
                     break;
-                case Module.Version.FI_R300A_C2C5:
-                case Module.Version.FI_R300A_C3C5:
-                case Module.Version.FI_R300T_D205:
-                case Module.Version.FI_R300S_D305:
-                    foreach (Module.AreaItem area in Module.GetAreaGroups(Module.Version.FI_R300A_C2C5))
-                        list.Add(String.Format("{0}", area.LocationName));
+                case ReaderModule.Version.FIR300AC2C5:
+                case ReaderModule.Version.FIR300AC3C5:
+                case ReaderModule.Version.FIR300TD205:
+                case ReaderModule.Version.FIR300SD305:
+                    foreach (AreaItem area in ReaderModule.GetAreaGroups(ReaderModule.Version.FIR300AC2C5))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", area.LocationName));
                     break;
-                case Module.Version.FI_R300A_C2C6:
-                case Module.Version.FI_R300S_D306:
+                case ReaderModule.Version.FIR300AC2C6:
+                case ReaderModule.Version.FIR300SD306:
                 //case Module.Version.FI_R300V_D405:
-                case Module.Version.FI_R300V_D406:
-                case Module.Version.FI_R300T_D206:
-                case Module.Version.FI_R300A_H:
-                case Module.Version.FI_R300S_H:
-                case Module.Version.FI_R300V_H:
-                case Module.Version.FI_R300T_H:
-                    foreach (Module.AreaItem area in Module.GetAreaGroups(Module.Version.FI_R300V_D406))
-                        list.Add(String.Format("{0}", area.LocationName));
+                case ReaderModule.Version.FIR300VD406:
+                case ReaderModule.Version.FIR300TD206:
+                case ReaderModule.Version.FIR300AH:
+                case ReaderModule.Version.FIR300SH:
+                case ReaderModule.Version.FIR300VH:
+                case ReaderModule.Version.FIR300TH:
+                    foreach (AreaItem area in ReaderModule.GetAreaGroups(ReaderModule.Version.FIR300VD406))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", area.LocationName));
                     break;
             }
 
@@ -238,46 +255,46 @@ namespace RFID.Utility
         /// 
         /// </summary>
         /// <param name="v"></param>
-        private void PowerModify(Module.Version v)
+        private void PowerModify(ReaderModule.Version v)
         {
             ObservableCollection<string> list = new ObservableCollection<string>();
             switch (v)
             {
-                case Module.Version.FI_R300T_D1:
-                case Module.Version.FI_R300T_D2:
-                case Module.Version.FI_R300T_D204:
-                case Module.Version.FI_R300T_D205:
-                case Module.Version.FI_R300T_D206:
-                case Module.Version.FI_R300T_H:
-                    foreach (Module.PowerItem power in Module.GetPowerGroups(Module.Version.FI_R300T_D1))
-                        list.Add(String.Format("{0}", power.LocationName));
+                case ReaderModule.Version.FIR300TD1:
+                case ReaderModule.Version.FIR300TD2:
+                case ReaderModule.Version.FIR300TD204:
+                case ReaderModule.Version.FIR300TD205:
+                case ReaderModule.Version.FIR300TD206:
+                case ReaderModule.Version.FIR300TH:
+                    foreach (PowerItem power in ReaderModule.GetPowerGroups(ReaderModule.Version.FIR300TD1))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", power.LocationName));
                     break;
-                case Module.Version.FI_R300A_C1:
-                case Module.Version.FI_R300A_C2:
-                case Module.Version.FI_R300A_C2C4:
-                case Module.Version.FI_R300A_C3:
-                case Module.Version.FI_R300A_C2C5:
-                case Module.Version.FI_R300A_C2C6:
-                case Module.Version.FI_R300A_C3C5:
-                case Module.Version.FI_R300A_H:
-                    foreach (Module.PowerItem power in Module.GetPowerGroups(Module.Version.FI_R300A_C1))
-                        list.Add(String.Format("{0}", power.LocationName));
+                case ReaderModule.Version.FIR300AC1:
+                case ReaderModule.Version.FIR300AC2:
+                case ReaderModule.Version.FIR300AC2C4:
+                case ReaderModule.Version.FIR300AC3:
+                case ReaderModule.Version.FIR300AC2C5:
+                case ReaderModule.Version.FIR300AC2C6:
+                case ReaderModule.Version.FIR300AC3C5:
+                case ReaderModule.Version.FIR300AH:
+                    foreach (PowerItem power in ReaderModule.GetPowerGroups(ReaderModule.Version.FIR300AC1))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", power.LocationName));
                     break;
-                case Module.Version.FI_R300S:
-                case Module.Version.FI_A300S:
-                case Module.Version.FI_R300S_D305:
-                case Module.Version.FI_R300S_D306:
-                case Module.Version.FI_R300S_H:
-                    foreach (Module.PowerItem power in Module.GetPowerGroups(Module.Version.FI_A300S))
-                        list.Add(String.Format("{0}", power.LocationName));
+                case ReaderModule.Version.FIR300S:
+                case ReaderModule.Version.FIA300S:
+                case ReaderModule.Version.FIR300SD305:
+                case ReaderModule.Version.FIR300SD306:
+                case ReaderModule.Version.FIR300SH:
+                    foreach (PowerItem power in ReaderModule.GetPowerGroups(ReaderModule.Version.FIA300S))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", power.LocationName));
                     break;
                 //case Module.Version.FI_R300V_D405:
-                case Module.Version.FI_R300V_D406:
-                case Module.Version.FI_R300V_H:
-                    foreach (Module.PowerItem power in Module.GetPowerGroups(Module.Version.FI_R300V_D406))
-                        list.Add(String.Format("{0}", power.LocationName));
+                case ReaderModule.Version.FIR300VD406:
+                case ReaderModule.Version.FIR300VH:
+                    foreach (PowerItem power in ReaderModule.GetPowerGroups(ReaderModule.Version.FIR300VD406))
+                        list.Add(String.Format(CultureInfo.CurrentCulture, "{0}", power.LocationName));
                     break;
-                case Module.Version.FI_RXXXX:
+                case ReaderModule.Version.FIRXXXX:
                     list.Add("== N/A ==");
                     break;
             }
@@ -290,18 +307,18 @@ namespace RFID.Utility
         /// 
         /// </summary>
         /// <param name="br"></param>
-        private void BaudRateModify(Module.BaudRate br)
+        private void BaudRateModify(ReaderModule.BaudRate br)
         {
             switch (br)
             {
-                case Module.BaudRate.B4800: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[0]; break;
-                case Module.BaudRate.B9600: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[1]; break;
-                case Module.BaudRate.B14400: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[2]; break;
-                case Module.BaudRate.B19200: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[3]; break;
-                case Module.BaudRate.B38400: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[4]; break;
-                case Module.BaudRate.B57600: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[5]; break;
-                case Module.BaudRate.B115200: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[6]; break;
-                case Module.BaudRate.B230400: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[7]; break;
+                case ReaderModule.BaudRate.B4800: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[0]; break;
+                case ReaderModule.BaudRate.B9600: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[1]; break;
+                case ReaderModule.BaudRate.B14400: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[2]; break;
+                case ReaderModule.BaudRate.B19200: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[3]; break;
+                case ReaderModule.BaudRate.B38400: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[4]; break;
+                case ReaderModule.BaudRate.B57600: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[5]; break;
+                case ReaderModule.BaudRate.B115200: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[6]; break;
+                case ReaderModule.BaudRate.B230400: VM.ComboBoxBaudRateSelectedBaudRate = VM.BaudRate[7]; break;
             }
         }
 
@@ -364,10 +381,10 @@ namespace RFID.Utility
             {
                 UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Reset and wait few second." : "重置..請稍後", false);
             }));
-            DoSendWork(this._ReaderService.Command_J("0", "00"), Module.CommandType.Normal);
-            DoReceiveWork(Module.CommandType.Normal);
+            DoSendWork(this._ReaderService.CommandJ("0", "00"), ReaderModule.CommandType.Normal);
+            DoReceiveWork();
 
-            Module.Regulation _regulation = Module.Regulation.US;
+            ReaderModule.Regulation _regulation = ReaderModule.Regulation.US;
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
             {
                 UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Set area." : "設定區域", false);
@@ -376,48 +393,48 @@ namespace RFID.Utility
             switch (VM.ComboBoxAreaSelectedIndex/*this.ComboBoxArea.SelectedIndex*/)
             {
                 case 0:
-                    _regulation = Module.Regulation.US;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.US), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.US;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.US), ReaderModule.CommandType.Normal);
                     break;
                 case 1:
-                    _regulation = Module.Regulation.TW;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.TW), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.TW;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.TW), ReaderModule.CommandType.Normal);
                     break;
                 case 2:
-                    _regulation = Module.Regulation.CN;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.CN), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.CN;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.CN), ReaderModule.CommandType.Normal);
                     break;
                 case 3:
-                    _regulation = Module.Regulation.CN2;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.CN2), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.CN2;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.CN2), ReaderModule.CommandType.Normal);
                     break;
                 case 4:
-                    _regulation = Module.Regulation.EU;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.EU), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.EU;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.EU), ReaderModule.CommandType.Normal);
                     break;
                 case 5:
-                    _regulation = Module.Regulation.JP;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.JP), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.JP;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.JP), ReaderModule.CommandType.Normal);
                     break;
                 case 6:
-                    _regulation = Module.Regulation.KR;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.KR), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.KR;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.KR), ReaderModule.CommandType.Normal);
                     break;
                 case 7:
-                    _regulation = Module.Regulation.VN;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.VN), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.VN;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.VN), ReaderModule.CommandType.Normal);
                     break;
                 case 8:
-                    _regulation = Module.Regulation.EU2;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.EU2), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.EU2;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.EU2), ReaderModule.CommandType.Normal);
                     break;
                 case 9:
-                    _regulation = Module.Regulation.IN;
-                    DoSendWork(this._ReaderService.SetRegulation(Module.Regulation.IN), Module.CommandType.Normal);
+                    _regulation = ReaderModule.Regulation.IN;
+                    DoSendWork(this._ReaderService.SetRegulation(ReaderModule.Regulation.IN), ReaderModule.CommandType.Normal);
                     break;
             }
 
-            this.ReceiveData = DoReceiveWork(Module.CommandType.Normal);
+            this.ReceiveData = DoReceiveWork();
             if (this.ReceiveData != null && this.ReceiveData.Length == 6)
             {
                 String str = Encoding.ASCII.GetString(new Byte[] { ReceiveData[2], ReceiveData[3] });
@@ -428,7 +445,7 @@ namespace RFID.Utility
                     if (attrs != null && attrs.Length > 0)
                     {
                         String dbr = ((DescriptionAttribute)attrs[0]).Description;
-                        if (dbr.Equals(str))
+                        if (dbr.Equals(str, StringComparison.CurrentCulture))
                         {
                             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
                             {
@@ -460,21 +477,21 @@ namespace RFID.Utility
         /// 
         /// </summary>
         /// <param name="area"></param>
-        private void SetArea(Module.Regulation area)
+        private void SetArea(ReaderModule.Regulation area)
         {
             ObservableCollection<String> items = new ObservableCollection<String>();
 
-            for (Int32 i = 0; i < Module.RegulationChannel(area); i++)
+            for (Int32 i = 0; i < ReaderModule.RegulationChannel(area); i++)
             {
-                Double j = Module.RegulationFrequency(area, i);
-                items.Add(String.Format("{0}MHz", j.ToString("###.000")));
+                Double j = ReaderModule.RegulationFrequency(area, i);
+                items.Add(String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.000", CultureInfo.CurrentCulture)));
             }
             items.Add("hopping");
 
             ComboBoxFrequency.ItemsSource = items;
-            ComboBoxFrequency.SelectedIndex = Module.RegulationMidChannel(area);
+            ComboBoxFrequency.SelectedIndex = ReaderModule.RegulationMidChannel(area);
             ComboBoxMeasureFrequency.ItemsSource = items;
-            ComboBoxMeasureFrequency.SelectedIndex = Module.RegulationChannel(area);
+            ComboBoxMeasureFrequency.SelectedIndex = ReaderModule.RegulationChannel(area);
         }
 
 
@@ -492,34 +509,34 @@ namespace RFID.Utility
             switch (index)
             {
 				case 0:
-                    SetArea(Module.Regulation.US);
+                    SetArea(ReaderModule.Regulation.US);
 					break;
 				case 1:
-                    SetArea(Module.Regulation.TW);
+                    SetArea(ReaderModule.Regulation.TW);
                     break;
 				case 2:
-                    SetArea(Module.Regulation.CN);
+                    SetArea(ReaderModule.Regulation.CN);
                     break;
 				case 3:
-                    SetArea(Module.Regulation.CN2);
+                    SetArea(ReaderModule.Regulation.CN2);
                     break;
 				case 4:
-                    SetArea(Module.Regulation.EU);
+                    SetArea(ReaderModule.Regulation.EU);
                     break;
                 case 5:
-                    SetArea(Module.Regulation.JP);
+                    SetArea(ReaderModule.Regulation.JP);
                     break;
                 case 6:
-                    SetArea(Module.Regulation.KR);
+                    SetArea(ReaderModule.Regulation.KR);
                     break;
                 case 7:
-                    SetArea(Module.Regulation.VN);
+                    SetArea(ReaderModule.Regulation.VN);
                     break;
                 case 8:
-                    SetArea(Module.Regulation.EU2);
+                    SetArea(ReaderModule.Regulation.EU2);
                     break;
                 case 9:
-                    SetArea(Module.Regulation.IN);
+                    SetArea(ReaderModule.Regulation.IN);
                     break;
             }
 		}
@@ -534,8 +551,8 @@ namespace RFID.Utility
 			Int32 idx = this.ComboBoxFrequency.SelectedIndex + 1;
 			String str = Format.ByteToHexString((Byte)idx);
 
-			DoSendWork(this._ReaderService.Command_J("1", str), Module.CommandType.Normal);
-			DoReceiveWork(Module.CommandType.Normal);
+			DoSendWork(this._ReaderService.CommandJ("1", str), ReaderModule.CommandType.Normal);
+			DoReceiveWork();
 		}
 
         /// <summary>
@@ -545,7 +562,7 @@ namespace RFID.Utility
         /// <param name="e"></param>
 		private void OnButtonAdjustClick(object sender, RoutedEventArgs e)
         {
-			if (TextBoxMeasureFrequency.GetLineText(0) != String.Empty) {
+			if (!String.IsNullOrEmpty(TextBoxMeasureFrequency.GetLineText(0))) {
 				this.IsAdjust = true;
 				this.PreProcess = PROC_READ_FREQ;
 				this.ProcessEvent.Start();
@@ -612,10 +629,10 @@ namespace RFID.Utility
         /// <param name="e"></param>
         private void OnButtonSetPowerClick(object sender, RoutedEventArgs e)
         {
-			Int32 idx = Module.GetPowerGroupsIndex(this._Version, ComboboxPower.SelectedIndex);
+			Int32 idx = ReaderModule.GetPowerGroupsIndex(this._Version, ComboboxPower.SelectedIndex);
 
-			DoSendWork(this._ReaderService.SetPower(Format.ByteToHexString((Byte)idx)), Module.CommandType.Normal);
-			DoReceiveWork(Module.CommandType.Normal);
+			DoSendWork(this._ReaderService.SetPower(Format.ByteToHexString((Byte)idx)), ReaderModule.CommandType.Normal);
+			DoReceiveWork();
 		}
         #endregion
 
@@ -629,7 +646,7 @@ namespace RFID.Utility
         /// <param name="e"></param>
         private void OnRadioButtonBasebandModeChecked(object sender, RoutedEventArgs e) {
             if (!(sender is RadioButton radioButton)) return;
-            this.BasebandMode = Convert.ToInt32(radioButton.Tag.ToString());
+            this.BasebandMode = Convert.ToInt32(radioButton.Tag.ToString(), CultureInfo.CurrentCulture);
 		}
         
         /// <summary>
@@ -645,42 +662,42 @@ namespace RFID.Utility
 			switch (ComboBoxArea.SelectedIndex)
             {
 				case 0:
-					if (idx == Module.RegulationChannel(Module.Regulation.US) + 1)
-                        bs = this._ReaderService.Command_J("0", "00");
+					if (idx == ReaderModule.RegulationChannel(ReaderModule.Regulation.US) + 1)
+                        bs = this._ReaderService.CommandJ("0", "00");
 					break;
 				case 1:
                 case 7:
-					if (idx == Module.RegulationChannel(Module.Regulation.TW) + 1)
-                        bs = this._ReaderService.Command_J("0", "00");
+					if (idx == ReaderModule.RegulationChannel(ReaderModule.Regulation.TW) + 1)
+                        bs = this._ReaderService.CommandJ("0", "00");
 					break;
 				case 2:
 				case 3:
-					if (idx == Module.RegulationChannel(Module.Regulation.CN) + 1)
-                        bs = this._ReaderService.Command_J("0", "00");
+					if (idx == ReaderModule.RegulationChannel(ReaderModule.Regulation.CN) + 1)
+                        bs = this._ReaderService.CommandJ("0", "00");
 					break;
 				
 				case 4:
                 case 5:
                 case 8:
-                    if (idx == Module.RegulationChannel(Module.Regulation.EU) + 1)
-                        bs = this._ReaderService.Command_J("0", "00");
+                    if (idx == ReaderModule.RegulationChannel(ReaderModule.Regulation.EU) + 1)
+                        bs = this._ReaderService.CommandJ("0", "00");
 					break;
                 case 6:
-                    if (idx == Module.RegulationChannel(Module.Regulation.KR) + 1)
-                        bs = this._ReaderService.Command_J("0", "00");
+                    if (idx == ReaderModule.RegulationChannel(ReaderModule.Regulation.KR) + 1)
+                        bs = this._ReaderService.CommandJ("0", "00");
                     break;
                 case 9:
-                    if (idx == Module.RegulationChannel(Module.Regulation.IN) + 1)
-                        bs = this._ReaderService.Command_J("0", "00");
+                    if (idx == ReaderModule.RegulationChannel(ReaderModule.Regulation.IN) + 1)
+                        bs = this._ReaderService.CommandJ("0", "00");
                     break;
             }
 
 			if (bs == null) {
-				bs = this._ReaderService.Command_J((this.BasebandMode == 2) ? "2" : "1", Format.ByteToHexString((Byte)idx));
+				bs = this._ReaderService.CommandJ((this.BasebandMode == 2) ? "2" : "1", Format.ByteToHexString((Byte)idx));
 			}
 			IsSetFrequency = true;
-			DoSendWork(bs, Module.CommandType.Normal);
-			DoReceiveWork(Module.CommandType.Normal);
+			DoSendWork(bs, ReaderModule.CommandType.Normal);
+			DoReceiveWork();
 		}
   
         /// <summary>
@@ -702,7 +719,7 @@ namespace RFID.Utility
 				this.IsRunning = true;
 				this.ButtonMeasureRun.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Stop" : "停止";
 				UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Running Tag test.." : "正在執行Tag測試..", false);
-                //DoProcess = CommandStates.TESTRUN;
+                //DoProcess = CommandStatus.TESTRUN;
                 this.RepeatEvent.Start();
             }
 			else
@@ -734,20 +751,20 @@ namespace RFID.Utility
 
         private void DoSetBuadRateWork()
         {
-            Module.BaudRate br = Module.BaudRate.B9600;
+            ReaderModule.BaudRate br = ReaderModule.BaudRate.B9600;
             switch (VM.ComboBoxBaudRateSelectedBaudRate.Tag)
             {
-                case "0": br = Module.BaudRate.B4800; break;
-                case "1": br = Module.BaudRate.B9600; break;
-                case "2": br = Module.BaudRate.B14400; break;
-                case "3": br = Module.BaudRate.B19200; break;
-                case "4": br = Module.BaudRate.B38400; break;
-                case "5": br = Module.BaudRate.B57600; break;
-                case "6": br = Module.BaudRate.B115200; break;
-                case "7": br = Module.BaudRate.B230400; break;
+                case "0": br = ReaderModule.BaudRate.B4800; break;
+                case "1": br = ReaderModule.BaudRate.B9600; break;
+                case "2": br = ReaderModule.BaudRate.B14400; break;
+                case "3": br = ReaderModule.BaudRate.B19200; break;
+                case "4": br = ReaderModule.BaudRate.B38400; break;
+                case "5": br = ReaderModule.BaudRate.B57600; break;
+                case "6": br = ReaderModule.BaudRate.B115200; break;
+                case "7": br = ReaderModule.BaudRate.B230400; break;
             }
-            DoSendWork(this._ReaderService.SetBaudRate(br), Module.CommandType.Normal);
-            this.ReceiveData = DoReceiveWork(Module.CommandType.Normal);
+            DoSendWork(this._ReaderService.SetBaudRate(br), ReaderModule.CommandType.Normal);
+            this.ReceiveData = DoReceiveWork();
             if (this.ReceiveData != null && this.ReceiveData.Length == 6)
             {
                 String str = Encoding.ASCII.GetString(new Byte[] { ReceiveData[2], ReceiveData[3] });
@@ -758,7 +775,7 @@ namespace RFID.Utility
                     if (attrs != null && attrs.Length > 0)
                     {
                         String dbr = ((DescriptionAttribute)attrs[0]).Description;
-                        if (!dbr.Equals(str))
+                        if (!dbr.Equals(str, StringComparison.CurrentCulture))
                         {
                             switch (_ConnectType)
                             {
@@ -783,7 +800,9 @@ namespace RFID.Utility
                                     {
                                         Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
                                         {
-                                            UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? String.Format("Utility has reconnected to module, and change baud rate to {0}", ibr) : String.Format("已重新連線, baud rate設定至{0}", ibr), true);
+                                            UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? 
+                                                String.Format(CultureInfo.CurrentCulture, "Utility has reconnected to module, and change baud rate to {0}", ibr) : 
+                                                String.Format(CultureInfo.CurrentCulture, "已重新連線, baud rate設定至{0}", ibr), true);
                                         }));
                                         _BaudRate = ICOM.GetBaudRate(ibr);
                                     }
@@ -799,7 +818,9 @@ namespace RFID.Utility
                                         UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Baud rate changed and reconnect module.." : "Baud rate改變，重新連線中..", false);
                                         Thread.Sleep(500);
                                         Int32 _ibr = ICOM.GetBaudRate(str);
-                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? String.Format("Utility has reconnected to module, and change baud rate to {0}", _ibr) : String.Format("已重新連線, baud rate設定至{0}", _ibr), true);
+                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? 
+                                            String.Format(CultureInfo.CurrentCulture, "Utility has reconnected to module, and change baud rate to {0}", _ibr) : 
+                                            String.Format(CultureInfo.CurrentCulture, "已重新連線, baud rate設定至{0}", _ibr), true);
                                         _BaudRate = ICOM.GetBaudRate(_ibr);
                                     }));
                                     
@@ -807,6 +828,19 @@ namespace RFID.Utility
                                 case ReaderService.ConnectType.NET:
                                     //
                                     Thread.Sleep(200);
+                                    break;
+                                case ReaderService.ConnectType.BLE:
+                                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
+                                    {
+                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Baud rate changed and reconnect module.." : "Baud rate改變，重新連線中..", false);
+                                        Thread.Sleep(500);
+                                        Int32 _ibr = ICOM.GetBaudRate(str);
+                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ?
+                                            String.Format(CultureInfo.CurrentCulture, "Utility has reconnected to module, and change baud rate to {0}", _ibr) :
+                                            String.Format(CultureInfo.CurrentCulture, "已重新連線, baud rate設定至{0}", _ibr), true);
+                                        _BaudRate = ICOM.GetBaudRate(_ibr);
+                                    }));
+
                                     break;
                             }
                             //reconnect
@@ -859,13 +893,16 @@ namespace RFID.Utility
             switch (this._ConnectType)
             {
                 case ReaderService.ConnectType.COM:
-                    this._ICOM.CombineDataReceiveEvent -= _CombineDataHandler;
+                    this._ICOM.CombineDataReceiveEventHandler -= combineDataEventHandler;
                     break;
                 case ReaderService.ConnectType.NET:
-                    this._INet.NetTCPDataReceiveEvent -= _NetTCPDataHandler;
+                    this._INet.NetTCPDataReceiveEventHandler -= netTCPDataEventHandler;
                     break;
                 case ReaderService.ConnectType.USB:
-                    this._IUSB.USBDataReceiveEvent -= _USBDataHandler;
+                    this._IUSB.USBDataReceiveEvent -= uSBDataEventHandler;
+                    break;
+                case ReaderService.ConnectType.BLE:
+                    this._IBLE.BLEDataReceiveEvent -= bLEDataEventHandler;
                     break;
             }
             this.Close();
@@ -889,21 +926,21 @@ namespace RFID.Utility
                     case "TX":
                         this.IsDateTimeStamp = true;
                         itm.Foreground = Brushes.SeaGreen;
-                        itm.Content = String.Format("{0} [{1}] - {2}", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff"), str, Format.ShowCRLF(data));
+                        itm.Content = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - {2}", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff", CultureInfo.CurrentCulture), str, Format.ShowCRLF(data));
                         break;
                     case "RX":
                         itm.Foreground = Brushes.DarkRed;
                         if (this.IsDateTimeStamp) {
                             if (this.IsRunning)
-                                itm.Content = String.Format("{0} [{1}] - \n{2}", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff"), str, Format.ShowCRLF(data));
+                                itm.Content = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - \n{2}", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff", CultureInfo.CurrentCulture), str, Format.ShowCRLF(data));
                             else
-                                itm.Content = String.Format("{0} [{1}] - {2}", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff"), str, Format.ShowCRLF(data));
+                                itm.Content = String.Format(CultureInfo.CurrentCulture, "{0} [{1}] - {2}", DateTime.Now.ToString("yy/MM/dd H:mm:ss.fff", CultureInfo.CurrentCulture), str, Format.ShowCRLF(data));
                         }
                         else {
                             if (IsReceiveData)
                                 itm.Content = Format.ShowCRLF(data);
                             else
-                                itm.Content = String.Format("{0}  -- {1}", Format.ShowCRLF(data), DateTime.Now.ToString("H:mm:ss.fff"));
+                                itm.Content = String.Format(CultureInfo.CurrentCulture, "{0}  -- {1}", Format.ShowCRLF(data), DateTime.Now.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture));
                         }
                         this.IsDateTimeStamp = false;
                         break;
@@ -1015,7 +1052,7 @@ namespace RFID.Utility
             if (!this.IsReceiveData)
             {
                 this.IsReceiveData = true;
-                DoSendWork(this._ReaderService.Command_U(), Module.CommandType.Normal);
+                DoSendWork(this._ReaderService.CommandU(), ReaderModule.CommandType.Normal);
             }		
 		}
 
@@ -1024,10 +1061,10 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="bs"></param>
         /// <param name="t"></param>
-		private void DoSendWork(Byte[] bs, Module.CommandType t) {
+		private void DoSendWork(Byte[] bs, ReaderModule.CommandType t) {
 			if (bs != null) {
                 if (!IsReceiveFake) {
-                    if (t == Module.CommandType.Normal)
+                    if (t == ReaderModule.CommandType.Normal)
                         DisplayText("TX", Format.ShowCRLF(Format.BytesToString(bs)));
                     else
                         DisplayText("TX", Format.BytesToHexString(bs));
@@ -1048,6 +1085,9 @@ namespace RFID.Utility
                     case ReaderService.ConnectType.NET:
                         this._INet.Send(bs, t);
                         break;
+                    case ReaderService.ConnectType.BLE:
+                        this._IBLE.Send(bs, t);
+                        break;
                 }
 			}
 		}
@@ -1056,9 +1096,8 @@ namespace RFID.Utility
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="t"></param>
         /// <returns></returns>
-        private Byte[] DoReceiveWork(Module.CommandType t)
+        private Byte[] DoReceiveWork()
         {
             Byte[] b = null;
             switch (_ConnectType)
@@ -1074,6 +1113,9 @@ namespace RFID.Utility
                     break;
                 case ReaderService.ConnectType.NET:
                     b = this._INet.Receive();
+                    break;
+                case ReaderService.ConnectType.BLE:
+                    b = this._IBLE.Receive();
                     break;
             }
 
@@ -1105,31 +1147,12 @@ namespace RFID.Utility
 
 			switch (this.PreProcess)
             {
-                /*case PROC_READ_REGULATION_FAKE:
-                    if (!IsSendPass)
-                    {
-                        //UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Get frequency information." : "讀取頻率資訊..", false);
-                        IsReceiveFake = true;
-                        DoSendWork(this._ReaderService.ReadRegulation(), Module.CommandType.Normal);
-                        IsSendPass = true;
-                    }
-                    else
-                    {
-                        if (IsReceiveEvent)
-                        {
-                            IsReceiveEvent = false;
-                            IsSendPass = false;
-                            this.ReceiveData = Format.StringToBytes(ReceiveEventData);
-                            this.PreProcess = PROC_READ_REGULATION;
-                            IsReceiveFake = false;
-                        }
-                    }
-                    break;*/
+
                 case PROC_READ_REGULATION:
                     if (!IsSendPass)
                     {
                         UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Get frequency information." : "讀取頻率資訊..", false);
-                        DoSendWork(this._ReaderService.ReadRegulation(), Module.CommandType.Normal);
+                        DoSendWork(this._ReaderService.ReadRegulation(), ReaderModule.CommandType.Normal);
                         IsSendPass = true;
                     }
                     else {
@@ -1152,16 +1175,16 @@ namespace RFID.Utility
                                 {
                                     switch (this.ReceiveData[3])
                                     {
-                                        case 0x31: this.mLabelArea.Text = "01: US 902~928"; IRegulation = 1; break;
-                                        case 0x32: this.mLabelArea.Text = "02: TW 922~928"; IRegulation = 2; break;
-                                        case 0x33: this.mLabelArea.Text = "03: CN 920~925"; IRegulation = 3; break;
-                                        case 0x34: this.mLabelArea.Text = "04: CN2 840~845"; IRegulation = 4; break;
-                                        case 0x35: this.mLabelArea.Text = "05: EU 865~868"; IRegulation = 5; break;
-                                        case 0x36: this.mLabelArea.Text = "06: JP 916~921"; IRegulation = 6; break;
-                                        case 0x37: this.mLabelArea.Text = "07: KR 917~921"; IRegulation = 7; break;
-                                        case 0x38: this.mLabelArea.Text = "08: VN 918~923"; IRegulation = 8; break;
-                                        case 0x39: this.mLabelArea.Text = "09: EU2 916~920"; IRegulation = 9; break;
-                                        case 0x41: this.mLabelArea.Text = "0A: IN 865~867"; IRegulation = 10; break;
+                                        case 0x31: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "01: US 902~928"); IRegulation = 1; break;
+                                        case 0x32: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "02: TW 922~928"); IRegulation = 2; break;
+                                        case 0x33: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "03: CN 920~925"); IRegulation = 3; break;
+                                        case 0x34: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "04: CN2 840~845"); IRegulation = 4; break;
+                                        case 0x35: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "05: EU 865~868"); IRegulation = 5; break;
+                                        case 0x36: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "06: JP 916~921"); IRegulation = 6; break;
+                                        case 0x37: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "07: KR 917~921"); IRegulation = 7; break;
+                                        case 0x38: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "08: VN 918~923"); IRegulation = 8; break;
+                                        case 0x39: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "09: EU2 916~920"); IRegulation = 9; break;
+                                        case 0x41: this.mLabelArea.Text = String.Format(CultureInfo.CurrentCulture, "0A: IN 865~867"); IRegulation = 10; break;
                                     }
                                     this.ComboBoxArea.SelectedIndex = IRegulation - 1;
                                     ComboBoxSetAreaChanged(this.ComboBoxArea.SelectedIndex);
@@ -1182,34 +1205,34 @@ namespace RFID.Utility
                         UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Get the regulation mode and channel." : "讀取頻率模式和頻道..", false);
                         switch (this._Version)
                         {
-                            case Module.Version.FI_R300A_C1:
-                            case Module.Version.FI_R300T_D1:
+                            case ReaderModule.Version.FIR300AC1:
+                            case ReaderModule.Version.FIR300TD1:
                                 //DoSendWork(this._ReaderService.Command_AA("FF04008702"), Module.CommandType.AA);
                                 //this.ReceiveData = DoReceiveWork(Module.CommandType.AA);
                                 UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Deprecated AA command." : "取消了AA指令集..", false);
                                 this.ProcessEvent.Stop();
                                 break;
-                            case Module.Version.FI_R300A_C2:
-                            case Module.Version.FI_R300A_C2C4:
-                            case Module.Version.FI_R300A_C3:
-                            case Module.Version.FI_R300T_D2:
-                            case Module.Version.FI_R300T_D204:
-                            case Module.Version.FI_R300S:
-                            case Module.Version.FI_A300S:
-                            case Module.Version.FI_R300A_C2C5:
-                            case Module.Version.FI_R300A_C2C6:
-                            case Module.Version.FI_R300A_C3C5:
-                            case Module.Version.FI_R300T_D205:
-                            case Module.Version.FI_R300T_D206:
-                            case Module.Version.FI_R300S_D305:
-                            case Module.Version.FI_R300S_D306:
+                            case ReaderModule.Version.FIR300AC2:
+                            case ReaderModule.Version.FIR300AC2C4:
+                            case ReaderModule.Version.FIR300AC3:
+                            case ReaderModule.Version.FIR300TD2:
+                            case ReaderModule.Version.FIR300TD204:
+                            case ReaderModule.Version.FIR300S:
+                            case ReaderModule.Version.FIA300S:
+                            case ReaderModule.Version.FIR300AC2C5:
+                            case ReaderModule.Version.FIR300AC2C6:
+                            case ReaderModule.Version.FIR300AC3C5:
+                            case ReaderModule.Version.FIR300TD205:
+                            case ReaderModule.Version.FIR300TD206:
+                            case ReaderModule.Version.FIR300SD305:
+                            case ReaderModule.Version.FIR300SD306:
                             //case Module.Version.FI_R300V_D405:
-                            case Module.Version.FI_R300V_D406:
-                            case Module.Version.FI_R300A_H:
-                            case Module.Version.FI_R300S_H:
-                            case Module.Version.FI_R300T_H:
-                            case Module.Version.FI_R300V_H:
-                                DoSendWork(this._ReaderService.ReadModeandChannel(), Module.CommandType.Normal);
+                            case ReaderModule.Version.FIR300VD406:
+                            case ReaderModule.Version.FIR300AH:
+                            case ReaderModule.Version.FIR300SH:
+                            case ReaderModule.Version.FIR300TH:
+                            case ReaderModule.Version.FIR300VH:
+                                DoSendWork(this._ReaderService.ReadModeandChannel(), ReaderModule.CommandType.Normal);
                                 //bs = DoReceiveWork(Module.CommandType.Normal);
                                 //this.ReceiveData = Format.HexStringToBytes(Format.RemoveCRLF(Format.BytesToString(bs)));
                                 break;
@@ -1223,7 +1246,7 @@ namespace RFID.Utility
                             this.ReceiveData = Format.HexStringToBytes(Format.RemoveCRLF(ReceiveEventData));
 
                             if (this.ReceiveData[0] == 0xFF || this.ReceiveData[0] == 0x0)
-                                this.mLabelFrequncy.Text = "hopping";
+                                this.mLabelFrequncy.Text = String.Format(CultureInfo.CurrentCulture, "hopping");
                             else
                             {
                                 String s = null, m;
@@ -1233,44 +1256,44 @@ namespace RFID.Utility
                                 switch (this.IRegulation)
                                 {
                                     case 1:
-                                        j = Module.RegulationFrequency(Module.Regulation.US, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.US, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                     case 2:
-                                        j = Module.RegulationFrequency(Module.Regulation.TW, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.TW, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                     case 3:
-                                        j = Module.RegulationFrequency(Module.Regulation.CN, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.000"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.CN, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.000", CultureInfo.CurrentCulture));
                                         break;
                                     case 4:
-                                        j = Module.RegulationFrequency(Module.Regulation.CN2, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.000"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.CN2, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.000", CultureInfo.CurrentCulture));
                                         break;
                                     case 5:
-                                        j = Module.RegulationFrequency(Module.Regulation.EU, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.EU, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                     case 6:
-                                        j = Module.RegulationFrequency(Module.Regulation.JP, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.JP, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                     case 7:
-                                        j = Module.RegulationFrequency(Module.Regulation.KR, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.KR, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                     case 8:
-                                        j = Module.RegulationFrequency(Module.Regulation.VN, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.VN, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                     case 9:
-                                        j = Module.RegulationFrequency(Module.Regulation.EU2, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.EU2, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                     case 10:
-                                        j = Module.RegulationFrequency(Module.Regulation.IN, i);
-                                        s = String.Format("{0}MHz", j.ToString("###.00"));
+                                        j = ReaderModule.RegulationFrequency(ReaderModule.Regulation.IN, i);
+                                        s = String.Format(CultureInfo.CurrentCulture, "{0}MHz", j.ToString("###.00", CultureInfo.CurrentCulture));
                                         break;
                                 }
 
@@ -1284,7 +1307,7 @@ namespace RFID.Utility
                                     m = "RX";
                                     BasebandRXMode.IsChecked = true;
                                 }
-                                this.mLabelFrequncy.Text = String.Format("Fix mode, {0} Freq. = {1}", m, s);
+                                this.mLabelFrequncy.Text = String.Format(CultureInfo.CurrentCulture, "Fix mode, {0} Freq. = {1}", m, s);
                                 this.ComboBoxMeasureFrequency.SelectedIndex = i;
                             }
 
@@ -1298,34 +1321,34 @@ namespace RFID.Utility
                         UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Get the Reader frequency offset.." : "讀取Reader頻率Offset..", false);
                         switch (this._Version)
                         {
-                            case Module.Version.FI_R300A_C1:
-                            case Module.Version.FI_R300T_D1:
+                            case ReaderModule.Version.FIR300AC1:
+                            case ReaderModule.Version.FIR300TD1:
                                 //DoSendWork(this._ReaderService.Command_AA("FF04008903"), Module.CommandType.AA);
                                 //this.ReceiveData = DoReceiveWork(Module.CommandType.AA);
                                 UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Deprecated AA command." : "取消了AA指令集..", false);
                                 this.ProcessEvent.Stop();
                                 break;
-                            case Module.Version.FI_R300A_C2:
-                            case Module.Version.FI_R300A_C2C4:
-                            case Module.Version.FI_R300A_C3:
-                            case Module.Version.FI_R300T_D2:
-                            case Module.Version.FI_R300T_D204:
-                            case Module.Version.FI_R300S:
-                            case Module.Version.FI_A300S:
-                            case Module.Version.FI_R300A_C2C5:
-                            case Module.Version.FI_R300A_C2C6:
-                            case Module.Version.FI_R300A_C3C5:
-                            case Module.Version.FI_R300T_D205:
-                            case Module.Version.FI_R300T_D206:
-                            case Module.Version.FI_R300S_D305:
-                            case Module.Version.FI_R300S_D306:
+                            case ReaderModule.Version.FIR300AC2:
+                            case ReaderModule.Version.FIR300AC2C4:
+                            case ReaderModule.Version.FIR300AC3:
+                            case ReaderModule.Version.FIR300TD2:
+                            case ReaderModule.Version.FIR300TD204:
+                            case ReaderModule.Version.FIR300S:
+                            case ReaderModule.Version.FIA300S:
+                            case ReaderModule.Version.FIR300AC2C5:
+                            case ReaderModule.Version.FIR300AC2C6:
+                            case ReaderModule.Version.FIR300AC3C5:
+                            case ReaderModule.Version.FIR300TD205:
+                            case ReaderModule.Version.FIR300TD206:
+                            case ReaderModule.Version.FIR300SD305:
+                            case ReaderModule.Version.FIR300SD306:
                             //case Module.Version.FI_R300V_D405:
-                            case Module.Version.FI_R300V_D406:
-                            case Module.Version.FI_R300A_H:
-                            case Module.Version.FI_R300S_H:
-                            case Module.Version.FI_R300T_H:
-                            case Module.Version.FI_R300V_H:
-                                DoSendWork(this._ReaderService.ReadFrequencyOffset(), Module.CommandType.Normal);
+                            case ReaderModule.Version.FIR300VD406:
+                            case ReaderModule.Version.FIR300AH:
+                            case ReaderModule.Version.FIR300SH:
+                            case ReaderModule.Version.FIR300TH:
+                            case ReaderModule.Version.FIR300VH:
+                                DoSendWork(this._ReaderService.ReadFrequencyOffset(), ReaderModule.CommandType.Normal);
                                 //bs = DoReceiveWork(Module.CommandType.Normal);
                                 //this.ReceiveData = Format.HexStringToBytes(Format.RemoveCRLF(Format.BytesToString(bs)));
                                 break;
@@ -1340,13 +1363,13 @@ namespace RFID.Utility
                             this.ReceiveData = Format.HexStringToBytes(Format.RemoveCRLF(ReceiveEventData));
 
                             if (this.ReceiveData[0] > 0x01)
-                                this.mLabelFrequncyOffset.Text = "N/A";
+                                this.mLabelFrequncyOffset.Text = String.Format(CultureInfo.CurrentCulture, "N/A");
                             else
                             {
                                 String strSymbol = (ReceiveData[0] == 0x00) ? "-" : "+";
                                 Int32 ii = ((ReceiveData[1] << 8) & 0xFF00) + (ReceiveData[2] & 0xFF);
                                 double db = (double)ii * (double)30.5;
-                                mLabelFrequncyOffset.Text = String.Format("{0}{1}Hz", strSymbol, db.ToString());
+                                mLabelFrequncyOffset.Text = String.Format(CultureInfo.CurrentCulture, "{0}{1}Hz", strSymbol, db.ToString(CultureInfo.CurrentCulture));
 
                             }
                             this.PreProcess = PROC_READ_POWER;
@@ -1359,7 +1382,7 @@ namespace RFID.Utility
                     if (!IsSendPass)
                     {
                         UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Get the Reader power.." : "讀取Reader功率..", false);
-                        DoSendWork(this._ReaderService.ReadPower(), Module.CommandType.Normal);
+                        DoSendWork(this._ReaderService.ReadPower(), ReaderModule.CommandType.Normal);
                         IsSendPass = true;
                     }
                     else {
@@ -1369,7 +1392,7 @@ namespace RFID.Utility
                             this.ReceiveData = Format.StringToBytes(ReceiveEventData);
 
                             if (ReceiveData[0] == 0xFF)
-                                this.mLabelPower.Text = "N/A";
+                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "N/A");
                             else
                             {
                                 if (ReceiveData[1] == 0x4E)
@@ -1379,74 +1402,74 @@ namespace RFID.Utility
 
                                     switch (this._Version)
                                     {
-                                        case Module.Version.FI_R300T_D1:
-                                        case Module.Version.FI_R300T_D2:
-                                        case Module.Version.FI_R300T_D204:
-                                        case Module.Version.FI_R300T_D205:
-                                        case Module.Version.FI_R300T_D206:
-                                        case Module.Version.FI_R300T_H:
+                                        case ReaderModule.Version.FIR300TD1:
+                                        case ReaderModule.Version.FIR300TD2:
+                                        case ReaderModule.Version.FIR300TD204:
+                                        case ReaderModule.Version.FIR300TD205:
+                                        case ReaderModule.Version.FIR300TD206:
+                                        case ReaderModule.Version.FIR300TH:
                                             if (Format.HexStringToByte(str) >= 0x1B)
                                             {
-                                                this.mLabelPower.Text = "25dBm";
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "25dBm");
                                                 this.ComboboxPower.SelectedIndex = 0;
                                             }
                                             else
                                             {
-                                                this.mLabelPower.Text = String.Format("{0}dBm", Format.HexStringToByte(str) - 2);
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "{0}dBm", Format.HexStringToByte(str) - 2);
                                                 this.ComboboxPower.SelectedIndex = 25 - (Format.HexStringToByte(str) - 2);
                                             }
                                             break;
-                                        case Module.Version.FI_R300A_C1:
-                                        case Module.Version.FI_R300A_C2:
-                                        case Module.Version.FI_R300A_C2C4:
-                                        case Module.Version.FI_R300A_C3:
-                                        case Module.Version.FI_R300A_C2C5:
-                                        case Module.Version.FI_R300A_C2C6:
-                                        case Module.Version.FI_R300A_C3C5:
-                                        case Module.Version.FI_R300A_H:
+                                        case ReaderModule.Version.FIR300AC1:
+                                        case ReaderModule.Version.FIR300AC2:
+                                        case ReaderModule.Version.FIR300AC2C4:
+                                        case ReaderModule.Version.FIR300AC3:
+                                        case ReaderModule.Version.FIR300AC2C5:
+                                        case ReaderModule.Version.FIR300AC2C6:
+                                        case ReaderModule.Version.FIR300AC3C5:
+                                        case ReaderModule.Version.FIR300AH:
                                             if (Format.HexStringToByte(str) >= 0x14)
                                             {
-                                                this.mLabelPower.Text = "18dBm";
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "18dBm");
                                                 this.ComboboxPower.SelectedIndex = 0;
                                             }
                                             else
                                             {
-                                                this.mLabelPower.Text = String.Format("{0}dBm", Format.HexStringToByte(str) - 2);
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "{0}dBm", Format.HexStringToByte(str) - 2);
                                                 this.ComboboxPower.SelectedIndex = 18 - (Format.HexStringToByte(str) - 2);
                                             }
                                             break;
-                                        case Module.Version.FI_R300S:
-                                        case Module.Version.FI_A300S:
-                                        case Module.Version.FI_R300S_D305:
-                                        case Module.Version.FI_R300S_D306:
-                                        case Module.Version.FI_R300S_H:
+                                        case ReaderModule.Version.FIR300S:
+                                        case ReaderModule.Version.FIA300S:
+                                        case ReaderModule.Version.FIR300SD305:
+                                        case ReaderModule.Version.FIR300SD306:
+                                        case ReaderModule.Version.FIR300SH:
                                             if (Format.HexStringToByte(str) >= 0x1B)
                                             {
-                                                this.mLabelPower.Text = "27dBm";
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "27dBm");
                                                 this.ComboboxPower.SelectedIndex = 0;
                                             }
                                             else
                                             {
-                                                this.mLabelPower.Text = String.Format("{0}dBm", Format.HexStringToByte(str));
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "{0}dBm", Format.HexStringToByte(str));
                                                 this.ComboboxPower.SelectedIndex = 27 - Format.HexStringToByte(str);
                                             }
                                             break;
                                         //case Module.Version.FI_R300V_D405:
-                                        case Module.Version.FI_R300V_D406:
-                                        case Module.Version.FI_R300V_H:
+                                        case ReaderModule.Version.FIR300VD406:
+                                        case ReaderModule.Version.FIR300VH:
                                             if (Format.HexStringToByte(str) >= 0x1B)
                                             {
-                                                this.mLabelPower.Text = "29dBm";
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "29dBm");
                                                 this.ComboboxPower.SelectedIndex = 0;
                                             }
                                             else
                                             {
-                                                this.mLabelPower.Text = String.Format("{0}dBm", Format.HexStringToByte(str) + 2);
+                                                this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "{0}dBm", Format.HexStringToByte(str) + 2);
                                                 this.ComboboxPower.SelectedIndex = 27 - Format.HexStringToByte(str);
                                             }
                                             break;
-                                        case Module.Version.FI_RXXXX:
-                                            this.mLabelPower.Text = "N/A";
+                                        case ReaderModule.Version.FIRXXXX:
+                                            this.mLabelPower.Text = String.Format(CultureInfo.CurrentCulture, "N/A");
                                             break;
                                     }
                                 }
@@ -1468,33 +1491,33 @@ namespace RFID.Utility
 
 						switch (this._Version)
                         {
-							case Module.Version.FI_R300A_C1:
-							case Module.Version.FI_R300T_D1:
-								DoSendWork(this._ReaderService.Command_AA("FF04008903"), Module.CommandType.AA);
-								this.ReceiveData = DoReceiveWork(Module.CommandType.AA);
+							case ReaderModule.Version.FIR300AC1:
+							case ReaderModule.Version.FIR300TD1:
+								DoSendWork(this._ReaderService.CommandAA("FF04008903"), ReaderModule.CommandType.AA);
+								this.ReceiveData = DoReceiveWork();
 								break;
-							case Module.Version.FI_R300A_C2:
-                            case Module.Version.FI_R300A_C2C4:
-                            case Module.Version.FI_R300A_C3:
-                            case Module.Version.FI_R300T_D2:
-                            case Module.Version.FI_R300T_D204:
-                            case Module.Version.FI_R300S:
-                            case Module.Version.FI_A300S:
-                            case Module.Version.FI_R300T_D205:
-                            case Module.Version.FI_R300T_D206:
-                            case Module.Version.FI_R300A_C2C5:
-                            case Module.Version.FI_R300A_C2C6:
-                            case Module.Version.FI_R300A_C3C5:
-                            case Module.Version.FI_R300S_D305:
-                            case Module.Version.FI_R300S_D306:
+							case ReaderModule.Version.FIR300AC2:
+                            case ReaderModule.Version.FIR300AC2C4:
+                            case ReaderModule.Version.FIR300AC3:
+                            case ReaderModule.Version.FIR300TD2:
+                            case ReaderModule.Version.FIR300TD204:
+                            case ReaderModule.Version.FIR300S:
+                            case ReaderModule.Version.FIA300S:
+                            case ReaderModule.Version.FIR300TD205:
+                            case ReaderModule.Version.FIR300TD206:
+                            case ReaderModule.Version.FIR300AC2C5:
+                            case ReaderModule.Version.FIR300AC2C6:
+                            case ReaderModule.Version.FIR300AC3C5:
+                            case ReaderModule.Version.FIR300SD305:
+                            case ReaderModule.Version.FIR300SD306:
                             //case Module.Version.FI_R300V_D405:
-                            case Module.Version.FI_R300V_D406:
-                            case Module.Version.FI_R300A_H:
-                            case Module.Version.FI_R300S_H:
-                            case Module.Version.FI_R300T_H:
-                            case Module.Version.FI_R300V_H:
-                                DoSendWork(this._ReaderService.ReadFrequencyOffset(), Module.CommandType.Normal);
-								bs = DoReceiveWork(Module.CommandType.Normal);
+                            case ReaderModule.Version.FIR300VD406:
+                            case ReaderModule.Version.FIR300AH:
+                            case ReaderModule.Version.FIR300SH:
+                            case ReaderModule.Version.FIR300TH:
+                            case ReaderModule.Version.FIR300VH:
+                                DoSendWork(this._ReaderService.ReadFrequencyOffset(), ReaderModule.CommandType.Normal);
+								bs = DoReceiveWork();
 								this.ReceiveData = Format.HexStringToBytes(Format.RemoveCRLF(Format.BytesToString(bs)));
 								break;
 						}
@@ -1519,7 +1542,7 @@ namespace RFID.Utility
 
 						if (IsPlus)
                         {
-							Int32 value = Int32.Parse(ComboboxStep.SelectedValue.ToString());
+							Int32 value = Int32.Parse(ComboboxStep.SelectedValue.ToString(), CultureInfo.CurrentCulture);
                             Int32 b = (Int32)((ReceiveData[1] << 8) + ReceiveData[2]);
 							if (ReceiveData[0] > 0x0) { value += b; ReceiveData[0] = 0x1; }
 							else {
@@ -1532,12 +1555,12 @@ namespace RFID.Utility
 							String str1 = (ReceiveData[0] > 0) ? "+" : "-";
 							Double d1 = ((ReceiveData[1] << 8) + ReceiveData[2]) * 30.5;
 							UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ?
-								String.Format("Offset freq. {0}{1}Hz，adjust to {2}{3}Hz，and waiting for reboot.", str0, d0, str1, d1) :
-								String.Format("目前offset頻率 {0}{1}Hz，調整為 {2}{3}Hz，並等候Reader重啟", str0, d0, str1, d1), false);
+								String.Format(CultureInfo.CurrentCulture, "Offset freq. {0}{1}Hz，adjust to {2}{3}Hz，and waiting for reboot.", str0, d0, str1, d1) :
+								String.Format(CultureInfo.CurrentCulture, "目前offset頻率 {0}{1}Hz，調整為 {2}{3}Hz，並等候Reader重啟", str0, d0, str1, d1), false);
 						}
 						else if (IsMinus)
                         {
-                            Int32 value = Int32.Parse(ComboboxStep.SelectedValue.ToString());
+                            Int32 value = Int32.Parse(ComboboxStep.SelectedValue.ToString(), CultureInfo.CurrentCulture);
                             Int32 b = (Int32)((ReceiveData[1] << 8) + ReceiveData[2]);
 							if (ReceiveData[0] > 0x0) {
 								if (value > b) { value = value - b; ReceiveData[0] = 0x0; }
@@ -1549,30 +1572,30 @@ namespace RFID.Utility
 							String str2 = (ReceiveData[0] > 0) ? "+" : "-";
 							Double d2 = ((ReceiveData[1] << 8) + ReceiveData[2]) * 30.5;
 							UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ?
-								String.Format("Offset freq. {0}{1}Hz，adjust to {2}{3}Hz，and waiting for reboot.", str0, d0, str2, d2) :
-								String.Format("目前offset頻率 {0}{1}Hz，調整為 {2}{3}Hz，並等候Reader重啟", str0, d0, str2, d2), false);
+								String.Format(CultureInfo.CurrentCulture, "Offset freq. {0}{1}Hz，adjust to {2}{3}Hz，and waiting for reboot.", str0, d0, str2, d2) :
+								String.Format(CultureInfo.CurrentCulture ,"目前offset頻率 {0}{1}Hz，調整為 {2}{3}Hz，並等候Reader重啟", str0, d0, str2, d2), false);
 						}
 						else if (IsAdjust)
                         {
 							Double fc, fm, fb, tf = 0;
 							if (ReceiveData[0] == 0x00)//-
-								fm = double.Parse(TextBoxMeasureFrequency.GetLineText(0)) * 1000000 + ((ReceiveData[1] << 8) + ReceiveData[2]) * 30.5;
+								fm = double.Parse(TextBoxMeasureFrequency.GetLineText(0), CultureInfo.CurrentCulture) * 1000000 + ((ReceiveData[1] << 8) + ReceiveData[2]) * 30.5;
 							else
-								fm = double.Parse(TextBoxMeasureFrequency.GetLineText(0)) * 1000000 - ((ReceiveData[1] << 8) + ReceiveData[2]) * 30.5;
+								fm = double.Parse(TextBoxMeasureFrequency.GetLineText(0), CultureInfo.CurrentCulture) * 1000000 - ((ReceiveData[1] << 8) + ReceiveData[2]) * 30.5;
                             Int32 idx = ComboBoxFrequency.SelectedIndex;
 
 							switch (IRegulation)
                             {
-								case 1: tf = Module.RegulationFrequency(Module.Regulation.US, idx); break;
-								case 2: tf = Module.RegulationFrequency(Module.Regulation.TW, idx); break;
-								case 3: tf = Module.RegulationFrequency(Module.Regulation.CN, idx); break;
-								case 4: tf = Module.RegulationFrequency(Module.Regulation.CN2, idx); break;
-								case 5: tf = Module.RegulationFrequency(Module.Regulation.EU, idx); break;
-                                case 6: tf = Module.RegulationFrequency(Module.Regulation.JP, idx); break;
-                                case 7: tf = Module.RegulationFrequency(Module.Regulation.KR, idx); break;
-                                case 8: tf = Module.RegulationFrequency(Module.Regulation.VN, idx); break;
-                                case 9: tf = Module.RegulationFrequency(Module.Regulation.EU2, idx); break;
-                                case 10: tf = Module.RegulationFrequency(Module.Regulation.IN, idx); break;
+								case 1: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.US, idx); break;
+								case 2: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.TW, idx); break;
+								case 3: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.CN, idx); break;
+								case 4: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.CN2, idx); break;
+								case 5: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.EU, idx); break;
+                                case 6: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.JP, idx); break;
+                                case 7: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.KR, idx); break;
+                                case 8: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.VN, idx); break;
+                                case 9: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.EU2, idx); break;
+                                case 10: tf = ReaderModule.RegulationFrequency(ReaderModule.Regulation.IN, idx); break;
                             }
 							fc = tf * 1000000;
 							fb = fc - fm;
@@ -1588,8 +1611,8 @@ namespace RFID.Utility
 							//this.PreProcess = PROC_READ_FREQ_CALLBACK;
 							//this.ProcessEvent.Start();
 							UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ?
-                                String.Format("Adjust freq. to {0}Hz，and waiting for reboot.", fm) :
-                                String.Format("修正頻率至{0}, 並等待Reader重啟", fm),
+                                String.Format(CultureInfo.CurrentCulture, "Adjust freq. to {0}Hz，and waiting for reboot.", fm) :
+                                String.Format(CultureInfo.CurrentCulture, "修正頻率至{0}, 並等待Reader重啟", fm),
 								false);
 						}
 					}
@@ -1598,9 +1621,9 @@ namespace RFID.Utility
 						UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Reset offset frequency, and waiting 2s for reboot." : "重置offset頻率，並等候Reader重啟(2s)", false);
                         //J000(reset) to set frequency (2017/4/18)
                         IsSetFrequency = true;
-                        DoSendWork(this._ReaderService.Command_J("0", "00"), Module.CommandType.Normal);
-                        DoReceiveWork(Module.CommandType.Normal);
-                        ComboBoxMeasureFrequency.SelectedIndex = Module.RegulationChannel(IRegulation);
+                        DoSendWork(this._ReaderService.CommandJ("0", "00"), ReaderModule.CommandType.Normal);
+                        DoReceiveWork();
+                        ComboBoxMeasureFrequency.SelectedIndex = ReaderModule.RegulationChannel(IRegulation);
                     }
 					this.PreProcess = PROC_SET_FREQ_H;
 					break;
@@ -1608,35 +1631,35 @@ namespace RFID.Utility
 				case PROC_SET_FREQ_H:
 					switch (this._Version)
                     {
-						case Module.Version.FI_R300A_C1:
-						case Module.Version.FI_R300T_D1:
-							str0 = String.Format("FF05008A{0}", (IsReset) ? "FF" : Format.ByteToHexString(ReceiveData[1]));
-							DoSendWork(this._ReaderService.Command_AA(str0), Module.CommandType.AA);
-							DoReceiveWork(Module.CommandType.AA);
+						case ReaderModule.Version.FIR300AC1:
+						case ReaderModule.Version.FIR300TD1:
+							str0 = String.Format(CultureInfo.CurrentCulture, "FF05008A{0}", (IsReset) ? "FF" : Format.ByteToHexString(ReceiveData[1]));
+							DoSendWork(this._ReaderService.CommandAA(str0), ReaderModule.CommandType.AA);
+							DoReceiveWork();
 							break;
-						case Module.Version.FI_R300A_C2:
-                        case Module.Version.FI_R300A_C2C4:
-                        case Module.Version.FI_R300A_C3:
-                        case Module.Version.FI_R300T_D2:
-                        case Module.Version.FI_R300T_D204:
-                        case Module.Version.FI_R300S:
-                        case Module.Version.FI_A300S:
-                        case Module.Version.FI_R300T_D205:
-                        case Module.Version.FI_R300T_D206:
-                        case Module.Version.FI_R300A_C2C5:
-                        case Module.Version.FI_R300A_C2C6:
-                        case Module.Version.FI_R300A_C3C5:
-                        case Module.Version.FI_R300S_D305:
-                        case Module.Version.FI_R300S_D306:
+						case ReaderModule.Version.FIR300AC2:
+                        case ReaderModule.Version.FIR300AC2C4:
+                        case ReaderModule.Version.FIR300AC3:
+                        case ReaderModule.Version.FIR300TD2:
+                        case ReaderModule.Version.FIR300TD204:
+                        case ReaderModule.Version.FIR300S:
+                        case ReaderModule.Version.FIA300S:
+                        case ReaderModule.Version.FIR300TD205:
+                        case ReaderModule.Version.FIR300TD206:
+                        case ReaderModule.Version.FIR300AC2C5:
+                        case ReaderModule.Version.FIR300AC2C6:
+                        case ReaderModule.Version.FIR300AC3C5:
+                        case ReaderModule.Version.FIR300SD305:
+                        case ReaderModule.Version.FIR300SD306:
                         //case Module.Version.FI_R300V_D405:
-                        case Module.Version.FI_R300V_D406:
-                        case Module.Version.FI_R300A_H:
-                        case Module.Version.FI_R300S_H:
-                        case Module.Version.FI_R300T_H:
-                        case Module.Version.FI_R300V_H:
+                        case ReaderModule.Version.FIR300VD406:
+                        case ReaderModule.Version.FIR300AH:
+                        case ReaderModule.Version.FIR300SH:
+                        case ReaderModule.Version.FIR300TH:
+                        case ReaderModule.Version.FIR300VH:
                             str0 = (IsReset) ? "FF" : Format.ByteToHexString(ReceiveData[1]);
-							DoSendWork(this._ReaderService.SetFrequencyAddrH(str0), Module.CommandType.Normal);
-							DoReceiveWork(Module.CommandType.Normal);
+							DoSendWork(this._ReaderService.SetFrequencyAddrH(str0), ReaderModule.CommandType.Normal);
+							DoReceiveWork();
 							break;
 					}			
 					this.PreProcess = PROC_SET_FREQ_L;
@@ -1644,35 +1667,35 @@ namespace RFID.Utility
 
 				case PROC_SET_FREQ_L:
 					switch (this._Version) {
-						case Module.Version.FI_R300A_C1:
-						case Module.Version.FI_R300T_D1:
-							str0 = string.Format("FF05008B{0}", (IsReset) ? "FF" : Format.ByteToHexString(ReceiveData[2]));
-							DoSendWork(this._ReaderService.Command_AA(str0), Module.CommandType.AA);
-							DoReceiveWork(Module.CommandType.AA);
+						case ReaderModule.Version.FIR300AC1:
+						case ReaderModule.Version.FIR300TD1:
+							str0 = string.Format(CultureInfo.CurrentCulture, "FF05008B{0}", (IsReset) ? "FF" : Format.ByteToHexString(ReceiveData[2]));
+							DoSendWork(this._ReaderService.CommandAA(str0), ReaderModule.CommandType.AA);
+							DoReceiveWork();
 							break;
-                        case Module.Version.FI_R300A_C2:
-                        case Module.Version.FI_R300A_C2C4:
-                        case Module.Version.FI_R300A_C3:
-                        case Module.Version.FI_R300T_D2:
-                        case Module.Version.FI_R300T_D204:
-                        case Module.Version.FI_R300S:
-                        case Module.Version.FI_A300S:
-                        case Module.Version.FI_R300T_D205:
-                        case Module.Version.FI_R300T_D206:
-                        case Module.Version.FI_R300A_C2C5:
-                        case Module.Version.FI_R300A_C2C6:
-                        case Module.Version.FI_R300A_C3C5:
-                        case Module.Version.FI_R300S_D305:
-                        case Module.Version.FI_R300S_D306:
+                        case ReaderModule.Version.FIR300AC2:
+                        case ReaderModule.Version.FIR300AC2C4:
+                        case ReaderModule.Version.FIR300AC3:
+                        case ReaderModule.Version.FIR300TD2:
+                        case ReaderModule.Version.FIR300TD204:
+                        case ReaderModule.Version.FIR300S:
+                        case ReaderModule.Version.FIA300S:
+                        case ReaderModule.Version.FIR300TD205:
+                        case ReaderModule.Version.FIR300TD206:
+                        case ReaderModule.Version.FIR300AC2C5:
+                        case ReaderModule.Version.FIR300AC2C6:
+                        case ReaderModule.Version.FIR300AC3C5:
+                        case ReaderModule.Version.FIR300SD305:
+                        case ReaderModule.Version.FIR300SD306:
                         //case Module.Version.FI_R300V_D405:
-                        case Module.Version.FI_R300V_D406:
-                        case Module.Version.FI_R300A_H:
-                        case Module.Version.FI_R300S_H:
-                        case Module.Version.FI_R300T_H:
-                        case Module.Version.FI_R300V_H:
+                        case ReaderModule.Version.FIR300VD406:
+                        case ReaderModule.Version.FIR300AH:
+                        case ReaderModule.Version.FIR300SH:
+                        case ReaderModule.Version.FIR300TH:
+                        case ReaderModule.Version.FIR300VH:
                             str0 = (IsReset) ? "FF" : Format.ByteToHexString(ReceiveData[2]);
-							DoSendWork(this._ReaderService.SetFrequencyAddrL(str0), Module.CommandType.Normal);
-							DoReceiveWork(Module.CommandType.Normal);
+							DoSendWork(this._ReaderService.SetFrequencyAddrL(str0), ReaderModule.CommandType.Normal);
+							DoReceiveWork();
 							break;
 					}			
 					
@@ -1681,9 +1704,9 @@ namespace RFID.Utility
 
 				case PROC_SET_FREQ:
 					switch (this._Version) {
-						case Module.Version.FI_R300A_C1:
-						case Module.Version.FI_R300T_D1:
-							str0 = string.Format("FF060089{0}", (IsReset) ? "FF" :
+						case ReaderModule.Version.FIR300AC1:
+						case ReaderModule.Version.FIR300TD1:
+							str0 = string.Format(CultureInfo.CurrentCulture, "FF060089{0}", (IsReset) ? "FF" :
 															(IsPlus | IsMinus) ? Format.ByteToHexString(ReceiveData[0]) :
 																IsSymbol ? "01" : "00");	
 							this.IsPlus = false;
@@ -1693,29 +1716,29 @@ namespace RFID.Utility
 								this.TextBoxMeasureFrequency.Text = String.Empty;
 								this.IsAdjust = false;
 							}
-							DoSendWork(this._ReaderService.Command_AA(str0), Module.CommandType.AA);
-							DoReceiveWork(Module.CommandType.AA);
+							DoSendWork(this._ReaderService.CommandAA(str0), ReaderModule.CommandType.AA);
+							DoReceiveWork();
 							break;
-                        case Module.Version.FI_R300A_C2:
-                        case Module.Version.FI_R300A_C2C4:
-                        case Module.Version.FI_R300A_C3:
-                        case Module.Version.FI_R300T_D2:
-                        case Module.Version.FI_R300T_D204:
-                        case Module.Version.FI_R300S:
-                        case Module.Version.FI_A300S:
-                        case Module.Version.FI_R300T_D205:
-                        case Module.Version.FI_R300T_D206:
-                        case Module.Version.FI_R300A_C2C5:
-                        case Module.Version.FI_R300A_C2C6:
-                        case Module.Version.FI_R300A_C3C5:
-                        case Module.Version.FI_R300S_D305:
-                        case Module.Version.FI_R300S_D306:
+                        case ReaderModule.Version.FIR300AC2:
+                        case ReaderModule.Version.FIR300AC2C4:
+                        case ReaderModule.Version.FIR300AC3:
+                        case ReaderModule.Version.FIR300TD2:
+                        case ReaderModule.Version.FIR300TD204:
+                        case ReaderModule.Version.FIR300S:
+                        case ReaderModule.Version.FIA300S:
+                        case ReaderModule.Version.FIR300TD205:
+                        case ReaderModule.Version.FIR300TD206:
+                        case ReaderModule.Version.FIR300AC2C5:
+                        case ReaderModule.Version.FIR300AC2C6:
+                        case ReaderModule.Version.FIR300AC3C5:
+                        case ReaderModule.Version.FIR300SD305:
+                        case ReaderModule.Version.FIR300SD306:
                         //case Module.Version.FI_R300V_D405:
-                        case Module.Version.FI_R300V_D406:
-                        case Module.Version.FI_R300A_H:
-                        case Module.Version.FI_R300S_H:
-                        case Module.Version.FI_R300T_H:
-                        case Module.Version.FI_R300V_H:
+                        case ReaderModule.Version.FIR300VD406:
+                        case ReaderModule.Version.FIR300AH:
+                        case ReaderModule.Version.FIR300SH:
+                        case ReaderModule.Version.FIR300TH:
+                        case ReaderModule.Version.FIR300VH:
                             str0 = (IsReset) ? "FF" : (IsPlus | IsMinus) ? Format.ByteToHexString(ReceiveData[0]) : IsSymbol ? "01" : "00";
 							this.IsPlus = false;
 							this.IsMinus = false;
@@ -1724,8 +1747,8 @@ namespace RFID.Utility
 								this.TextBoxMeasureFrequency.Text = String.Empty;
 								this.IsAdjust = false;
 							}
-							DoSendWork(this._ReaderService.SetFrequency(str0), Module.CommandType.Normal);
-							DoReceiveWork(Module.CommandType.Normal);
+							DoSendWork(this._ReaderService.SetFrequency(str0), ReaderModule.CommandType.Normal);
+							DoReceiveWork();
 							break;
 					}		
 					this.PreProcess = PROC_SET_RESET;
@@ -1755,20 +1778,20 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-		private void DoReceiveDataWork(object sender, ICOM.CombineDataReceiveArgument e)
+		private void DoReceiveDataWork(object sender, CombineDataReceiveArgumentEventArgs e)
         {
 			String s_crlf = e.Data;
             /*switch (DoProcess)
             {
-                case CommandStates.DEFAULT:
+                case CommandStatus.DEFAULT:
                     break;
-                case CommandStates.TESTRUN:
+                case CommandStatus.TESTRUN:
 
                     DisplayText("RX", s_crlf);
                     if (s_crlf.Equals(ReaderService.COMMANDU_END))
                     {
                         if(!IsRunning)
-                            DoProcess = CommandStates.DEFAULT;
+                            DoProcess = CommandStatus.DEFAULT;
                         this.IsReceiveData = false;
                     } 
                     break;
@@ -1776,7 +1799,7 @@ namespace RFID.Utility
             
             if (this.IsRunning)
             {
-                if (s_crlf.Equals(ReaderService.COMMANDU_END)) this.IsReceiveData = false;
+                if (s_crlf.Equals(ReaderService.CommandEndU, StringComparison.CurrentCulture)) this.IsReceiveData = false;
                 DisplayText("RX", s_crlf);
             }
             else
@@ -1793,7 +1816,7 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void DoReceiveDataWork(object sender, IUSB.USBDataReceiveArgument e)
+        private void DoReceiveDataWork(object sender, USBDataReceiveEventArgs e)
         {
             if (e.Status == ReadStatus.Success)
             {
@@ -1801,7 +1824,7 @@ namespace RFID.Utility
                 
                 if (this.IsRunning)
                 {
-                    if (s_crlf.Equals(ReaderService.COMMANDU_END)) this.IsReceiveData = false;
+                    if (s_crlf.Equals(ReaderService.CommandEndU, StringComparison.CurrentCulture)) this.IsReceiveData = false;
                     DisplayText("RX", s_crlf);
 
                 }
@@ -1823,7 +1846,38 @@ namespace RFID.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-		private void DoReceiveDataWork(object sender, INET.DataReceiveArgument e)
+        private void DoReceiveDataWork(object sender, BLEDataReceiveEventArgs e)
+        {
+            if (e.Status == ReadStatus.Success)
+            {
+                String s_crlf = e.Data;
+
+                if (this.IsRunning)
+                {
+                    if (s_crlf.Equals(ReaderService.CommandEndU, StringComparison.CurrentCulture)) this.IsReceiveData = false;
+                    DisplayText("RX", s_crlf);
+
+                }
+                else
+                {
+                    ReceiveEventData = s_crlf;
+                    IsReceiveEvent = true;
+                    if (!IsReceiveFake)
+                        DisplayText("RX", s_crlf);
+                }
+            }
+            else if (e.Status == ReadStatus.WaitTimedOut)
+            {
+            }
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+		private void DoReceiveDataWork(object sender, NETDataReceiveEventArgs e)
         {
             if (e.Status == ReadStatus.Success)
             {
@@ -1831,7 +1885,7 @@ namespace RFID.Utility
                 
                 if (this.IsRunning)
                 {
-                    if (s_crlf.Equals(ReaderService.COMMANDU_END)) this.IsReceiveData = false;
+                    if (s_crlf.Equals(ReaderService.CommandEndU, StringComparison.CurrentCulture)) this.IsReceiveData = false;
                     DisplayText("RX", s_crlf);
 
                 }

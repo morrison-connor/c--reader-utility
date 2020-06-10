@@ -12,8 +12,8 @@ namespace RFID.Utility.VM
 {
     public class EditCommandVM : INotifyPropertyChanged
     {
-        public ObservableCollection<MemBank> MemBank { get; set; }
-        public ObservableCollection<SlotQ> SlotQ { get; set; }
+        public ObservableCollection<MemBank> MemBank { get; private set; }
+        public ObservableCollection<SlotQ> SlotQ { get; private set; }
 
         public EditCommandVM() {
 

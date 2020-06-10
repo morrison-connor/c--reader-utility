@@ -10,8 +10,8 @@ using System.Windows;
 [assembly: AssemblyTitle("ReaderUtility")]
 [assembly: AssemblyDescription("UHF Reader Utility")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ReaderUtility V3.5.6")]
+[assembly: AssemblyCompany("FAVEPC Inc.")]
+[assembly: AssemblyProduct("ReaderUtility V4.0.0")]
 [assembly: AssemblyCopyright("Copyright © 2013 FAVEPC")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -52,5 +52,6 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.0.3.4")]
-[assembly: AssemblyFileVersion("2.0.3.4")]
+[assembly: AssemblyVersion("2.0.6.08")]
+[assembly: AssemblyFileVersion("2.0.6.08")]
+[assembly: NeutralResourcesLanguage("en-US")]

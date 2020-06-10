@@ -10,7 +10,7 @@ namespace RFID.Utility.VM
 {
     public class RegulationVM : INotifyPropertyChanged
     {
-        public ObservableCollection<BaudRate> BaudRate { get; set; }
+        public ObservableCollection<BaudRate> BaudRate { get; private set; }
 
         public RegulationVM()
         {

@@ -21,14 +21,14 @@ namespace RFID.Utility.IClass
 	}
 
 	public enum ProfileChangeType {	Name, ReadOnly, SetValue, RemoveEntry, RemoveSection, Other }
-	public class ProfileChangedArgs : EventArgs {
+	public class ProfileChangedEventArgs : EventArgs {
 		// Fields
 		private readonly ProfileChangeType m_changeType;
 		private readonly string m_section;
 		private readonly string m_entry;
 		private readonly object m_value;
 
-		public ProfileChangedArgs(ProfileChangeType changeType, string section, string entry, object value) {
+		public ProfileChangedEventArgs(ProfileChangeType changeType, string section, string entry, object value) {
 			m_changeType = changeType;
 			m_section = section;
 			m_entry = entry;
@@ -52,10 +52,11 @@ namespace RFID.Utility.IClass
 		}
 	}
 
-	public class ProfileChangingArgs : ProfileChangedArgs {
+	public class ProfileChangingEventArgs : ProfileChangedEventArgs
+	{
 		private bool m_cancel;
 		
-		public ProfileChangingArgs(ProfileChangeType changeType, string section, string entry, object value) :
+		public ProfileChangingEventArgs(ProfileChangeType changeType, string section, string entry, object value) :
 			base(changeType, section, entry, value) {}
 
 		
@@ -65,20 +66,20 @@ namespace RFID.Utility.IClass
 		}
 	}
 	
-	public delegate void ProfileChangingHandler(object sender, ProfileChangingArgs e);
-	public delegate void ProfileChangedHandler(object sender, ProfileChangedArgs e);
+	public delegate void ProfileChangingEventHandler(object sender, ProfileChangingEventArgs e);
+	public delegate void ProfileChangedEventHandler(object sender, ProfileChangedEventArgs e);
 
-	public interface IProfile : IReadOnlyProfile {		
+	public interface IProfileX : IReadOnlyProfile {		
 		new string Name { get; set; }		
 		string DefaultName { get; }	
-		bool ReadOnly { get; set; }				
+		bool ReadOnlyValue { get; set; }				
 		void SetValue(string section, string entry, object value);			
 		void RemoveEntry(string section, string entry);	
 		void RemoveSection(string section);		
 		void SetDataSet(DataSet ds);	
 		IReadOnlyProfile CloneReadOnly();	
-		event ProfileChangingHandler Changing;
-		event ProfileChangedHandler Changed;				
+		event ProfileChangingEventHandler ChangingEventHandler;
+		event ProfileChangedEventHandler ChangedEventHandler;				
 	}
 }
 

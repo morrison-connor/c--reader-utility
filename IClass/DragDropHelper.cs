@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Globalization;
+using System.Reflection;
+using System.Resources;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -8,8 +11,11 @@ namespace RFID.Utility.IClass
 {
     public static class DragDropHelper
     {
+        private static ResourceManager stringManager = new ResourceManager("en-US", Assembly.GetExecutingAssembly());
         public static bool DoesItemExists(ItemsControl itemsControl, object item)
         {
+            if (itemsControl == null)
+                throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
             if (itemsControl.Items.Count > 0)
             {
                 return itemsControl.Items.Contains(item);
@@ -19,6 +25,8 @@ namespace RFID.Utility.IClass
 
         public static void AddItem(ItemsControl itemsControl, object item, int insertIndex)
         {
+            if (itemsControl == null)
+                throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
             if (itemsControl.ItemsSource != null)
             {
                 if (itemsControl.ItemsSource is IList iList)
@@ -45,6 +53,8 @@ namespace RFID.Utility.IClass
         {
             if (itemToRemove != null)
             {
+                if (itemsControl == null)
+                    throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
                 int index = itemsControl.Items.IndexOf(itemToRemove);
                 if (index != -1)
                 {
@@ -55,6 +65,8 @@ namespace RFID.Utility.IClass
 
         public static void RemoveItem(ItemsControl itemsControl, int removeIndex)
         {
+            if (itemsControl == null)
+                throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
             if (removeIndex != -1 && removeIndex < itemsControl.Items.Count)
             {
                 if (itemsControl.ItemsSource != null)
@@ -82,6 +94,8 @@ namespace RFID.Utility.IClass
 
         public static object GetDataObjectFromItemsControl(ItemsControl itemsControl, Point p)
         {
+            if (itemsControl == null)
+                throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
             UIElement element = itemsControl.InputHitTest(p) as UIElement;
             while (element != null)
             {
@@ -105,6 +119,8 @@ namespace RFID.Utility.IClass
 
         public static UIElement GetItemContainerFromPoint(ItemsControl itemsControl, Point p)
         {
+            if (itemsControl == null)
+                throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
             UIElement element = itemsControl.InputHitTest(p) as UIElement;
             while (element != null)
             {
@@ -126,6 +142,8 @@ namespace RFID.Utility.IClass
 
         public static UIElement GetItemContainerFromItemsControl(ItemsControl itemsControl)
         {
+            if (itemsControl == null)
+                throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
             UIElement container = null;
             if (itemsControl != null && itemsControl.Items.Count > 0)
             {
@@ -140,6 +158,8 @@ namespace RFID.Utility.IClass
 
         public static bool IsPointInTopHalf(ItemsControl itemsControl, DragEventArgs e)
         {
+            if (e == null)
+                throw new ArgumentNullException(stringManager.GetString("DragEventArgs parameter is null", CultureInfo.CurrentCulture));
             UIElement selectedItemContainer = GetItemContainerFromPoint(itemsControl, e.GetPosition(itemsControl));
             Point relativePosition = e.GetPosition(selectedItemContainer);
             if (IsItemControlOrientationHorizontal(itemsControl))
@@ -158,6 +178,8 @@ namespace RFID.Utility.IClass
 
         public static bool? IsMousePointerAtTop(ItemsControl itemsControl, Point pt)
         {
+            if (itemsControl == null)
+                throw new ArgumentNullException(stringManager.GetString("ItemsControl parameter is null", CultureInfo.CurrentCulture));
             if (pt.Y > 0.0 && pt.Y < 25)
             {
                 return true;
