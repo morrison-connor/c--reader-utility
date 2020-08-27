@@ -51,6 +51,8 @@ namespace RFID.Utility
         {
 			InitializeComponent();
             this.DataContext = VM;
+            VM.BaudRateSelectedItem = VM.BaudRate[4];
+
             //COM
             this.SearchThread = new Thread(DoSearchCOMWork) {
                 IsBackground = true
@@ -74,14 +76,14 @@ namespace RFID.Utility
             //COM
             switch (br)
             {
-                case ReaderModule.BaudRate.B4800: this.ComboBoxCOMBaudRate.SelectedIndex = 0; break;
-                case ReaderModule.BaudRate.B9600: this.ComboBoxCOMBaudRate.SelectedIndex = 1; break;
-                case ReaderModule.BaudRate.B14400: this.ComboBoxCOMBaudRate.SelectedIndex = 2; break;
-                case ReaderModule.BaudRate.B19200: this.ComboBoxCOMBaudRate.SelectedIndex = 3; break;
-                case ReaderModule.BaudRate.B38400: this.ComboBoxCOMBaudRate.SelectedIndex = 4; break;
-                case ReaderModule.BaudRate.B57600: this.ComboBoxCOMBaudRate.SelectedIndex = 5; break;
-                case ReaderModule.BaudRate.B115200: this.ComboBoxCOMBaudRate.SelectedIndex = 6; break;
-                case ReaderModule.BaudRate.B230400: this.ComboBoxCOMBaudRate.SelectedIndex = 7; break;
+                case ReaderModule.BaudRate.B4800:   VM.BaudRateSelectedItem = VM.BaudRate[0]; break;
+                case ReaderModule.BaudRate.B9600:   VM.BaudRateSelectedItem = VM.BaudRate[1]; break;
+                case ReaderModule.BaudRate.B14400:  VM.BaudRateSelectedItem = VM.BaudRate[2]; break;
+                case ReaderModule.BaudRate.B19200:  VM.BaudRateSelectedItem = VM.BaudRate[3]; break;
+                case ReaderModule.BaudRate.B38400:  VM.BaudRateSelectedItem = VM.BaudRate[4]; break;
+                case ReaderModule.BaudRate.B57600:  VM.BaudRateSelectedItem = VM.BaudRate[5]; break;
+                case ReaderModule.BaudRate.B115200: VM.BaudRateSelectedItem = VM.BaudRate[6]; break;
+                case ReaderModule.BaudRate.B230400: VM.BaudRateSelectedItem = VM.BaudRate[7]; break;
             }
             this.SearchThread = new Thread(DoSearchCOMWork) {
                 IsBackground = true
@@ -106,14 +108,14 @@ namespace RFID.Utility
             //COM
             switch (br)
             {
-                case ReaderModule.BaudRate.B4800: this.ComboBoxCOMBaudRate.SelectedIndex = 0; break;
-                case ReaderModule.BaudRate.B9600: this.ComboBoxCOMBaudRate.SelectedIndex = 1; break;
-                case ReaderModule.BaudRate.B14400: this.ComboBoxCOMBaudRate.SelectedIndex = 2; break;
-                case ReaderModule.BaudRate.B19200: this.ComboBoxCOMBaudRate.SelectedIndex = 3; break;
-                case ReaderModule.BaudRate.B38400: this.ComboBoxCOMBaudRate.SelectedIndex = 4; break;
-                case ReaderModule.BaudRate.B57600: this.ComboBoxCOMBaudRate.SelectedIndex = 5; break;
-                case ReaderModule.BaudRate.B115200: this.ComboBoxCOMBaudRate.SelectedIndex = 6; break;
-                case ReaderModule.BaudRate.B230400: this.ComboBoxCOMBaudRate.SelectedIndex = 7; break;
+                case ReaderModule.BaudRate.B4800: VM.BaudRateSelectedItem = VM.BaudRate[0]; break;
+                case ReaderModule.BaudRate.B9600: VM.BaudRateSelectedItem = VM.BaudRate[1]; break;
+                case ReaderModule.BaudRate.B14400: VM.BaudRateSelectedItem = VM.BaudRate[2]; break;
+                case ReaderModule.BaudRate.B19200: VM.BaudRateSelectedItem = VM.BaudRate[3]; break;
+                case ReaderModule.BaudRate.B38400: VM.BaudRateSelectedItem = VM.BaudRate[4]; break;
+                case ReaderModule.BaudRate.B57600: VM.BaudRateSelectedItem = VM.BaudRate[5]; break;
+                case ReaderModule.BaudRate.B115200: VM.BaudRateSelectedItem = VM.BaudRate[6]; break;
+                case ReaderModule.BaudRate.B230400: VM.BaudRateSelectedItem = VM.BaudRate[7]; break;
             }
 
             if (usb != null)
@@ -130,14 +132,14 @@ namespace RFID.Utility
             //COM
             switch (br)
             {
-                case ReaderModule.BaudRate.B4800: this.ComboBoxCOMBaudRate.SelectedIndex = 0; break;
-                case ReaderModule.BaudRate.B9600: this.ComboBoxCOMBaudRate.SelectedIndex = 1; break;
-                case ReaderModule.BaudRate.B14400: this.ComboBoxCOMBaudRate.SelectedIndex = 2; break;
-                case ReaderModule.BaudRate.B19200: this.ComboBoxCOMBaudRate.SelectedIndex = 3; break;
-                case ReaderModule.BaudRate.B38400: this.ComboBoxCOMBaudRate.SelectedIndex = 4; break;
-                case ReaderModule.BaudRate.B57600: this.ComboBoxCOMBaudRate.SelectedIndex = 5; break;
-                case ReaderModule.BaudRate.B115200: this.ComboBoxCOMBaudRate.SelectedIndex = 6; break;
-                case ReaderModule.BaudRate.B230400: this.ComboBoxCOMBaudRate.SelectedIndex = 7; break;
+                case ReaderModule.BaudRate.B4800: VM.BaudRateSelectedItem = VM.BaudRate[0]; break;
+                case ReaderModule.BaudRate.B9600: VM.BaudRateSelectedItem = VM.BaudRate[1]; break;
+                case ReaderModule.BaudRate.B14400: VM.BaudRateSelectedItem = VM.BaudRate[2]; break;
+                case ReaderModule.BaudRate.B19200: VM.BaudRateSelectedItem = VM.BaudRate[3]; break;
+                case ReaderModule.BaudRate.B38400: VM.BaudRateSelectedItem = VM.BaudRate[4]; break;
+                case ReaderModule.BaudRate.B57600: VM.BaudRateSelectedItem = VM.BaudRate[5]; break;
+                case ReaderModule.BaudRate.B115200: VM.BaudRateSelectedItem = VM.BaudRate[6]; break;
+                case ReaderModule.BaudRate.B230400: VM.BaudRateSelectedItem = VM.BaudRate[7]; break;
             }
             //NET
             if (inet != null) {
@@ -156,14 +158,14 @@ namespace RFID.Utility
             //COM
             switch (br)
             {
-                case ReaderModule.BaudRate.B4800: this.ComboBoxCOMBaudRate.SelectedIndex = 0; break;
-                case ReaderModule.BaudRate.B9600: this.ComboBoxCOMBaudRate.SelectedIndex = 1; break;
-                case ReaderModule.BaudRate.B14400: this.ComboBoxCOMBaudRate.SelectedIndex = 2; break;
-                case ReaderModule.BaudRate.B19200: this.ComboBoxCOMBaudRate.SelectedIndex = 3; break;
-                case ReaderModule.BaudRate.B38400: this.ComboBoxCOMBaudRate.SelectedIndex = 4; break;
-                case ReaderModule.BaudRate.B57600: this.ComboBoxCOMBaudRate.SelectedIndex = 5; break;
-                case ReaderModule.BaudRate.B115200: this.ComboBoxCOMBaudRate.SelectedIndex = 6; break;
-                case ReaderModule.BaudRate.B230400: this.ComboBoxCOMBaudRate.SelectedIndex = 7; break;
+                case ReaderModule.BaudRate.B4800: VM.BaudRateSelectedItem = VM.BaudRate[0]; break;
+                case ReaderModule.BaudRate.B9600: VM.BaudRateSelectedItem = VM.BaudRate[1]; break;
+                case ReaderModule.BaudRate.B14400: VM.BaudRateSelectedItem = VM.BaudRate[2]; break;
+                case ReaderModule.BaudRate.B19200: VM.BaudRateSelectedItem = VM.BaudRate[3]; break;
+                case ReaderModule.BaudRate.B38400: VM.BaudRateSelectedItem = VM.BaudRate[4]; break;
+                case ReaderModule.BaudRate.B57600: VM.BaudRateSelectedItem = VM.BaudRate[5]; break;
+                case ReaderModule.BaudRate.B115200: VM.BaudRateSelectedItem = VM.BaudRate[6]; break;
+                case ReaderModule.BaudRate.B230400: VM.BaudRateSelectedItem = VM.BaudRate[7]; break;
             }
 
             if (ble != null)
@@ -262,7 +264,7 @@ namespace RFID.Utility
 
             if (this._IBLE != null)
             {
-                this._IBLE.Stop();
+                this._IBLE.EnumerateStop();
                 this._IBLE.Dispose();
             }
                 
@@ -290,27 +292,19 @@ namespace RFID.Utility
             switch (page)
             {
                 case "COM":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.TBMSG1.FontSize = 12.0;
-                        this.TBMSG1.Text = str;
-                    }));
+                    VM.TBMSG1 = str;
+                    VM.TBMSG1FontSize = 12.0;
                     break;
                 case "Net":
                     break;
                 case "USB":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.USBTBMSG1.FontSize = 12.0;
-                        this.USBTBMSG1.Text = str;
-                    }));
+                    VM.USBTBMSG1 = str;
+                    VM.USBTBMSG1FontSize = 12.0;
+                    
                     break;
                 case "BLE":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.USBTBMSG1.FontSize = 12.0;
-                        this.BLETBMSG1.Text = str;
-                    }));
+                    VM.BLETBMSG1 = str;
+                    VM.BLETBMSG1FontSize = 12.0;
                     break;
             }
         }
@@ -320,27 +314,18 @@ namespace RFID.Utility
             switch (page)
             {
                 case "COM":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.TBMSG1.FontSize = size;
-                        this.TBMSG1.Text = str;
-                    }));
+                    VM.TBMSG1 = str;
+                    VM.TBMSG1FontSize = size;
                     break;
                 case "Net":
                     break;
                 case "USB":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.USBTBMSG1.FontSize = size;
-                        this.USBTBMSG1.Text = str;
-                    }));
+                    VM.USBTBMSG1 = str;
+                    VM.USBTBMSG1FontSize = size;
                     break;
                 case "BLE":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.USBTBMSG1.FontSize = size;
-                        this.BLETBMSG1.Text = str;
-                    }));
+                    VM.BLETBMSG1 = str;
+                    VM.BLETBMSG1FontSize = size;
                     break;
             }
         }
@@ -354,24 +339,15 @@ namespace RFID.Utility
             switch (page)
             {
                 case "COM":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.TBMSG2.Text = str;
-                    }));
+                    VM.TBMSG2 = str;
                     break;
                 case "Net":
                     break;
                 case "USB":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.USBTBMSG2.Text = str;
-                    }));
+                    VM.USBTBMSG2 = str;
                     break;
                 case "BLE":
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.BLETBMSG2.Text = str;
-                    }));
+                    VM.BLETBMSG2 = str;
                     break;
             }
         }
@@ -388,19 +364,22 @@ namespace RFID.Utility
                     {
 
                         case "COM":
-                            this.ButtonCOMEnter.IsEnabled = false;
+                            if (VM.ButtonCOMEnterIsEnabled)
+                            {
+                                VM.ButtonCOMConnectIsEnabled = false;
+                            }
                             break;
                         case "USB":
 
                             if (this._IUSB != null)
                             {
                                 if (this._IUSB.IsOpen)
-                                    this.ButtonUSBEnter.IsEnabled = true;
+                                    VM.ButtonUSBEnterIsEnabled = true;
                                 else
-                                    this.ButtonUSBEnter.IsEnabled = false;
+                                    VM.ButtonUSBEnterIsEnabled = false;
                             }
                             else
-                                this.ButtonUSBEnter.IsEnabled = false;
+                                VM.ButtonUSBEnterIsEnabled = false;
                             break;
                         case "NET":
                             break;
@@ -408,36 +387,30 @@ namespace RFID.Utility
                             OperatingSystem os = Environment.OSVersion;
                             if (os.Version.Major < 6)
                             {
-                                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                                {
-                                    ShowOnTBMSG1("BLE", "=== Windows Platform not support BluetoothBLE. ===", 20.0);
-                                    this.ButtonBLEEnumerate.IsEnabled = false;
-                                    this.ButtonBLEConnect.IsEnabled = false;
-                                    this.ButtonBLEEnter.IsEnabled = false;
-                                }));
+                                ShowOnTBMSG1("BLE", "=== Windows Platform not support BluetoothBLE. ===", 20.0);
+                                VM.ButtonBLEEnumerateIsEnabled = false;
+                                VM.ButtonBLEConnectIsEnabled = false;
+                                VM.ButtonBLEEnterIsEnabled = false;
                             }
                             else if (os.Version.Major == 6 && os.Version.Minor == 1)
                             {
-                                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                                {
-                                    ShowOnTBMSG1("BLE", "=== Windows Platform not support BluetoothBLE. ===", 20.0);
-                                    this.ButtonBLEEnumerate.IsEnabled = false;
-                                    this.ButtonBLEConnect.IsEnabled = false;
-                                    this.ButtonBLEEnter.IsEnabled = false;
-                                }));
+                                ShowOnTBMSG1("BLE", "=== Windows Platform not support BluetoothBLE. ===", 20.0);
+                                VM.ButtonBLEEnumerateIsEnabled = false;
+                                VM.ButtonBLEConnectIsEnabled = false;
+                                VM.ButtonBLEEnterIsEnabled = false;
                             }
                             else {
                                 if (this._IBLE != null)
                                 {
                                     if (this._IBLE.IsConnected)
-                                        this.ButtonBLEEnter.IsEnabled = true;
+                                        VM.ButtonBLEEnterIsEnabled = true;
                                     else
-                                        this.ButtonBLEEnter.IsEnabled = false;
+                                        VM.ButtonBLEEnterIsEnabled = false;
                                 }
                                 else
                                 {
-                                    this.ButtonBLEConnect.IsEnabled = false;
-                                    this.ButtonBLEEnter.IsEnabled = false;
+                                    VM.ButtonBLEConnectIsEnabled = false;
+                                    VM.ButtonBLEEnterIsEnabled = false;
                                 }
                             }
                             break;
@@ -454,14 +427,29 @@ namespace RFID.Utility
         /// Add baudrate parameter and modify process (2017/4/20)
         /// </summary>
         private void DoSearchCOMWork() {
-            ObservableCollection<String> oc = new ObservableCollection<String>();
+            //ObservableCollection<String> oc = new ObservableCollection<String>();
+            VM.COMPortBoxItemsSource.Clear();
+
             foreach (IReader rs in ICOM.GetReaders())
             {
-                if (rs != null)
-                    oc.Add(String.Format(CultureInfo.CurrentCulture, "{0} –{1}", rs.Name, rs.Description));
+                if (rs != null) {
+                    //oc.Add(String.Format(CultureInfo.CurrentCulture, "{0} –{1}", rs.Name, rs.Description));
+                    var newItems = new COMPortBox()
+                    {
+                        Content = String.Format(CultureInfo.CurrentCulture, "{0} –{1}", rs.Name, rs.Description),
+                        Name = rs.Name
+                    };
+                    VM.COMPortBoxAddNewItem(newItems);
+                }
+                    
+                
             }
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ObservableCollection<String>>(CollectionData), oc);
+            if (VM.COMPortBoxItemsSource.Count > 0)
+            {
+                VM.COMPortBoxSelectedItem = VM.COMPortBoxItemsSource[0];
+            }
+            //Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ObservableCollection<String>>(CollectionData), oc);
 		}
 
 
@@ -470,12 +458,13 @@ namespace RFID.Utility
 
             try
             {
-                String[] words = (ComboBoxCOMReader.SelectedItem as String).Split(' ');
-                IBaudRate = Int32.Parse(((ComboBoxItem)ComboBoxCOMBaudRate.SelectedItem).Content.ToString(), CultureInfo.CurrentCulture);
+                //String[] words = (ComboBoxCOMReader.SelectedItem as String).Split(' ');
+                String name = VM.COMPortBoxSelectedItem.Name;
+                IBaudRate = Int32.Parse(VM.BaudRateSelectedItem.Content, CultureInfo.CurrentCulture);
 
 
                 this._ICOM = new ICOM();
-                this._ICOM.Open(words[0], IBaudRate, (Parity)Enum.Parse(typeof(Parity), "None", true), 8, (StopBits)Enum.Parse(typeof(StopBits), "One", true));
+                this._ICOM.Open(name, IBaudRate, (Parity)Enum.Parse(typeof(Parity), "None", true), 8, (StopBits)Enum.Parse(typeof(StopBits), "One", true));
 
                 if (this._ICOM.IsOpen())
                 {
@@ -486,58 +475,99 @@ namespace RFID.Utility
                         string s = Format.RemoveCRLF(Format.BytesToString(b));
                         if (s.Contains("V"))
                         {
-                            ShowOnTBMSG2("COM", String.Format(CultureInfo.CurrentCulture, "{0}已連接並驗證", words[0]));
-                            this.ButtonCOMEnter.IsEnabled = true;
-                            this.ButtonCOMConnect.IsEnabled = false;
+                            ShowOnTBMSG2("COM", String.Format(CultureInfo.CurrentCulture, "{0}已連接並驗證", name));
+                            VM.ButtonCOMEnterIsEnabled = true;
+                            VM.ButtonCOMConnectIsEnabled = false;
                         }
                         else
                         {
-                            ShowOnTBMSG2("COM", "開啟" + words[0] + "成功，驗證並非是Reader模組");
+                            ShowOnTBMSG2("COM", "開啟" + name + "成功，驗證並非是Reader模組");
                             this._ICOM.Close();
                             this._ICOM = null;
-                            ButtonCOMConnect.IsEnabled = true;
-                        }
+                            VM.ButtonCOMConnectIsEnabled = true;
+                    }
                     }
                     else
                     {
-                        ShowOnTBMSG2("COM", "開啟" + words[0] + "成功，驗證未回覆。");
+                        ShowOnTBMSG2("COM", "開啟" + name + "成功，驗證未回覆。");
                         this._ICOM.Close();
                         this._ICOM = null;
-                        ButtonCOMConnect.IsEnabled = true;
+                        VM.ButtonCOMConnectIsEnabled = true;
                     }
                 }
                 else
                 {
-                    ShowOnTBMSG2("COM", "開啟" + words[0] + "失敗.");
+                    ShowOnTBMSG2("COM", "開啟" + name + "失敗.");
                     this._ICOM.Close();
                     this._ICOM = null;
-                    ButtonCOMConnect.IsEnabled = true;
+                    VM.ButtonCOMConnectIsEnabled = true;
                 }
-
-
-                new Thread(DisableMsg).Start();
+                
             }
-            catch (InvalidOperationException iex) {
-                ShowOnTBMSG1("COM", "嘗試連接失敗");
-                ShowOnTBMSG2("COM", iex.Message);
+            catch (UnauthorizedAccessException uae)
+            {
+                ShowOnTBMSG1("COM", "拒絕對連接埠的存取");
+                ShowOnTBMSG2("COM", "[" + uae.Message + "]");
+                VM.ButtonCOMConnectIsEnabled = true;
                 this._ICOM.Close();
                 this._ICOM = null;
             }
+            catch (ArgumentOutOfRangeException outOfRange)
+            {
+                ShowOnTBMSG1("COM", "一個或多個參數屬性無效");
+                ShowOnTBMSG2("COM", "[" + outOfRange.Message + "]");
+                VM.ButtonCOMConnectIsEnabled = true;
+                this._ICOM.Close();
+                this._ICOM = null;
+            }
+            catch (ArgumentException ae)
+            {
+                ShowOnTBMSG1("COM", "連接埠問題");
+                ShowOnTBMSG2("COM", "[" + ae.Message + "]");
+                VM.ButtonCOMConnectIsEnabled = true;
+                this._ICOM.Close();
+                this._ICOM = null;
+            }
+            catch (System.IO.IOException ie)
+            {
+                ShowOnTBMSG1("COM", "連接埠問題");
+                ShowOnTBMSG2("COM", "[" + ie.Message + "]");
+                VM.ButtonCOMConnectIsEnabled = true;
+                this._ICOM.Close();
+                this._ICOM = null;
+            }
+            catch (InvalidOperationException iex) {
+                ShowOnTBMSG1("COM", "嘗試連接失敗");
+                ShowOnTBMSG2("COM", "[" + iex.Message + "]");
+                VM.ButtonCOMConnectIsEnabled = true;
+                this._ICOM.Close();
+                this._ICOM = null;
+                
+            }
+            catch (NullReferenceException nre)
+            {
+                ShowOnTBMSG1("COM", "請選擇一個序列埠");
+                ShowOnTBMSG2("COM", "[" + nre.Message + "]");
+                VM.ButtonCOMConnectIsEnabled = true;
+            }
+            finally
+            {
+                new Thread(DisableMsg).Start();
+            }
+            
 		}
 
         private void DisableMsg()
         {
-            Thread.Sleep(1600);
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                ShowOnTBMSG1("COM", "");
-                ShowOnTBMSG2("COM", "");
-            }));
+            Thread.Sleep(1500);
+            ShowOnTBMSG1("COM", "");
+            ShowOnTBMSG2("COM", "");
         }
        
-		private void CollectionData(ObservableCollection<String> s) {
+		/*private void CollectionData(ObservableCollection<String> s) {
 			this.ComboBoxCOMReader.ItemsSource = s;
 			this.ComboBoxCOMReader.SelectedIndex = 0;
-        }
+        }*/
 
         /// <summary>
         /// When combobox dropdown is opened which to search COM device
@@ -546,20 +576,31 @@ namespace RFID.Utility
         /// <param name="e"></param>
 		private void OnComboboxCOMReaderDropDownOpened(object sender, EventArgs e) {
 
-            ObservableCollection<string> oc = new ObservableCollection<string>();
+            //ObservableCollection<string> oc = new ObservableCollection<string>();
+            VM.COMPortBoxItemsSource.Clear();
+
             foreach (IReader rs in ICOM.GetReaders())
             {
                 if (rs != null)
-                    oc.Add(string.Format(CultureInfo.CurrentCulture, "{0} –{1}", rs.Name, rs.Description));
+                {
+                    //oc.Add(string.Format(CultureInfo.CurrentCulture, "{0} –{1}", rs.Name, rs.Description));
+                    var newItems = new COMPortBox()
+                    {
+                        Content = String.Format(CultureInfo.CurrentCulture, "{0} –{1}", rs.Name, rs.Description),
+                        Name = rs.Name
+                    };
+                    VM.COMPortBoxAddNewItem(newItems);
+                }
+                    
             }
 
-            if (oc.Count > 0)
-                CollectionData(oc);
+            //if (oc.Count > 0)
+            //    CollectionData(oc);
 		}
 
 		private void OnButtonCOMConnectClick(object sender, RoutedEventArgs e)
         {
-            ButtonCOMConnect.IsEnabled = false;
+            VM.ButtonCOMConnectIsEnabled = false;
             ShowOnTBMSG1("COM", "");
             ShowOnTBMSG2("COM", "");
             this.SearchThread = new Thread(DoConnectWork) {
@@ -605,7 +646,7 @@ namespace RFID.Utility
 
         private void OnButtonUSBEnumerateClick(object sender, RoutedEventArgs e)
         {
-
+            VM.ButtonUSBConnectIsEnabled = true;
             this.SearchThread = new Thread(DoUSBEnumerateWork) {
                 IsBackground = true
             };
@@ -614,9 +655,8 @@ namespace RFID.Utility
 
         private void DoUSBEnumerateWork()
         {
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                ShowOnTBMSG1("USB", "Get HID device..");
-            }));
+
+            ShowOnTBMSG1("USB", "Get HID device..");
 
             new Thread(USBDisableMsg1).Start();
 
@@ -627,9 +667,9 @@ namespace RFID.Utility
             for (int i = 0; i < this._IUSBs.Count(); i++)
             {
                 String _productName = this._IUSBs.ElementAt(i).ProductName ?? "NULL";
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                    ShowOnTBMSG2("USB", $"{i + 1}: {_productName} ");
-                }));
+
+                ShowOnTBMSG2("USB", $"{i + 1}: {_productName} ");
+
 
                 _oc.Add($"{i + 1}: {_productName} (VID: 0x{this._IUSBs.ElementAt(i).VendorId}, PID: 0x{this._IUSBs.ElementAt(i).ProductID})");
             }
@@ -647,17 +687,15 @@ namespace RFID.Utility
         private void USBDisableMsg1()
         {
             Thread.Sleep(2000);
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                ShowOnTBMSG1("USB", "");
-            }));
+            ShowOnTBMSG1("USB", "");
         }
 
         private void USBDisableMsg2()
         {
-            Thread.Sleep(500);
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
+            Thread.Sleep(1500);
+            //Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
                 ShowOnTBMSG2("USB", "");
-            }));
+            //}));
         }
 
         private void OnButtonUSBConnectClick(object sender, RoutedEventArgs e)
@@ -670,8 +708,12 @@ namespace RFID.Utility
                     this._IUSB.Open();
                     if (this._IUSB.IsOpen)
                     {
-                        this.ButtonUSBEnter.IsEnabled = true;
-                        this.ButtonUSBConnect.IsEnabled = false;
+                        VM.ButtonUSBEnterIsEnabled = true;
+                        VM.ButtonUSBConnectIsEnabled = false;
+                    }
+                    else {
+                        ShowOnTBMSG2("USB", "USB裝置未成功開啟");
+                        new Thread(USBDisableMsg2).Start();
                     }
                 }
             }
@@ -825,13 +867,13 @@ namespace RFID.Utility
         #endregion
 
 
-
         #region === BLE ===
         private void OnButtonBLEEnumerateClick(object sender, RoutedEventArgs e)
         {
 
-            
-            this.ButtonBLEConnect.IsEnabled = false;
+
+            //VM.ButtonBLEConnectIsEnabled = false;
+            VM.ButtonBLEEnumerateIsEnabled = false;
 
             this.SearchThread = new Thread(DoBLEEnumerateWork)
             {
@@ -844,25 +886,22 @@ namespace RFID.Utility
         private void DoBLEEnumerateWork()
         {
             _timeCount = 30;
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                ShowOnTBMSG2("BLE", "");
-                ShowOnTBMSG1("BLE", "");
-                //ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device   ({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
-                this.ButtonBLEEnumerate.IsEnabled = false;
-            }));
+            ShowOnTBMSG2("BLE", "");
+            ShowOnTBMSG1("BLE", "");
+            
             
             this.BLEEnumerateProcess.Start();
             
 
             VM.BLEDeviceUnpairedItemsSource.Clear();
             if (this._IBLE != null)
-                this._IBLE.Stop();
+                this._IBLE.EnumerateStop();
             this._IBLE = new IBLE(DeviceSelector.BluetoothLeUnpairedOnly);
             this._IBLE.DeviceAdded += OnBLEDeviceAdded;
             this._IBLE.DeviceUpdated += OnBLEDeviceUpdated;
             this._IBLE.DeviceRemoved += OnBLEDeviceRemoved;
             this._IBLE.DeviceEnumerationCompleted += OnBLEDeviceEnumerationCompleted;
-            this._IBLE.Start();
+            this._IBLE.EnumerateStart();
         }
 
 
@@ -878,27 +917,19 @@ namespace RFID.Utility
                 case 0:
                 default:
                     _toggleCount = 1;
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                        ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device   ({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
-                    }));
+                    ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device   ({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
                     break;
                 case 1:
                     _toggleCount++;
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                        ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device.  ({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
-                    }));
+                    ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device.  ({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
                     break;
                 case 2:
                     _toggleCount++;
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                        ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device.. ({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
-                    }));
+                    ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device.. ({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
                     break;
                 case 3:
                     _toggleCount = 0;
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                        ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device...({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
-                    }));
+                    ShowOnTBMSG1("BLE", String.Format(CultureInfo.CurrentCulture, "Enumerate BLE device...({0})", _timeCount.ToString("00", CultureInfo.CurrentCulture)));
                     break;
             }
 
@@ -914,14 +945,9 @@ namespace RFID.Utility
                     bleDevice.DeviceName = e.Device.Name;
                     bleDevice.DeviceUUID = e.Device.UUID;
                     bleDevice.ShowDeviceUUID = str.ToUpper(CultureInfo.CurrentCulture);
-                    /*{
-                        DeviceName = e.Device.Name,
-                        DeviceUUID = e.Device.UUID
-                    };*/
+                    
                     VM.BLEListViewAddNewItem(bleDevice);
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                        ButtonBLEConnect.IsEnabled = true;
-                    }));
+                    VM.ButtonBLEConnectIsEnabled = true;
                 }
                 
             }).ConfigureAwait(false);
@@ -961,13 +987,12 @@ namespace RFID.Utility
             await RunOnUiThread(() =>
             {
                 this.BLEEnumerateProcess.Stop();
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                    this.ButtonBLEEnumerate.IsEnabled = true;
-                    if (_timeCount > 0)
-                        ShowOnTBMSG1("BLE", "Enumerate BLE device completed, Maybe don't insert the dongle.");
-                    else
-                        ShowOnTBMSG1("BLE", "Enumerate BLE device completed.");
-                }));
+                
+                VM.ButtonBLEEnumerateIsEnabled = true;
+                if (_timeCount > 10)
+                    ShowOnTBMSG1("BLE", "Enumerate BLE device completed, Maybe don't insert the dongle.");
+                else
+                    ShowOnTBMSG1("BLE", "Enumerate BLE device completed.");
 
             }).ConfigureAwait(false);
         }
@@ -983,14 +1008,12 @@ namespace RFID.Utility
         private void BLEDisableMsg1()
         {
             Thread.Sleep(2000);
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                ShowOnTBMSG1("BLE", "");
-            }));
+            ShowOnTBMSG1("BLE", "");
         }
 
         private void BLEDisableMsg2()
         {
-            Thread.Sleep(500);
+            Thread.Sleep(1500);
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
                 ShowOnTBMSG2("BLE", "");
             }));
@@ -1003,37 +1026,32 @@ namespace RFID.Utility
             if (item != null)
             {
                 this.BLEEnumerateProcess.Stop();
-                this.ButtonBLEEnumerate.IsEnabled = true;
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                    ShowOnTBMSG1("BLE", "Connecting...");
-                }));
+                ShowOnTBMSG1("BLE", "Connecting...");
 
                 var result = await _IBLE.ConnectAsync(item.DeviceUUID).ConfigureAwait(false);
                 if (result.IsConnected)
                 {
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                        this.ButtonBLEEnter.IsEnabled = true;
-                        this.ButtonBLEConnect.IsEnabled = false;
-                        ShowOnTBMSG1("BLE", "");
-                        ShowOnTBMSG2("BLE", String.Format(CultureInfo.CurrentCulture, "{0} is connected.", result.Name));
-                    }));
+                    VM.ButtonBLEEnterIsEnabled = true;
+                    VM.ButtonBLEEnumerateIsEnabled = true;
+                    VM.ButtonBLEConnectIsEnabled = false;
+                    _IBLE.EnumerateStop();
+                    ShowOnTBMSG1("BLE", "");
+                    ShowOnTBMSG2("BLE", String.Format(CultureInfo.CurrentCulture, "{0} is connected.", result.Name));
                     
                 }
                 else {
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                        ShowOnTBMSG1("BLE", "");
-                        ShowOnTBMSG2("BLE", String.Format(CultureInfo.CurrentCulture, "[Error]:{0}", result.ErrorMessage));
-                    }));
-                    
+                    VM.ButtonBLEEnumerateIsEnabled = true;
+                    VM.ButtonBLEConnectIsEnabled = false;
+                    _IBLE.EnumerateStop();
+                    ShowOnTBMSG1("BLE", "");
+                    ShowOnTBMSG2("BLE", String.Format(CultureInfo.CurrentCulture, "[Error]:{0}", result.ErrorMessage));  
                 }
                 
             }
             else
             {
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                    ShowOnTBMSG1("BLE", "");
-                    ShowOnTBMSG2("BLE", "Must select an unpaired/unconnected device");
-                }));
+                ShowOnTBMSG1("BLE", "");
+                ShowOnTBMSG2("BLE", "Must select an unpaired/unconnected device");
                 
             }
         }

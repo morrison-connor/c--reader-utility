@@ -37,6 +37,8 @@ using System.Security;
 using System.Resources;
 using System.Reflection;
 using System.Globalization;
+using System.Net;
+using System.Security.Permissions;
 
 namespace RFID.Utility.IClass
 {
@@ -72,15 +74,41 @@ namespace RFID.Utility.IClass
 			VerifyName();
 			if (!File.Exists(Name))
 				return null;
+            
+            #pragma warning disable CA3075 // XML 中不安全的 DTD 處理
+            XmlDocument doc = new XmlDocument();
+            doc.Load(Name);
+            #pragma warning restore CA3075 // XML 中不安全的 DTD 處理
+            return doc;
 
-			//XmlDocument doc = new XmlDocument();
-			//doc.Load(Name);
-			XmlDocument doc = new XmlDocument() { XmlResolver = null };
-			System.IO.StringReader sreader = new System.IO.StringReader(Name);
+            /*XmlDocument doc = new XmlDocument() { XmlResolver = null };
+            XmlReaderSettings settings = new XmlReaderSettings()
+            {
+                DtdProcessing = DtdProcessing.Parse
+            };
+            StringReader sreader = new StringReader(Name);
+            XmlReader reader = null;
+            try
+            {
+                reader = XmlReader.Create(sreader, settings);
+                doc.Load(reader);
+                return doc;
+            }
+            finally
+            {
+                if (reader != null)
+                {
+                    reader.Close();
+                }
+            }*/
+            
+
+            /*XmlDocument doc = new XmlDocument() { XmlResolver = null };
+			StringReader sreader = new StringReader(Name);
 			XmlReader reader = null;
 			try
 			{
-				reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                reader = XmlReader.Create(sreader);
 				doc.Load(reader);
 				return doc;
 			}
@@ -90,11 +118,12 @@ namespace RFID.Utility.IClass
 				{
 					reader.Close();
 				}
-			}
-			
-		}
-		
-		protected void Save(XmlDocument doc) {
+			}*/
+
+
+        }
+
+        protected void Save(XmlDocument doc) {
 			if (m_buffer != null)
 				m_buffer.m_needsFlushing = true;
 			else
@@ -227,8 +256,8 @@ namespace RFID.Utility.IClass
 							m_profile.VerifyName();
 							if (File.Exists(m_profile.Name))
 							{
-								System.IO.StringReader sreader = new System.IO.StringReader(m_profile.Name);
-								reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+								StringReader sReader = new StringReader(m_profile.Name);
+								reader = XmlReader.Create(sReader, new XmlReaderSettings() { XmlResolver = null });
 								m_doc.Load(reader); //m_profile.Name
 							}
 								

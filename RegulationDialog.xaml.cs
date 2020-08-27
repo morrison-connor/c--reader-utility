@@ -97,6 +97,10 @@ namespace RFID.Utility
             return _BaudRate;
         }
 
+        public ICOM GetICOM()
+        {
+            return _ICOM;
+        }
         /// <summary>
         /// 
         /// </summary>
@@ -785,14 +789,16 @@ namespace RFID.Utility
                                 case ReaderService.ConnectType.COM:
                                     Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
                                     {
+                                        BorderView.IsEnabled = false;
                                         UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Baud rate changed and reconnect module.." : "Baud rate改變，重新連線中..", false);
                                     }));
                                     String port = this._ICOM.GetSerialPort().PortName;
                                     Int32 ibr = ICOM.GetBaudRate(str);
 
+                                    this._ICOM.CombineDataReceiveEventHandler -= combineDataEventHandler;
                                     this._ICOM.Close();
                                     this._ICOM = null;
-                                    Thread.Sleep(500);
+                                    Thread.Sleep(1000);
                                     this._ICOM = new ICOM();
                                     this._ICOM.Open(port, ibr, (Parity)Enum.Parse(typeof(Parity), "None", true), 8, (StopBits)Enum.Parse(typeof(StopBits), "One", true));
 
@@ -800,47 +806,35 @@ namespace RFID.Utility
                                     {
                                         Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
                                         {
+                                            BorderView.IsEnabled = true;
                                             UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? 
                                                 String.Format(CultureInfo.CurrentCulture, "Utility has reconnected to module, and change baud rate to {0}", ibr) : 
                                                 String.Format(CultureInfo.CurrentCulture, "已重新連線, baud rate設定至{0}", ibr), true);
                                         }));
                                         _BaudRate = ICOM.GetBaudRate(ibr);
+                                        this.combineDataEventHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
+                                        this._ICOM.CombineDataReceiveEventHandler += combineDataEventHandler;
                                     }
                                     else
                                         Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
                                         {
+                                            BorderView.IsEnabled = true;
                                             UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "reconnect error" : "連線失敗", false);
                                         }));
                                     break;
                                 case ReaderService.ConnectType.USB:
-                                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                                    {
-                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Baud rate changed and reconnect module.." : "Baud rate改變，重新連線中..", false);
-                                        Thread.Sleep(500);
-                                        Int32 _ibr = ICOM.GetBaudRate(str);
-                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? 
-                                            String.Format(CultureInfo.CurrentCulture, "Utility has reconnected to module, and change baud rate to {0}", _ibr) : 
-                                            String.Format(CultureInfo.CurrentCulture, "已重新連線, baud rate設定至{0}", _ibr), true);
-                                        _BaudRate = ICOM.GetBaudRate(_ibr);
-                                    }));
-                                    
-                                    break;
                                 case ReaderService.ConnectType.NET:
-                                    //
-                                    Thread.Sleep(200);
-                                    break;
                                 case ReaderService.ConnectType.BLE:
                                     Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
                                     {
-                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? "Baud rate changed and reconnect module.." : "Baud rate改變，重新連線中..", false);
-                                        Thread.Sleep(500);
+                                        Thread.Sleep(1000);
                                         Int32 _ibr = ICOM.GetBaudRate(str);
-                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ?
-                                            String.Format(CultureInfo.CurrentCulture, "Utility has reconnected to module, and change baud rate to {0}", _ibr) :
-                                            String.Format(CultureInfo.CurrentCulture, "已重新連線, baud rate設定至{0}", _ibr), true);
+                                        UIUnitControl((this.Culture.IetfLanguageTag == "en-US") ? 
+                                            String.Format(CultureInfo.CurrentCulture, "Change baud rate to {0}", _ibr) : 
+                                            String.Format(CultureInfo.CurrentCulture, "baud rate設定至{0}", _ibr), true);
                                         _BaudRate = ICOM.GetBaudRate(_ibr);
                                     }));
-
+                                    
                                     break;
                             }
                             //reconnect

@@ -1186,7 +1186,7 @@ namespace RFID.Utility.VM
             }
         }
 
-        private String _B02GroupUButton = "";
+        private String _B02GroupUButton = "Multi(U)";
         public String B02GroupUButton {
             get { return _B02GroupUButton; }
             set
@@ -1199,7 +1199,7 @@ namespace RFID.Utility.VM
             }
         }
 
-        private String _B02GroupQButton = "";
+        private String _B02GroupQButton = "EPC(Q)";
         public String B02GroupQButton
         {
             get { return _B02GroupQButton; }
@@ -2006,6 +2006,20 @@ namespace RFID.Utility.VM
                 {
                     _BorderComboBoxCultureIsEnabled = value;
                     OnPropertyChanged("BorderComboBoxCultureIsEnabled");
+                }
+            }
+        }
+
+        private String _BorderCheckBoxStatusTag = "False";
+        public String BorderCheckBoxStatusTag
+        {
+            get { return _BorderCheckBoxStatusTag; }
+            set
+            {
+                if (_BorderCheckBoxStatusTag != value)
+                {
+                    _BorderCheckBoxStatusTag = value;
+                    OnPropertyChanged("BorderCheckBoxStatusTag");
                 }
             }
         }

@@ -109,6 +109,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Management" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -123,6 +124,7 @@
     <Reference Include="UIAutomationTypes" />
     <Reference Include="Windows">
       <HintPath>C:\Program Files (x86)\Windows Kits\10\UnionMetadata\10.0.18362.0\Windows.winmd</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
@@ -151,6 +153,7 @@
     <Compile Include="IClass\XmlHelper.cs" />
     <Compile Include="VM\BaudRate.cs" />
     <Compile Include="VM\BLEListViewItem.cs" />
+    <Compile Include="VM\COMPortBox.cs" />
     <Compile Include="VM\ConnectVM.cs" />
     <Compile Include="VM\EditCommandVM.cs" />
     <Compile Include="IClass\GridViewColumnResize.cs" />

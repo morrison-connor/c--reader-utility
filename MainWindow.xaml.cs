@@ -24,13 +24,14 @@ using RFID.Service;
 using RFID.Service.IInterface.COM;
 using RFID.Service.IInterface.NET;
 using RFID.Service.IInterface.USB;
+using RFID.Service.IInterface.BLE;
 using System.Linq;
 using Microsoft.Win32;
 using static RFID.Utility.EditCommandDialog;
 using RFID.Service.IInterface.COM.Events;
 using RFID.Service.IInterface.USB.Events;
 using RFID.Service.IInterface.NET.Events;
-using RFID.Service.IInterface.BLE;
+
 using System.Resources;
 using System.Net.Sockets;
 using System.Xml.XPath;
@@ -114,10 +115,8 @@ namespace RFID.Utility
         //Menu, Common
         private Hashtable                       ValidationState = new Hashtable();
         private CultureInfo                     Culture;
-        //private CulturesHelper                  culturesHelper = new CulturesHelper();
         private List<UIControl>                 UIControPackets = new List<UIControl>();
         private List<UIControl>                 UITempControPackets = new List<UIControl>();
-        //private Thread                          SelectPreThread;
         private Boolean                         IsReceiveDataWork = false;// false to receive data is completed, otherwise is true 
         private Boolean                         IsMenuRecordMode = false;
         private Boolean                         IsReceiveSubDataWork = false;
@@ -140,14 +139,12 @@ namespace RFID.Utility
         //Page02
         public ObservableCollection<B02Item02Command> B02Item02Commands { get; private set; }
         private readonly DispatcherTimer        B02Item02Process = new DispatcherTimer();
-        //private readonly DispatcherTimer        B02TagsTime = new DispatcherTimer();
         private List<CommandStatus>             B02Item02ProcessItem = new List<CommandStatus>();
         private List<String>                    B02Item02CommandSets = new List<String>();
         private Int32                           B02Item02ProcessCounts = 0, 
                                                 B02Item02ProcessIdx = 0,
                                                 B02Item02SelectIdx = 0,
                                                 B02TabCtrlIndex = 0,
-                                                //B02ListViewTagTimeCount = 0,
                                                 B02ListViewRunCount = 0,
                                                 B02ListViewTagCount = 0;  
 		private Boolean                         IsB02Repeat = false;
@@ -183,7 +180,6 @@ namespace RFID.Utility
         private List<Int32>                     B04AntennaTargetRunTimes = new List<Int32>();
         private Int32                           B04AntennaRunCount = 0;
         private Int32                           B04AntennaTagIncreaseCount = 0;
-        //private readonly DispatcherTimer        B04RepeatEvent = new DispatcherTimer();
         private Boolean                         IsOnB04BtnAntennaClick = false;
         private Boolean                         IsB04BtnAntennaRun = false;
 
@@ -228,8 +224,7 @@ namespace RFID.Utility
             DataContext = VM;
             this.Culture = new CultureInfo("en-US", false);
 
-            //this.Regex["BitAddress"] = @"[0-9a-fA-F]";
-            this.ReaderService = new ReaderService();//?
+            this.ReaderService = new ReaderService();
 			this._ConnectDialog = new ConnectDialog();
 			this._ConnectDialog.ShowDialog();
 
@@ -237,7 +232,7 @@ namespace RFID.Utility
                 this.Close();
 			else if (_ConnectDialog.DialogResult.HasValue && _ConnectDialog.DialogResult.Value)
             {
-                this.BorderCheckBoxStatus.Tag = "True";
+                VM.BorderCheckBoxStatusTag = "True";
 
                 this.ReaderService = _ConnectDialog.GetService();
 
@@ -250,7 +245,6 @@ namespace RFID.Utility
                         this._BaudRate = ICOM.GetBaudRate(this._SerialPort.BaudRate);
                         this._CombineDataHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
                         this._ICOM.CombineDataReceiveEventHandler += this._CombineDataHandler;
-                        //this._ICOM.RawDataReceiveEvent += new ICOM.RawDataHandler(DoRawReceiveDataWork);
                         this.ReaderService.COM = this._ICOM;
                         VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0} ({1},{2},{3},{4})",
                                                                     this._SerialPort.PortName,
@@ -469,8 +463,6 @@ namespace RFID.Utility
 
             if (status != ReadStatus.Success)
             {
-                //if (status == ReadStatus.ReadError)
-                //    MessageShow("status = ReadStatus.ReadError", true);
                 switch (_ConnectType)
                 {
                     case ReaderService.ConnectType.COM:
@@ -487,21 +479,18 @@ namespace RFID.Utility
                         break;
                 }
 
-                //this.InfoThread.Join();
                 this.IsB02ThreadRunCtrl = false;
                 this.IsReceiveDataWork = false;
 
 
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
-                    MessageShow((this.Culture.IetfLanguageTag == "en-US") ? s_crlf : s_crlf, false);
-                    GroupStatusControl(GroupStatus.ALL, false);
+                MessageShow((this.Culture.IetfLanguageTag == "en-US") ? s_crlf : s_crlf, false);
+                GroupStatusControl(GroupStatus.ALL, false);
 
-                    this.BorderCheckBoxStatus.Tag = "False";
-                    VM.BorderTextBlockStatus = String.Empty;
-                    VM.BorderFirmwareVersion = String.Empty;
-                    VM.BorderTBReaderID = String.Empty;
-                    DoProcess = CommandStatus.DEFAULT;
-                }));
+                VM.BorderCheckBoxStatusTag = "False";
+                VM.BorderTextBlockStatus = String.Empty;
+                VM.BorderFirmwareVersion = String.Empty;
+                VM.BorderTBReaderID = String.Empty;
+                DoProcess = CommandStatus.DEFAULT;
 
                 var _thread = new Thread(new ThreadStart(() =>
                 {
@@ -516,7 +505,6 @@ namespace RFID.Utility
                             this._EditCommandDialog.Close();
                         }
 
-                        //OnOpenConnectClick(null, null);
                         OpenConnectDialog();
                     }));
                 }))
@@ -761,6 +749,7 @@ namespace RFID.Utility
                     B02DisplayInfoMsg("RX", s_crlf, true, dtU);
                     B02DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'U'));
                     IsReceiveSubDataWork = true;
+                    
                     if (s_crlf.Equals("\nU\r\n", StringComparison.CurrentCulture) || s_crlf.Equals("\nX\r\n", StringComparison.CurrentCulture))
                     {
 
@@ -913,15 +902,6 @@ namespace RFID.Utility
             }
         }
 
-        /// <summary>
-        /// receive raw data event
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e">raw data argument class</param>
-		private void DoRawReceiveDataWork(object sender, RawDataReceiveArgumentEventArgs e)
-        {
-            //implement code
-        }
 
         /// <summary>
         /// receive combne data event
@@ -1632,7 +1612,6 @@ namespace RFID.Utility
             {
                 case ReaderService.ConnectType.COM:
                     this._ICOM.CombineDataReceiveEventHandler -= this._CombineDataHandler;
-                    //this._ICOM.RawDataReceiveEvent -= null;
                     break;
                 case ReaderService.ConnectType.USB:
                     this._IUSB.USBDataReceiveEvent -= this._USBDataHandler;
@@ -1660,13 +1639,13 @@ namespace RFID.Utility
                         {
                             this._BaudRate = this._RegulationDialog.GetBaudRate();
                             this.ReaderService = this._RegulationDialog.GetService();
+                            this._ICOM = this._RegulationDialog.GetICOM();
                             this._SerialPort = this._ICOM.GetSerialPort();
 
                             this.ReaderService.COM = this._ICOM;
                         }
                         this._CombineDataHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
                         this._ICOM.CombineDataReceiveEventHandler += this._CombineDataHandler;
-                        //this._ICOM.RawDataReceiveEvent += new ICOM.RawDataHandler(DoRawReceiveDataWork);
                         break;
                     case ReaderService.ConnectType.USB:
                         this._BaudRate = this._RegulationDialog.GetBaudRate();
@@ -1683,7 +1662,6 @@ namespace RFID.Utility
                         this._IBLE.BLEDataReceiveEvent += this._BLEDataHandler;
                         break;
                 }
-                //this._RegulationDialog.Close();
             }
             catch (InvalidOperationException ex)
             {
@@ -1704,7 +1682,7 @@ namespace RFID.Utility
         /// <param name="e"></param>
 		private void OnCloseConnectClick(object sender, RoutedEventArgs e)
         {
-            if (BorderCheckBoxStatus.Tag.ToString() == "True")
+            if (VM.BorderCheckBoxStatusTag == "True")
             {
                 switch(_ConnectType)
                 {
@@ -1719,11 +1697,11 @@ namespace RFID.Utility
                         break;
                     case ReaderService.ConnectType.BLE:
                         this._IBLE.Close();
+                        this._IBLE.Dispose();
                         break;
                 }
 
-
-                this.BorderCheckBoxStatus.Tag = "False";
+                VM.BorderCheckBoxStatusTag = "False";
                 //this.InfoThread.Join();
                 GroupStatusControl(GroupStatus.ALL, false);
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Disconnected" : "已中斷連線", false);
@@ -1745,14 +1723,12 @@ namespace RFID.Utility
 
         private void OpenConnectDialog()
         {
-            if (BorderCheckBoxStatus.Tag.ToString() == "False")
+            if (VM.BorderCheckBoxStatusTag == "False")
             {
                 this.IsReceiveDataWork = false;
                 this.IsB02Repeat = false;
                 VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                //this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
                 VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                //this.B02GroupQButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
                 B04AntennaTestEndWork();
 
                 switch (_ConnectType)
@@ -1771,12 +1747,11 @@ namespace RFID.Utility
                         break;
                 }
 
-                //this._ConnectDialog = new ConnectDialog(this._BaudRate);
                 this._ConnectDialog.ShowDialog();
                 if (_ConnectDialog.DialogResult.HasValue && !_ConnectDialog.DialogResult.Value) this.Close();
                 else if (_ConnectDialog.DialogResult.HasValue && _ConnectDialog.DialogResult.Value)
                 {
-                    this.BorderCheckBoxStatus.Tag = "True";
+                    VM.BorderCheckBoxStatusTag = "True";
 
                     switch (this._ConnectDialog.GetIType())
                     {
@@ -1788,7 +1763,6 @@ namespace RFID.Utility
                             this._BaudRate = ICOM.GetBaudRate(this._SerialPort.BaudRate);
                             this._CombineDataHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
                             this._ICOM.CombineDataReceiveEventHandler += this._CombineDataHandler;
-                            //this._ICOM.RawDataReceiveEvent += new ICOM.RawDataHandler(DoRawReceiveDataWork);
                             this.ReaderService.COM = this._ICOM;
                             VM.BorderTextBlockStatus = String.Format(CultureInfo.CurrentCulture, "{0} ({1},{2},{3},{4})",
                                                                         this._SerialPort.PortName,
@@ -1959,6 +1933,7 @@ namespace RFID.Utility
                         b = this._IBLE.Receive();
                         break;
                 }
+
                 if (b == null)
                 {
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "The Reader not response." : "Reader沒有回應", true);
@@ -2025,7 +2000,6 @@ namespace RFID.Utility
                         case ReaderModule.Version.FIR300TD206:
                         case ReaderModule.Version.FIR300SD305:
                         case ReaderModule.Version.FIR300SD306:
-                        //case Module.Version.FI_R300V_D405:
                         case ReaderModule.Version.FIR300VD406:
                         case ReaderModule.Version.FIR300S:
                         case ReaderModule.Version.FIR300AH:
@@ -2082,20 +2056,6 @@ namespace RFID.Utility
                 else
                     VM.BorderTBReaderID = Format.RemoveCRLF(Format.BytesToString(b));
 
-                /*switch (_ConnectType)
-                {
-                    default:
-                    case ReaderService.ConnectType.DEFAULT:
-                    case ReaderService.ConnectType.COM:      
-                        b = this._ICOM.Receive(10);       
-                        break;
-                    case ReaderService.ConnectType.USB:      
-                        b = this._IUSB.Receive(10);
-                        break;
-                    case ReaderService.ConnectType.NET:         
-                        b = this._INet.Receive(10);
-                        break;
-                }*/
                 this.DoProcess = CommandStatus.DEFAULT;
 
             }
@@ -2103,13 +2063,13 @@ namespace RFID.Utility
             {
                 MessageShow(ex.Message, false);
             }
-            catch (ArgumentNullException ane)
+            catch (ArgumentNullException argumentNullException)
             {
-                MessageShow(ane.Message, false);
+                MessageShow(argumentNullException.Message, false);
             }
-            catch (SocketException se)
+            catch (SocketException socketException)
             {
-                MessageShow(se.Message, false);
+                MessageShow(socketException.Message, false);
             }
 
             
@@ -2348,36 +2308,30 @@ namespace RFID.Utility
 
 
         /// <summary>
-        /// Pager1 Timeout = 2048ms
+        /// Select command
         /// </summary>
         private Boolean DoB01SelectWork(CommandStatus cs)
         {
             int _index = 0;
             bool _f = false;
-            //try
-            //{
-                if (DoB01SendWork(this.ReaderService.CommandT(VM.B01GroupPreSetSelectMemBank.Tag, VM.B01GroupPreSetSelectBitAddress, VM.B01GroupPreSetSelectBitLength, VM.B01GroupPreSetSelectBitData), cs))
+
+            if (DoB01SendWork(this.ReaderService.CommandT(VM.B01GroupPreSetSelectMemBank.Tag, VM.B01GroupPreSetSelectBitAddress, VM.B01GroupPreSetSelectBitLength, VM.B01GroupPreSetSelectBitData), cs))
+            {
+                _f = true;
+                while (IsReceiveDataWork)
                 {
-                    _f = true;
-                    while (IsReceiveDataWork)
+                    Thread.Sleep(10);
+                    _index++;
+                    if (_index >= 200)
                     {
-                        Thread.Sleep(4);
-                        _index++;
-                        if (_index >= 512)
-                        {
-                            _f = false;
-                            break;
-                        }
+                        _f = false;
+                        break;
                     }
                 }
+            }
 
-                return _f;
-            /*}
-            catch (Exception ex)
-            {
-                MessageShow(ex.Message, true);
-                return false;
-            }*/
+            return _f;
+           
         }
 
         /// <summary>
@@ -2406,7 +2360,7 @@ namespace RFID.Utility
             {
                 IsReceiveDataWork = false;
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto SinglePreSelectAccessEPCEXIT;
             }
 
@@ -2415,12 +2369,12 @@ namespace RFID.Utility
             if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                         goto SinglePreSelectAccessEPCEXIT;
                     }
                 }
@@ -2430,12 +2384,12 @@ namespace RFID.Utility
             {
                 while (IsReceiveDataWork) 
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2048ms)." : "Q指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2000ms)." : "Q指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2449,7 +2403,7 @@ namespace RFID.Utility
             if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto SinglePreSelectEPCEXIT;
             }
             else
@@ -2458,11 +2412,11 @@ namespace RFID.Utility
                 if (DoB01SendWork(this.ReaderService.CommandQ(), CommandStatus.EPC))
                     while (IsReceiveDataWork)   
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
-                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2048ms)." : "Q指令超時(2048ms)", true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2000ms)." : "Q指令超時(2000ms)", true);
                             break;
                         }
                     }
@@ -2477,12 +2431,12 @@ namespace RFID.Utility
             DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD);
             while (IsReceiveDataWork)
             {
-                Thread.Sleep(4);
+                Thread.Sleep(10);
                 _index++;
-                if (_index >= 512)
+                if (_index >= 200)
                 {
                     IsReceiveDataWork = false;
-                    MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout." : "Access(P)指令超時(2048ms)", true);
+                    MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                     goto SinglePreAccessEPCEXIT;
                 }
             }
@@ -2492,12 +2446,12 @@ namespace RFID.Utility
             {
                 while (IsReceiveDataWork)  
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2048ms)." : "Q指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2000ms)." : "Q指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2512,12 +2466,12 @@ namespace RFID.Utility
             {
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2048ms)." : "Q指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2000ms)." : "Q指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2530,7 +2484,7 @@ namespace RFID.Utility
             if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto SinglePreSelectAccessTIDEXIT;
             }
             else
@@ -2545,7 +2499,7 @@ namespace RFID.Utility
                     if (_index >= 512)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                         goto SinglePreSelectAccessTIDEXIT;
                     }
                 }
@@ -2555,11 +2509,11 @@ namespace RFID.Utility
                     _index = 0;
                     while (IsReceiveDataWork) 
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
-                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "TID command timeout(2048ms)." : "TID指令超時(2048ms)", true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "TID command timeout(2000ms)." : "TID指令超時(2000ms)", true);
                             break;
                         }
                     }
@@ -2575,7 +2529,7 @@ namespace RFID.Utility
             if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto SinglePreSelectTIDEXIT;
             }
             else
@@ -2584,11 +2538,11 @@ namespace RFID.Utility
                 {
                     while (IsReceiveDataWork)
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
-                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "TID command timeout(2048ms)." : "TID指令超時(2048ms)", true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "TID command timeout(2000ms)." : "TID指令超時(2000ms)", true);
                             break;
                         }
                     }
@@ -2604,12 +2558,12 @@ namespace RFID.Utility
             DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD);
             while (IsReceiveDataWork)
             {
-                Thread.Sleep(4);
+                Thread.Sleep(10);
                 _index++;
-                if (_index >= 512)
+                if (_index >= 200)
                 {
                     IsReceiveDataWork = false;
-                    MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout." : "Access(P)指令超時(2048ms)", true);
+                    MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                     goto SinglePreAccessTIDEXIT;
                 }
             }
@@ -2619,11 +2573,11 @@ namespace RFID.Utility
             {
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "TID command timeout(2048ms)." : "TID指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "TID command timeout(2000ms)." : "TID指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2640,12 +2594,12 @@ namespace RFID.Utility
             {
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2048ms)." : "Q指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Q command timeout(2000ms)." : "Q指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2696,6 +2650,7 @@ namespace RFID.Utility
                             this.SettingThread.Start();
                         }
                     }
+                    else IsRunning = false;
                 }
                 else
                 {
@@ -2781,6 +2736,7 @@ namespace RFID.Utility
                             this.SettingThread.Start();
                         }
                     }
+                    else this.IsRunning = false;
                 }
                 else
                 {
@@ -2829,7 +2785,7 @@ namespace RFID.Utility
             if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto PreSelectAccessReadEXIT;
             }
             Int32 _index = 0;
@@ -2837,12 +2793,12 @@ namespace RFID.Utility
             if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                         goto PreSelectAccessReadEXIT;
                     }
                 }
@@ -2851,12 +2807,12 @@ namespace RFID.Utility
                 VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStatus.READ))
                 while (IsReceiveDataWork) 
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Read(R) command timeout(2048ms)." : "Read(R)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Read(R) command timeout(2000ms)." : "Read(R)指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2869,7 +2825,7 @@ namespace RFID.Utility
             if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto PreSelectReadEXIT;
             }
             Int32 _index = 0;
@@ -2877,12 +2833,12 @@ namespace RFID.Utility
                 VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStatus.READ))
                 while (IsReceiveDataWork)   
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Read(R) command timeout(2048ms)." : "Read(R)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Read(R) command timeout(2000ms)." : "Read(R)指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2897,12 +2853,12 @@ namespace RFID.Utility
             if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                         goto PreAccessReadEXIT;
                     }
                 }
@@ -2911,12 +2867,12 @@ namespace RFID.Utility
                 VM.B01GroupRWTextBoxAddress, VM.B01GroupRWTextBoxLength), CommandStatus.READ))
                 while (IsReceiveDataWork)  
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Read(R) command timeout(2048ms)." : "Read(R)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Read(R) command timeout(2000ms)." : "Read(R)指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2929,7 +2885,7 @@ namespace RFID.Utility
             if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto PreSelectAccessWriteEXIT;
             }
             Int32 _index = 0;
@@ -2937,12 +2893,12 @@ namespace RFID.Utility
             if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                         goto PreSelectAccessWriteEXIT;
                     }
                 }
@@ -2954,12 +2910,12 @@ namespace RFID.Utility
                 VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)   
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2048ms)." : "Write(W)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2000ms)." : "Write(W)指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -2972,7 +2928,7 @@ namespace RFID.Utility
             if (!DoB01SelectWork(CommandStatus.SELECT))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." : "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." : "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto PreSelectWriteEXIT;
             }
             Int32 _index = 0;
@@ -2983,12 +2939,12 @@ namespace RFID.Utility
                 VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)   
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2048ms)." : "Write(W)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2000ms)." : "Write(W)指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -3003,12 +2959,12 @@ namespace RFID.Utility
             if (DoB01SendWork(this.ReaderService.CommandP(VM.B01GroupPreSetAccessPassword), CommandStatus.PASSWORD))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                         goto PreAccessWriteEXIT;
                     }
                 }
@@ -3020,12 +2976,12 @@ namespace RFID.Utility
                 VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)   
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2048ms)." : "Write(W)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2000ms)." : "Write(W)指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -3043,12 +2999,12 @@ namespace RFID.Utility
                 VM.B01GroupRWTextBoxWrite), CommandStatus.WRITE))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2048ms)." : "Write(W)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Write(W) command timeout(2000ms)." : "Write(W)指令超時(2000ms)", true);
                         break;
                     }
                 }
@@ -3215,6 +3171,7 @@ namespace RFID.Utility
                             this.SettingThread.Start();
                         }
                     }
+                    else this.IsRunning = false;
                 }
                 else
                 {
@@ -3326,6 +3283,7 @@ namespace RFID.Utility
                             this.SettingThread.Start();
                         }
                     }
+                    else this.IsRunning = false;
                 }
                 else
                 {
@@ -3612,6 +3570,7 @@ namespace RFID.Utility
                             this.SettingThread.Start();
                         }
                     }
+                    else this.IsRunning = false;
                 }
                 else
                 {
@@ -4077,6 +4036,7 @@ namespace RFID.Utility
                             this.SettingThread.Start();
                         }
                     }
+                    else this.IsRunning = false;
                 }
                 else
                 {
@@ -4294,8 +4254,8 @@ namespace RFID.Utility
             this.B02Item02ListBox.ItemsSource = B02Item02Commands = new ObservableCollection<B02Item02Command>();
             B02Item02Commands.Add(new B02Item02Command());
 
-            VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-            VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
+            //VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
+            //VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
         }
 
         /// <summary>
@@ -4407,6 +4367,7 @@ namespace RFID.Utility
                         itm.Content = String.Format(CultureInfo.CurrentCulture, "{0}  -- {1}", Format.ShowCRLF(data), dt.ToString("H:mm:ss.fff", CultureInfo.CurrentCulture));
                 }
                 if (this.B02ListBox.Items.Count > 2000)
+                    //this.B02ListBox.Items.RemoveAt(0);
                     this.B02ListBox.Items.Clear();
 
                 this.B02ListBox.Items.Add(itm);
@@ -4439,9 +4400,24 @@ namespace RFID.Utility
             {
                 return;
             }
-            
 
-            if (!IsMenuRecordMode && !isCRC) return;
+
+            if (!IsMenuRecordMode && !isCRC)
+            {
+                VM.B02GroupRecordTextBlockCount = B02ListViewList.Distinct().Count().ToString(CultureInfo.CurrentCulture);
+                VM.B02GroupRecordTextBlockRunCount = this.B02ListViewRunCount.ToString(CultureInfo.CurrentCulture);
+                VM.B02GroupRecordTextBlockTagCount = B02ListViewTagCount.ToString(CultureInfo.CurrentCulture);
+                if (VM.B02ListViewItemsSource.Count > 0)
+                {
+                    for (Int32 j = 0; j < VM.B02ListViewItemsSource.Count; j++)
+                    {
+                        number = Convert.ToInt32(VM.B02ListViewItemsSource[j].B02Count, CultureInfo.CurrentCulture);
+                        if (this.B02ListViewRunCount > 0)
+                            VM.B02ListViewItemsSource[j].B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
+                    }
+                }
+                return;
+            }
 
             if (!IsMenuRecordMode && VM.B02GroupReadCtrlCheckBoxIsChecked)
                 if (data[1].Length <= 1) return;
@@ -4466,6 +4442,7 @@ namespace RFID.Utility
                         {
                             number++;
                             VM.B02ListViewItemsSource[j].B02Count = number.ToString(CultureInfo.CurrentCulture);
+                            VM.B02ListViewItemsSource[j].B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
                             bCompare = true;
                             break;
                         }
@@ -4481,9 +4458,12 @@ namespace RFID.Utility
                     }
                 }
 
+                //new tag
                 if (!bCompare)
                 {
                     newBank.B02Count = "1";
+                    number = Convert.ToInt32(newBank.B02Count, CultureInfo.CurrentCulture);
+                    newBank.B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
                     VM.B02ListViewAddNewItem(newBank);
                     B02ListViewList.Add(data[0]);
                     VM.B02GroupRecordTextBlockCount = B02ListViewList.Distinct().Count().ToString(CultureInfo.CurrentCulture);
@@ -4579,7 +4559,7 @@ namespace RFID.Utility
         }
 
         /// <summary>
-        /// Do select command, 2048ms time out
+        /// Do select command, 2000ms time out
         /// </summary>
         /// <param name="cs">command state</param>
         /// <returns></returns>
@@ -4594,11 +4574,12 @@ namespace RFID.Utility
                 _f = true;
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         _f = false;
+                        IsReceiveDataWork = false;
                         break;
                     }
                 }
@@ -4623,13 +4604,9 @@ namespace RFID.Utility
                     UIControlStatus(UITempControPackets, false);
                     UIControlStatus(UIControPackets, true);
                     VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                    /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                    }));*/
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ? 
-                        "Select(T) command timeout(2048ms) or parameter error.":
-                        "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error.":
+                        "Select(T)指令超時(2000ms)或參數錯誤。", true);
                     break;
                 }
                 else
@@ -4640,12 +4617,12 @@ namespace RFID.Utility
                     if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                         while (IsReceiveDataWork)
                         {
-                            Thread.Sleep(4);
+                            Thread.Sleep(10);
                             _index++;
-                            if (_index >= 100)
+                            if (_index >= 200)
                             {
                                 IsReceiveDataWork = false;
-                                MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                                MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                                 return;
                             }
                         }
@@ -4691,6 +4668,7 @@ namespace RFID.Utility
                             _index++;
                             if (_index >= 300)
                             {
+                                this.IsB02ThreadRunCtrl = false;
                                 this.IsB02Repeat = false;
                                 UIControlStatus(UITempControPackets, false);
                                 UIControlStatus(UIControPackets, true);
@@ -4702,6 +4680,7 @@ namespace RFID.Utility
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                     "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                                     "U指令超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                                IsReceiveDataWork = false;
                                 break;
                             }
                         }
@@ -4720,6 +4699,7 @@ namespace RFID.Utility
             {
                 if (!DoB02SelectWork(CommandStatus.B02T))
                 {
+                    this.IsB02ThreadRunCtrl = false;
                     this.IsB02Repeat = false;
                     UIControlStatus(UITempControPackets, false);
                     UIControlStatus(UIControPackets, true);
@@ -4781,13 +4761,10 @@ namespace RFID.Utility
                                 UIControlStatus(UITempControPackets, false);
                                 UIControlStatus(UIControPackets, true);
                                 VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                                /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                                {
-                                    this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                                }));*/
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                     "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                                     "Multi(U)超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                                IsReceiveDataWork = false;
                                 break;
                             }
                         }
@@ -4810,12 +4787,12 @@ namespace RFID.Utility
                 if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                     while (IsReceiveDataWork)
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
                             IsReceiveDataWork = false;
-                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                             break;
                         }
                     }
@@ -4866,13 +4843,10 @@ namespace RFID.Utility
                             UIControlStatus(UITempControPackets, false);
                             UIControlStatus(UIControPackets, true);
                             VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                            /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                            {
-                                this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                            }));*/
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                 "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                                 "Multi(U)超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -4920,27 +4894,24 @@ namespace RFID.Utility
                     _index = 0;
                     while (IsReceiveDataWork)   //SlotQ within U command, the received time will arrive to the max of 3s.
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         if (IsReceiveSubDataWork)
                         {
                             _index = 0;
                             IsReceiveSubDataWork = false;
                         }
                         _index++;
-                        if (_index >= 750)
+                        if (_index >= 300)
                         {
                             this.IsB02ThreadRunCtrl = false;
                             this.IsB02Repeat = false;
                             UIControlStatus(UITempControPackets, false);
                             UIControlStatus(UIControPackets, true);
                             VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                            /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                            {
-                                this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                            }));*/
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                 "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                                 "Multi(U)超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -4956,8 +4927,8 @@ namespace RFID.Utility
             if (!DoB02SelectWork(CommandStatus.B02T))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-					"Select(T) command timeout(2048ms) or parameter error." :
-                    "Select(T)指令超時(2048ms)或參數錯誤。", true);
+					"Select(T) command timeout(200ms) or parameter error." :
+                    "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto B02SinglePreSelectAccessUREXIT;
             }
             else
@@ -4968,12 +4939,12 @@ namespace RFID.Utility
                 if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                     while (IsReceiveDataWork)
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
                             IsReceiveDataWork = false;
-                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                             goto B02SinglePreSelectAccessUREXIT;
                         }
                     }
@@ -5029,6 +5000,7 @@ namespace RFID.Utility
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                 "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                                 "Multi(U)超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -5046,8 +5018,8 @@ namespace RFID.Utility
             if (!DoB02SelectWork(CommandStatus.B02T))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    "Select(T) command timeout(2048ms) or parameter error." :
-                    "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                    "Select(T) command timeout(2000ms) or parameter error." :
+                    "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto B02SinglePreSelectUREXIT;
             }
             else
@@ -5094,13 +5066,10 @@ namespace RFID.Utility
                             UIControlStatus(UITempControPackets, false);
                             UIControlStatus(UIControPackets, true);
                             VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                            /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                            {
-                                this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                            }));*/
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                 "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                                 "Multi(U)超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -5120,12 +5089,12 @@ namespace RFID.Utility
             if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
             while (IsReceiveDataWork)
             {
-                Thread.Sleep(4);
+                Thread.Sleep(10);
                 _index++;
-                if (_index >= 512)
+                if (_index >= 200)
                 {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms) and stop process." : "Access(P)指令超時(2048ms)，執行結束。", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms) and stop process." : "Access(P)指令超時(2000ms)，執行結束。", true);
                         goto B02SinglePreAccessUREXIT;
                 }
             }
@@ -5174,13 +5143,10 @@ namespace RFID.Utility
                         UIControlStatus(UITempControPackets, false);
                         UIControlStatus(UIControPackets, true);
                         VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                        /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                        {
-                            this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                        }));*/
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                             "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                             "Multi(U)超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                        IsReceiveDataWork = false;
                         break;
                     }
                 }
@@ -5237,13 +5203,10 @@ namespace RFID.Utility
                         UIControlStatus(UITempControPackets, false);
                         UIControlStatus(UIControPackets, true);
                         VM.B02GroupUButton = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                        /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                        {
-                            this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
-                        }));*/
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                             "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                             "Multi(U)超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
+                        IsReceiveDataWork = false;
                         break;
                     }
                 }
@@ -5265,13 +5228,9 @@ namespace RFID.Utility
                     UIControlStatus(UITempControPackets, false);
                     UIControlStatus(UIControPackets, true);
                     VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                    /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.B02GroupQButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                    }));*/
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." :
-                        "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." :
+                        "Select(T)指令超時(2000ms)或參數錯誤。", true);
                     break;
                 }
                 else
@@ -5282,12 +5241,12 @@ namespace RFID.Utility
                     if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                         while (IsReceiveDataWork)
                         {
-                            Thread.Sleep(4);
+                            Thread.Sleep(10);
                             _index++;
-                            if (_index >= 512)
+                            if (_index >= 200)
                             {
                                 IsReceiveDataWork = false;
-                                MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                                MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                                 return;
                             }
                         }
@@ -5312,22 +5271,19 @@ namespace RFID.Utility
                         _index = 0;
                         while (IsReceiveDataWork) 
                         {
-                            Thread.Sleep(4);
+                            Thread.Sleep(10);
                             _index++;
-                            if (_index >= 512)
+                            if (_index >= 200)
                             {
                                 this.IsB02ThreadRunCtrl = false;
                                 this.IsB02Repeat = false;
                                 UIControlStatus(UITempControPackets, false);
                                 UIControlStatus(UIControPackets, true);
                                 VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                                /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                                {
-                                    this.B02GroupQButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                                }));*/
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-									"EPC(Q) command timeout(2048ms)." :
-                                    "EPC(Q)指令超時(2048ms)", true);
+									"EPC(Q) command timeout(2000ms)." :
+                                    "EPC(Q)指令超時(2000ms)", true);
+                                IsReceiveDataWork = false;
                                 break;
                             }
                         }
@@ -5350,13 +5306,9 @@ namespace RFID.Utility
                     UIControlStatus(UITempControPackets, false);
                     UIControlStatus(UIControPackets, true);
                     VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                    /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        this.B02GroupQButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                    }));*/
                     MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                        "Select(T) command timeout(2048ms) or parameter error." :
-                        "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                        "Select(T) command timeout(2000ms) or parameter error." :
+                        "Select(T)指令超時(2000ms)或參數錯誤。", true);
                     break;
                 }
                 else
@@ -5381,22 +5333,19 @@ namespace RFID.Utility
                         _index = 0;
                         while (IsReceiveDataWork)  
                         {
-                            Thread.Sleep(4);
+                            Thread.Sleep(10);
                             _index++;
-                            if (_index >= 512)
+                            if (_index >= 200)
                             {
                                 this.IsB02ThreadRunCtrl = false;
                                 this.IsB02Repeat = false;
                                 UIControlStatus(UITempControPackets, false);
                                 UIControlStatus(UIControPackets, true);
                                 VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                                /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                                {
-                                    this.B02GroupQButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                                }));*/
                                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-									"EPC(Q) command timeout(2048ms)." :
-                                    "EPC(Q)指令超時(2048ms)", true);
+									"EPC(Q) command timeout(2000ms)." :
+                                    "EPC(Q)指令超時(2000ms)", true);
+                                IsReceiveDataWork = false;
                                 break;
                             }
                         }
@@ -5419,12 +5368,12 @@ namespace RFID.Utility
                 if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                             IsReceiveDataWork = false;
-                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                             return;
                     }
                 }
@@ -5449,22 +5398,19 @@ namespace RFID.Utility
                     _index = 0;
                     while (IsReceiveDataWork)  
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
                             this.IsB02ThreadRunCtrl = false;
                             this.IsB02Repeat = false;
                             UIControlStatus(UITempControPackets, false);
                             UIControlStatus(UIControPackets, true);
                             VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                            /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                            {
-                                this.B02GroupQButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                            }));*/
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                "EPC(Q) command timeout(2048ms)." :
-                                "EPC(Q)指令超時(2048ms)", true);
+                                "EPC(Q) command timeout(2000ms)." :
+                                "EPC(Q)指令超時(2000ms)", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -5500,22 +5446,19 @@ namespace RFID.Utility
                     _index = 0;
                     while (IsReceiveDataWork)  
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
                             this.IsB02ThreadRunCtrl = false;
                             this.IsB02Repeat = false;
                             UIControlStatus(UITempControPackets, false);
                             UIControlStatus(UIControPackets, true);
                             VM.B02GroupQButton = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                            /*Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-                            {
-                                this.B02GroupQButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "EPC(Q)" : "讀取(Q)";
-                            }));*/
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                "EPC(Q) command timeout(2048ms)." :
-                                "EPC(Q)指令超時(2048ms)", true);
+                                "EPC(Q) command timeout(2000ms)." :
+                                "EPC(Q)指令超時(2000ms)", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -5543,12 +5486,12 @@ namespace RFID.Utility
                 if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                     while (IsReceiveDataWork)
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
                             IsReceiveDataWork = false;
-                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                             goto B02SinglePreSelectAccessQREXIT;
                         }
                     }
@@ -5571,15 +5514,16 @@ namespace RFID.Utility
                 if (_callback)
                 {
                     _index = 0;
-                    while (IsReceiveDataWork)   //1s timeout
+                    while (IsReceiveDataWork)  
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                "EPC(Q) command timeout(2048ms)." :
-                                "EPC(Q)指令超時(2048ms)", true);
+                                "EPC(Q) command timeout(2000ms)." :
+                                "EPC(Q)指令超時(2000ms)", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -5596,8 +5540,8 @@ namespace RFID.Utility
             if (!DoB02SelectWork(CommandStatus.B02T))
             {
                 MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                    "Select(T) command timeout(2048ms) or parameter error." :
-                    "Select(T)指令超時(2048ms)或參數錯誤。", true);
+                    "Select(T) command timeout(2000ms) or parameter error." :
+                    "Select(T)指令超時(2000ms)或參數錯誤。", true);
                 goto B02SinglePreSelectQREXIT;
             }
             else
@@ -5622,13 +5566,14 @@ namespace RFID.Utility
                     _index = 0;
                     while (IsReceiveDataWork)   
                     {
-                        Thread.Sleep(4);
+                        Thread.Sleep(10);
                         _index++;
-                        if (_index >= 512)
+                        if (_index >= 200)
                         {
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                                "EPC(Q) command timeout(2048ms)." :
-                                "EPC(Q)指令超時(2048ms)", true);
+                                "EPC(Q) command timeout(2000ms)." :
+                                "EPC(Q)指令超時(2000ms)", true);
+                            IsReceiveDataWork = false;
                             break;
                         }
                     }
@@ -5648,12 +5593,12 @@ namespace RFID.Utility
             if (DoB02SendWork(this.ReaderService.CommandP(VM.B02GroupPreSetAccessPassword), CommandStatus.B02P))
                 while (IsReceiveDataWork)
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         IsReceiveDataWork = false;
-                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2048ms)." : "Access(P)指令超時(2048ms)", true);
+                        MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Access(P) command timeout(2000ms)." : "Access(P)指令超時(2000ms)", true);
                         goto B02SinglePreAccessQREXIT;
                     }
                 }
@@ -5676,15 +5621,16 @@ namespace RFID.Utility
             if (_callback)
             {
                 _index = 0;
-                while (IsReceiveDataWork)   //1s timeout
+                while (IsReceiveDataWork)  
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            "EPC(Q) command timeout(2048ms)." :
-                            "EPC(Q)指令超時(2048ms)", true);
+                            "EPC(Q) command timeout(2000ms)." :
+                            "EPC(Q)指令超時(2000ms)", true);
+                        IsReceiveDataWork = false;
                         break;
                     }
                 }
@@ -5717,15 +5663,16 @@ namespace RFID.Utility
             if (_callback)
             {
                 _index = 0;
-                while (IsReceiveDataWork)   //1s timeout
+                while (IsReceiveDataWork)   
                 {
-                    Thread.Sleep(4);
+                    Thread.Sleep(10);
                     _index++;
-                    if (_index >= 512)
+                    if (_index >= 200)
                     {
                         MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
-                            "EPC(Q) command timeout(2048ms)." :
-                            "EPC(Q)指令超時(2048ms)", true);
+                            "EPC(Q) command timeout(2000ms)." :
+                            "EPC(Q)指令超時(2000ms)", true);
+                        IsReceiveDataWork = false;
                         break;
                     }
                 }
@@ -8992,7 +8939,7 @@ namespace RFID.Utility
 
 
                             //B04AntennaDelayTimesIdx = 0;
-                            B04Process.Start();                  
+                            B04Process.Start();
                         }
                         return;
                     case 0x01:

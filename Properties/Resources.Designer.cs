@@ -88,7 +88,7 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
-        ///   查詢類似 B02Item01 的當地語系化字串。
+        ///   查詢類似 Basic 的當地語系化字串。
         /// </summary>
         public static string B02Item01 {
             get {
@@ -97,7 +97,7 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
-        ///   查詢類似 B02Item02 的當地語系化字串。
+        ///   查詢類似 Customize 的當地語系化字串。
         /// </summary>
         public static string B02Item02 {
             get {
@@ -196,7 +196,7 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
-        ///   查詢類似 Border01 的當地語系化字串。
+        ///   查詢類似 Basic Operator 的當地語系化字串。
         /// </summary>
         public static string Border01 {
             get {
@@ -205,7 +205,7 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
-        ///   查詢類似 Border02 的當地語系化字串。
+        ///   查詢類似 Multi Operator 的當地語系化字串。
         /// </summary>
         public static string Border02 {
             get {
@@ -214,7 +214,7 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
-        ///   查詢類似 Border03 的當地語系化字串。
+        ///   查詢類似 EM demo 的當地語系化字串。
         /// </summary>
         public static string Border03 {
             get {
@@ -223,7 +223,7 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
-        ///   查詢類似 Border04 的當地語系化字串。
+        ///   查詢類似 Multi Antenna 的當地語系化字串。
         /// </summary>
         public static string Border04 {
             get {
@@ -232,7 +232,7 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
-        ///   查詢類似 Border05 的當地語系化字串。
+        ///   查詢類似 Customize 的當地語系化字串。
         /// </summary>
         public static string Border05 {
             get {

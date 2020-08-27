@@ -127,10 +127,10 @@
     <value>Multi(U)</value>
   </data>
   <data name="B02Item01" xml:space="preserve">
-    <value>B02Item01</value>
+    <value>Basic</value>
   </data>
   <data name="B02Item02" xml:space="preserve">
-    <value>B02Item02</value>
+    <value>Customize</value>
   </data>
   <data name="B04AntennaCycleIndex" xml:space="preserve">
     <value>Cycle-Index:</value>
@@ -163,19 +163,19 @@
     <value>Read Count:</value>
   </data>
   <data name="Border01" xml:space="preserve">
-    <value>Border01</value>
+    <value>Basic Operator</value>
   </data>
   <data name="Border02" xml:space="preserve">
-    <value>Border02</value>
+    <value>Multi Operator</value>
   </data>
   <data name="Border03" xml:space="preserve">
-    <value>Border03</value>
+    <value>EM demo</value>
   </data>
   <data name="Border04" xml:space="preserve">
-    <value>Border04</value>
+    <value>Multi Antenna</value>
   </data>
   <data name="Border05" xml:space="preserve">
-    <value>Border05</value>
+    <value>Customize</value>
   </data>
   <data name="Connect" xml:space="preserve">
     <value>Connect</value>
