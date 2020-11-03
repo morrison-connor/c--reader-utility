@@ -185,6 +185,7 @@ namespace RFID.Utility
 
 
         private static ILog                     RawLogger, FragmentSummaryLogger;
+        private static ILog                     B02MessageLogger;
         private XmlFormat                       ProfileXml;
         private String                          ProfileXmlName;
         private MainWindowVM                    VM = new MainWindowVM();
@@ -193,9 +194,6 @@ namespace RFID.Utility
 
         private ResourceManager                 stringManager;
 
-        /// <summary>
-        /// 
-        /// </summary>
         class UIControl
         {
 			public GroupStatus Group { get; set; }
@@ -305,15 +303,19 @@ namespace RFID.Utility
             InitializeB04();
         }
 
-        
+
+
+
+
+        #region === #Interface Function ===
         /// <summary>
-        /// 
+        /// item enable or disable
         /// </summary>
         /// <param name="g"></param>
         /// <param name="b"></param>
-		private void GroupStatusControl(GroupStatus g, Boolean b)
+        private void GroupStatusControl(GroupStatus g, Boolean b)
         {
-			switch (g)
+            switch (g)
             {
                 case GroupStatus.BORDER_PAGES: VM.BorderSelectedPageIsEnabled = b; break;
                 case GroupStatus.BORDER_CULTURE: VM.BorderComboBoxCultureIsEnabled = b; break;
@@ -335,7 +337,7 @@ namespace RFID.Utility
                 case GroupStatus.GB02BTN_U: VM.B02GroupUButtonIsEnabled = b; break;
                 case GroupStatus.GB02BTN_Q: VM.B02GroupQButtonIsEnabled = b; break;
                 case GroupStatus.GB02BTN_CLR: VM.B02ButtonClearIsEnabled = b; break;
-				case GroupStatus.GB02BTN_SAVE: VM.B02ButtonSaveIsEnabled = b; break;
+                case GroupStatus.GB02BTN_SAVE: VM.B02ButtonSaveIsEnabled = b; break;
                 case GroupStatus.GB03: VM.B03IsEnabled = b; break;
                 case GroupStatus.GB04: VM.B04IsEnabled = b; break;
                 case GroupStatus.GB04ReadCtrl: VM.B04GroupReadCtrlIsEnabled = b; break;
@@ -373,7 +375,7 @@ namespace RFID.Utility
                     VM.B02GroupUButtonIsEnabled = b;
                     VM.B02GroupQButtonIsEnabled = b;
                     VM.B02ButtonClearIsEnabled = b;
-					VM.B02ButtonSaveIsEnabled = b;
+                    VM.B02ButtonSaveIsEnabled = b;
 
                     VM.B03GroupTagWindowButtonGetIsEnabled = b;
                     VM.B03GroupTagWindowButtonRunIsEnabled = b;
@@ -386,8 +388,8 @@ namespace RFID.Utility
                     VM.B04GroupReadCtrlIsEnabled = b;
                     VM.B04GroupUSlotQIsEnabled = b;
                     break;
-			}
-		}
+            }
+        }
 
         /// <summary>
         /// 
@@ -396,16 +398,15 @@ namespace RFID.Utility
         /// <param name="b"></param>
 		private void UIControlStatus(List<UIControl> list, Boolean b)
         {
-			for (Int32 i = 0; i < list.Count; i++) {
-				if (b) GroupStatusControl(list[i].Group, list[i].Status);
-				else GroupStatusControl(list[i].Group, !list[i].Status);
-			}
-		}
-	
+            for (Int32 i = 0; i < list.Count; i++)
+            {
+                if (b) GroupStatusControl(list[i].Group, list[i].Status);
+                else GroupStatusControl(list[i].Group, !list[i].Status);
+            }
+        }
 
-        #region === #Interface Function ===
         /// <summary>
-        /// 
+        /// command code error message
         /// </summary>
         /// <param name="process"></param>
         /// <param name="s"></param>
@@ -1702,9 +1703,9 @@ namespace RFID.Utility
                 }
 
                 VM.BorderCheckBoxStatusTag = "False";
-                //this.InfoThread.Join();
                 GroupStatusControl(GroupStatus.ALL, false);
-                MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Disconnected" : "已中斷連線", false);
+                //MessageShow((this.Culture.IetfLanguageTag == "en-US") ? "Disconnected" : "已中斷連線", false);
+                MessageShow(Properties.Resources.MSG_DeviceDisconnected, false);
                 VM.BorderTextBlockStatus = String.Empty;
                 VM.BorderFirmwareVersion = String.Empty;
                 VM.BorderTBReaderID = String.Empty;
@@ -2003,9 +2004,9 @@ namespace RFID.Utility
                         case ReaderModule.Version.FIR300VD406:
                         case ReaderModule.Version.FIR300S:
                         case ReaderModule.Version.FIR300AH:
-                        case ReaderModule.Version.FIR300SH:
-                        case ReaderModule.Version.FIR300TH:
-                        case ReaderModule.Version.FIR300VH:
+                        //case ReaderModule.Version.FIR300SH:
+                        //case ReaderModule.Version.FIR300TH:
+                        ///case ReaderModule.Version.FIR300VH:
                             GroupStatusControl(GroupStatus.ALL, true);
                             break;
                         case ReaderModule.Version.FIRXXXX:
@@ -2016,6 +2017,12 @@ namespace RFID.Utility
                             MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                 String.Format(CultureInfo.CurrentCulture, "Unknown the Reader module version: {0}", s.Substring(1, 4)) :
                                 String.Format(CultureInfo.CurrentCulture, "未知的Reader版本: {0}", s.Substring(1, 4)), false);
+                            break;
+                        case ReaderModule.Version.UNKNOW:
+                            GroupStatusControl(GroupStatus.ALL, true);
+                            MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
+                               String.Format(CultureInfo.CurrentCulture, "more recent the Reader module version: {0}", s.Substring(1, 4)) :
+                               String.Format(CultureInfo.CurrentCulture, "此裝置是較新的的Reader版本: {0}", s.Substring(1, 4)), false);
                             break;
                     }
                 }
@@ -2109,6 +2116,10 @@ namespace RFID.Utility
                 (this.IsMenuCustomPop == true) ? "Close Custom Command" : "Open Custom Command" :
                 (this.IsMenuCustomPop == true) ? "關閉自訂指令" : "開啟自訂指令";*/
 
+            /*this.MenuGCommand.Header = (this.Culture.IetfLanguageTag == "en-US") ?
+                (this.IsMenuRecordMode == true) ? "G Command Receive Record" : "Normal Mode for Record" :
+                (this.IsMenuRecordMode == true) ? "G指令接收模式" : "正常接收模式";*/
+
         }
 
         /// <summary>
@@ -2155,6 +2166,9 @@ namespace RFID.Utility
             if (IsMenuRecordMode) IsMenuRecordMode = false;
             else IsMenuRecordMode = true;
         }
+
+
+
         #endregion
 
         #endregion
@@ -4370,6 +4384,10 @@ namespace RFID.Utility
                     //this.B02ListBox.Items.RemoveAt(0);
                     this.B02ListBox.Items.Clear();
 
+                //log message
+                if (VM.B02GroupMsgLogCheckBoxIsChecked)
+                    B02MessageLogger.Info(itm.Content.ToString());
+
                 this.B02ListBox.Items.Add(itm);
 
                 itm = null;
@@ -4449,6 +4467,7 @@ namespace RFID.Utility
                         else
                             bCompare = false;
 
+
                         /*if (B02ListViewRunCount > 0)
                             VM.B02ListViewItemsSource[j].B02Percentage = 
                                 String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
@@ -4463,7 +4482,10 @@ namespace RFID.Utility
                 {
                     newBank.B02Count = "1";
                     number = Convert.ToInt32(newBank.B02Count, CultureInfo.CurrentCulture);
-                    newBank.B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
+                    if (this.B02ListViewRunCount == 0)
+                        newBank.B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / 1));
+                    else
+                        newBank.B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
                     VM.B02ListViewAddNewItem(newBank);
                     B02ListViewList.Add(data[0]);
                     VM.B02GroupRecordTextBlockCount = B02ListViewList.Distinct().Count().ToString(CultureInfo.CurrentCulture);
@@ -5078,7 +5100,6 @@ namespace RFID.Utility
             B02SinglePreSelectUREXIT: this.IsRunning = false;
         }
 
-
         private void DoB02SinglePreAccessURWork()
         {
             Int32 _index = 0;
@@ -5154,7 +5175,6 @@ namespace RFID.Utility
             B02SinglePreAccessUREXIT: this.IsRunning = false;
         }
 
-
         private void DoB02SingleURWork()
         {
             Int32 _index = 0;
@@ -5213,7 +5233,6 @@ namespace RFID.Utility
             }
             this.IsRunning = false;
         }
-
 
         private void DoB02PreSelectAccessQRWork()
         {
@@ -5292,7 +5311,6 @@ namespace RFID.Utility
             }
         }
 
-
         private void DoB02PreSelectQRWork()
         {
             Int32 _index = 0;
@@ -5353,7 +5371,6 @@ namespace RFID.Utility
                 }
             }
         }
-
 
         private void DoB02PreAccessQRWork()
         {
@@ -5418,7 +5435,6 @@ namespace RFID.Utility
             }
         }
 
-
         private void DoB02QRWork()
         {
             Int32 _index = 0;
@@ -5465,7 +5481,6 @@ namespace RFID.Utility
                 }
             }
         }
-
 
         private void DoB02SinglePreSelectAccessQRWork()
         {
@@ -5532,7 +5547,6 @@ namespace RFID.Utility
             B02SinglePreSelectAccessQREXIT: this.IsRunning = false;
         }
 
-
         private void DoB02SinglePreSelectQRWork()
         {
             Int32 _index = 0;
@@ -5581,7 +5595,6 @@ namespace RFID.Utility
             }
             B02SinglePreSelectQREXIT: this.IsRunning = false;
         }
-
 
         private void DoB02SinglePreAccessQRWork()
         {
@@ -5638,7 +5651,6 @@ namespace RFID.Utility
 
             B02SinglePreAccessQREXIT: this.IsRunning = false;
         }
-
 
         private void DoB02SingleQRWork()
         {
@@ -6661,7 +6673,6 @@ namespace RFID.Utility
             }
         }
 
-
         private void DoB02Item02ProcessTimeUpWork (object sender, EventArgs e)
         {
             Int32 _index = 0;
@@ -6689,7 +6700,6 @@ namespace RFID.Utility
                 ((DispatcherTimer)sender).Stop();
             }
         }
-
 
         private void DoB02Item02ProcessWork(object sender, EventArgs e)
         {
@@ -6725,7 +6735,6 @@ namespace RFID.Utility
             }
         }
 
-        //
         private void OnB02Item02BtnOpenClick(object sender, RoutedEventArgs e)
         {
             var _openFileDialog = new OpenFileDialog {
@@ -6740,7 +6749,7 @@ namespace RFID.Utility
                 this.ProfileXml = new XmlFormat(_openFileDialog.FileName);
 
 
-                var _section = ProfileXml.GetSectionNames();
+                var _section = this.ProfileXml.GetSectionNames();
 
                 if (_section != null) {
                     for (int i = 0; i < _section.Length; i++) {
@@ -6773,7 +6782,6 @@ namespace RFID.Utility
             }
             
         }
-
 
         private void OnB02Item02BtnSaveClick(object sender, RoutedEventArgs e)
         {
@@ -6939,7 +6947,6 @@ namespace RFID.Utility
             }
         }
 
-
         private static object GetDataFromListBox(ListBox source, Point point)
         {
             if (source.InputHitTest(point) is UIElement element)
@@ -6969,13 +6976,11 @@ namespace RFID.Utility
             return null;
         }
 
-
         private void EditCommandDialogReceiveValues(object sender, PassValuesEventArgs e)
         {
             this.B02Item02Commands[e.Index] = e.Command;
             this.B02Item02ListBox.Items.Refresh();
         }
-
 
         private void OnB02Item02ListBoxTemplateMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -6997,7 +7002,6 @@ namespace RFID.Utility
             } 
         }
 
-
         private void OnB02Item02ListBoxMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
 
@@ -7008,25 +7012,36 @@ namespace RFID.Utility
             }
         }
 
-
         private void OnB02Item02ListBoxMenuItemDeleteRangeClick(object sender, RoutedEventArgs e)
         {
             if (this.B02Item02ListBox.SelectedIndex != B02Item02Commands.Count - 1)
                 B02Item02Commands.Remove(this.B02Item02ListBox.SelectedItem as B02Item02Command);
         }
 
-
         private void OnB02ButtonSaveMouseMove(object sender, MouseEventArgs e)
         {
             B02SavePop.IsOpen = true;
         }
-
 
         private void OnB02ButtonSaveMouseLeave(object sender, MouseEventArgs e)
         {
             B02SavePop.IsOpen = false;
         }
 
+        /// <summary>
+        /// Log display message to file if checked.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OnB02CheckBoxGroupMsgLogChecked(object sender, RoutedEventArgs e)
+        {
+            if (B02MessageLogger == null)
+            {
+                B02MessageLogger = LogManager.GetLogger(typeof(MainWindow));
+                XmlConfigurator.Configure(new FileInfo("./logConfig/log4MessageRaw.config"));
+
+            }
+        }
         #endregion
 
 
@@ -9095,7 +9110,10 @@ namespace RFID.Utility
 
                 try
                 {
-                    B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture) - B04AntennaTagIncreaseCount;
+                    if (string.IsNullOrEmpty(VM.B04TagReadCount))
+                        B04AntennaTagIncreaseCount = 0;
+                    else
+                        B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture) - B04AntennaTagIncreaseCount;
                 }
                 catch (FormatException)
                 {
@@ -9384,6 +9402,7 @@ namespace RFID.Utility
         {
             B04AntennaGroupRunTimesPop.IsOpen = true;
         }
+
         private void B04AntennaGroupRunTimesMouseLeave(object sender, MouseEventArgs e)
         {
             B04AntennaGroupRunTimesPop.IsOpen = false;
@@ -9412,7 +9431,7 @@ namespace RFID.Utility
             if (RawLogger == null)
             {
                 RawLogger = LogManager.GetLogger(typeof(MainWindow));
-                XmlConfigurator.Configure(new FileInfo("./log4netRaw.config"));
+                XmlConfigurator.Configure(new FileInfo("./logConfig/log4netRaw.config"));
                 
             }
             //Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -9423,7 +9442,7 @@ namespace RFID.Utility
             if (FragmentSummaryLogger == null)
             {
                 FragmentSummaryLogger = LogManager.GetLogger(typeof(MainWindow));
-                XmlConfigurator.Configure(new FileInfo("./log4netFragmentSummary.config"));
+                XmlConfigurator.Configure(new FileInfo("./logConfig/log4netFragmentSummary.config"));
 
             }
         }

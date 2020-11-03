@@ -196,7 +196,10 @@ namespace RFID.Utility.IClass
 				XmlElement root = doc.DocumentElement;
 				
 				XmlNode entryNode = root.SelectSingleNode(GetSectionsPath(section) + "/" + GetEntryPath(entry));
-				return entryNode.InnerText;
+                if (entryNode == null)
+                    return null;
+                else
+                    return entryNode.InnerText;
 			}
 			catch (XPathException) {	
 				return null;
