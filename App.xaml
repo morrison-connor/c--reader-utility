@@ -32,7 +32,6 @@
             <Image x:Key="IMG_Right" Source="IMG/ic_arrow_right_32.png"/>
             <Image x:Key="IMG_Forward" Source="IMG/ic_keyboard_arrow_left_white_48dp.png"/>
             <Image x:Key="IMG_Next" Source="IMG/ic_keyboard_arrow_right_white_48dp.png"/>
-            <Image x:Key="IMG_Load" Source="IMG/load.png"/>
 
             <!-- ComboBoxStyle -->
             <Style x:Key="ComboBoxStyle" TargetType="ComboBox">

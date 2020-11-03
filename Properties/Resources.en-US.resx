@@ -501,10 +501,4 @@
   <data name="Lock_11Description_" xml:space="preserve">
     <value>3:Need password to permanently writable </value>
   </data>
-  <data name="MessageBox_Option" xml:space="preserve">
-    <value>Regulation information</value>
-  </data>
-  <data name="MSG_DeviceDisconnected" xml:space="preserve">
-    <value>Device Disconnected</value>
-  </data>
 </root>

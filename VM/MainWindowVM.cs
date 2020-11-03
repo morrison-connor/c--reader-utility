@@ -1213,21 +1213,6 @@ namespace RFID.Utility.VM
             }
         }
 
-
-        private Boolean _B02GroupMsgLogCheckBoxIsChecked = false;
-        public Boolean B02GroupMsgLogCheckBoxIsChecked
-        {
-            get { return _B02GroupMsgLogCheckBoxIsChecked; }
-            set
-            {
-                if (_B02GroupMsgLogCheckBoxIsChecked != value)
-                {
-                    _B02GroupMsgLogCheckBoxIsChecked = value;
-                    OnPropertyChanged("B02GroupMsgLogCheckBoxIsChecked");
-                }
-            }
-        }
-
         #endregion
 
         #region === #B03 ===

@@ -145,12 +145,10 @@
     <Compile Include="IClass\BooleanToWidthConverter.cs" />
     <Compile Include="IClass\DragAdorner.cs" />
     <Compile Include="IClass\DragDropHelper.cs" />
-    <Compile Include="IClass\FocusExtension.cs" />
     <Compile Include="IClass\IProfileX.cs" />
     <Compile Include="IClass\PassValuesEventArgs.cs" />
     <Compile Include="IClass\ProfileX.cs" />
     <Compile Include="IClass\ProfileXML.cs" />
-    <Compile Include="IClass\RegulationEntry.cs" />
     <Compile Include="IClass\XmlFormat.cs" />
     <Compile Include="IClass\XmlHelper.cs" />
     <Compile Include="VM\BaudRate.cs" />
@@ -322,12 +320,6 @@
     <Analyzer Include="packages\Microsoft.NetCore.Analyzers.2.9.6\analyzers\dotnet\cs\Microsoft.NetCore.CSharp.Analyzers.dll" />
     <Analyzer Include="packages\Microsoft.NetFramework.Analyzers.2.9.6\analyzers\dotnet\cs\Microsoft.NetFramework.Analyzers.dll" />
     <Analyzer Include="packages\Microsoft.NetFramework.Analyzers.2.9.6\analyzers\dotnet\cs\Microsoft.NetFramework.CSharp.Analyzers.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="IMG\load.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="IMG\upload.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

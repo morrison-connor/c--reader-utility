@@ -1211,23 +1211,5 @@ namespace RFID.Utility.Properties {
                 return ResourceManager.GetString("Lock_11Description_", resourceCulture);
             }
         }
-        
-        /// <summary>
-        ///   查詢類似 Regulation information 的當地語系化字串。
-        /// </summary>
-        public static string MessageBox_Option {
-            get {
-                return ResourceManager.GetString("MessageBox_Option", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   查詢類似 Device Disconnected 的當地語系化字串。
-        /// </summary>
-        public static string MSG_DeviceDisconnected {
-            get {
-                return ResourceManager.GetString("MSG_DeviceDisconnected", resourceCulture);
-            }
-        }
     }
 }
