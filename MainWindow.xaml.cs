@@ -152,7 +152,7 @@ namespace RFID.Utility
         private Boolean                         IsB02Item02OnBtnClick = false;
         private DateTime                        B02Item02CommandStartTime;
         private double                          B02Item02CommandRunTimesCount = 0.0d;
-
+        private static ILog                     B02MessageLogger;
 
         //Page03
         private String                          EMTemp;
@@ -185,7 +185,7 @@ namespace RFID.Utility
 
 
         private static ILog                     RawLogger, FragmentSummaryLogger;
-        private static ILog                     B02MessageLogger;
+        
         private XmlFormat                       ProfileXml;
         private String                          ProfileXmlName;
         private MainWindowVM                    VM = new MainWindowVM();
@@ -4460,7 +4460,10 @@ namespace RFID.Utility
                         {
                             number++;
                             VM.B02ListViewItemsSource[j].B02Count = number.ToString(CultureInfo.CurrentCulture);
-                            VM.B02ListViewItemsSource[j].B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
+                            if (this.B02ListViewRunCount == 0)
+                                VM.B02ListViewItemsSource[j].B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / 1));
+                            else
+                                VM.B02ListViewItemsSource[j].B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
                             bCompare = true;
                             break;
                         }
