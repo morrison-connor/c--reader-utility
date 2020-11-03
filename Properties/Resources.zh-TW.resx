@@ -483,4 +483,10 @@
   <data name="Lock_11Description_" xml:space="preserve">
     <value>3:永久需密碼可寫</value>
   </data>
+  <data name="MessageBox_Option" xml:space="preserve">
+    <value>組態資訊</value>
+  </data>
+  <data name="MSG_DeviceDisconnected" xml:space="preserve">
+    <value>裝置已中斷</value>
+  </data>
 </root>

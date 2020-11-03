@@ -20,6 +20,7 @@ using RFID.Service.IInterface.BLE;
 using RFID.Service.IInterface.COM.IClass;
 using RFID.Service.IInterface.BLE.IClass;
 using System.Threading.Tasks;
+using RFID.Service.IInterface.COM.Events;
 
 namespace RFID.Utility
 {
@@ -453,7 +454,8 @@ namespace RFID.Utility
 		}
 
 
-		private void DoConnectWork()
+        private ICOM.CombineDataEventHandler _CombineDataHandler;
+        private void DoConnectWork()
         {
 
             try
@@ -465,10 +467,12 @@ namespace RFID.Utility
 
                 this._ICOM = new ICOM();
                 this._ICOM.Open(name, IBaudRate, (Parity)Enum.Parse(typeof(Parity), "None", true), 8, (StopBits)Enum.Parse(typeof(StopBits), "One", true));
-
+                this._CombineDataHandler = new ICOM.CombineDataEventHandler(DoReceiveDataWork);
+                this._ICOM.CombineDataReceiveEventHandler += this._CombineDataHandler;
                 if (this._ICOM.IsOpen())
-                {
-                    this._ICOM.Send(this._ReaderService.CommandV());
+                {                  
+                    this._ICOM.Send(this._ReaderService.CommandV(), ReaderModule.CommandType.Normal);
+                    
                     Byte[] b = this._ICOM.Receive();
                     if (b != null)
                     {
@@ -485,7 +489,7 @@ namespace RFID.Utility
                             this._ICOM.Close();
                             this._ICOM = null;
                             VM.ButtonCOMConnectIsEnabled = true;
-                    }
+                        }
                     }
                     else
                     {
@@ -556,6 +560,13 @@ namespace RFID.Utility
             }
             
 		}
+
+
+        private void DoReceiveDataWork(object sender, CombineDataReceiveArgumentEventArgs e)
+        {
+            //
+        }
+
 
         private void DisableMsg()
         {
@@ -710,11 +721,13 @@ namespace RFID.Utility
                     {
                         VM.ButtonUSBEnterIsEnabled = true;
                         VM.ButtonUSBConnectIsEnabled = false;
+                        ShowOnTBMSG2("USB", _IUSB.ProductName + "成功開啟");
                     }
                     else {
                         ShowOnTBMSG2("USB", "USB裝置未成功開啟");
-                        new Thread(USBDisableMsg2).Start();
+                        
                     }
+                    new Thread(USBDisableMsg2).Start();
                 }
             }
             catch (ArgumentNullException ex)
@@ -1078,7 +1091,10 @@ namespace RFID.Utility
                 {
                     this.DialogResult = false;
                     if (_UDPSocket != null) { _UDPSocket.Dispose(); }
-                    if (this._ICOM != null) { this._ICOM.Dispose(); }
+                    if (this._ICOM != null) {
+                        this._ICOM.CombineDataReceiveEventHandler -= this._CombineDataHandler;
+                        this._ICOM.Dispose(); 
+                    }
                     if (this._INet != null) { this._INet.Dispose(); OCUPDReceives.Clear(); }
                     if (this._IUSB != null) { this._IUSB.Dispose(); }
                     if (this._IBLE != null) { this._IBLE.Dispose(); }
