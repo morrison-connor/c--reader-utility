@@ -349,6 +349,15 @@ namespace RFID.Utility.Properties {
         }
         
         /// <summary>
+        ///   查詢類似 Customize 的當地語系化字串。
+        /// </summary>
+        public static string Group_Customize {
+            get {
+                return ResourceManager.GetString("Group_Customize", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查詢類似 Q/U 的當地語系化字串。
         /// </summary>
         public static string Group_EPC_MultiRead {

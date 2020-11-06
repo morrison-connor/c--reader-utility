@@ -210,6 +210,9 @@
   <data name="GroupEPCReadTID" xml:space="preserve">
     <value>讀取TID</value>
   </data>
+  <data name="Group_Customize" xml:space="preserve">
+    <value>Customize指令</value>
+  </data>
   <data name="Group_EPC_ReadEPC_U" xml:space="preserve">
     <value>讀取EPC(U)</value>
   </data>

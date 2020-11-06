@@ -222,6 +222,9 @@
   <data name="GroupEPCReadTID" xml:space="preserve">
     <value>TID</value>
   </data>
+  <data name="Group_Customize" xml:space="preserve">
+    <value>Customize</value>
+  </data>
   <data name="Group_EPC_MultiRead" xml:space="preserve">
     <value>Q/U</value>
   </data>

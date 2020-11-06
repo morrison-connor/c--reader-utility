@@ -3,10 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:input="clr-namespace:System.Windows.Input;assembly=PresentationCore"
         xmlns:interaction="clr-namespace:Microsoft.Expression.Interactivity;assembly=Microsoft.Expression.Interactivity"
-        xmlns:cla="clr-namespace:RFID.Utility.IClass"
-        Title="Reader Utility" WindowStyle="None" ResizeMode="NoResize"  Height="714" Width="1106"
-        WindowStartupLocation="CenterScreen"
+        xmlns:iclass="clr-namespace:RFID.Utility.IClass" 
+        Title="Reader Utility" WindowStyle="None" ResizeMode="NoResize" WindowState="Maximized" 
         Icon="/ReaderUtility;component/res/reader.png" Loaded="Window_Loaded">
+
+        <!--  Height="714" Width="1106" -->
+
     <Window.Resources>
         <Image x:Key="IMG_Close" Source="IMG/close.png"/>
         <!--TextBox-->
@@ -41,7 +43,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-                    
+
         <Style x:Key="RadioButtonTitleStyle" TargetType="{x:Type RadioButton}">
             <Setter Property="Background" Value="White" />
             <Setter Property="FontFamily" Value="微軟正黑體"/>
@@ -69,7 +71,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        
+
         <Style x:Key="RadioButtonItemStyle" TargetType="{x:Type RadioButton}">
             <Setter Property="Background" Value="White" />
             <Setter Property="FontFamily" Value="微軟正黑體"/>
@@ -125,7 +127,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        
+
         <Style x:Key="ButtonStyle_ListViewItem" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="FontFamily" Value="微軟正黑體"/>
@@ -412,12 +414,12 @@
         </Style>
 
         <!--ListBox: B02Item02-->
-        <DataTemplate x:Key="ListBoxDataTemplate" DataType="{x:Type cla:B02Item02Command}">
+        <DataTemplate x:Key="ListBoxDataTemplate" DataType="{x:Type iclass:B02Item02Command}">
             <StackPanel Orientation="Horizontal">
                 <CheckBox IsChecked="{Binding Check}" Style="{StaticResource {x:Static ToolBar.CheckBoxStyleKey}}" Margin="1,1,0,0" VerticalAlignment="Center"></CheckBox>
                 <StackPanel Orientation="Horizontal" PreviewMouseLeftButtonDown="OnB02Item02ListBoxTemplateMouseLeftButtonDown">
                     <Border BorderThickness="1" BorderBrush="Gray" Margin="2,1,0,0" >
-                        <TextBlock x:Name="B02Item02ListBoxName" FontSize="12" FontWeight="Bold" FontFamily="微軟正黑體" VerticalAlignment="Center" Height="20" Width="146" 
+                        <TextBlock x:Name="B02Item02ListBoxName" FontSize="12" FontWeight="Bold" FontFamily="微軟正黑體" VerticalAlignment="Center" Height="20" Width="205" 
                                Margin="2,3,0,0" Text="{Binding Name}"/>
                     </Border>
                     <Popup Name="B02Item02ListBoxNamePop" IsOpen="False" PlacementTarget="{Binding ElementName=B02Item02ListBoxName}" 
@@ -433,7 +435,7 @@
                     </Border>
                 </StackPanel>
                 <Border BorderThickness="1" BorderBrush="Gray" Margin="2,1,0,0">
-                    <Button Width="20" Height="20" Click="OnB02Item02SingleCommandSendButton" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}">></Button>
+                    <Button Width="25" Height="20" Click="OnB02Item02SingleCommandSendButton" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}">></Button>
                 </Border>
             </StackPanel>
             <DataTemplate.Triggers>
@@ -458,8 +460,6 @@
             </DataTemplate.Triggers>
         </DataTemplate>
     </Window.Resources>
-    
-    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="38" />
@@ -470,7 +470,7 @@
             <Grid Margin="2">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <TextBlock Margin="2,0" FontSize="18" FontWeight="Bold" FontFamily="微軟正黑體" Foreground="WhiteSmoke" VerticalAlignment="Center">Reader Utility</TextBlock>
-                    <TextBlock Style="{StaticResource TextBlockStyle12}" Foreground="WhiteSmoke" Margin="2,0,0,1" Text="v4.1.2" VerticalAlignment="Bottom" MouseRightButtonDown="OnBorderMenuMouseRightButtonDown">
+                    <TextBlock Style="{StaticResource TextBlockStyle12}" Foreground="WhiteSmoke" Margin="2,0,0,1" Text="v5.0.0" VerticalAlignment="Bottom" MouseRightButtonDown="OnBorderMenuMouseRightButtonDown">
                         <TextBlock.ContextMenu>
                             <ContextMenu>
                                 <MenuItem x:Name="MenuBugReport" Header="Bug Report" Click="OnMenuBugRepoetClick"/>
@@ -510,429 +510,430 @@
                     </Style>
                 </TabControl.ItemContainerStyle>
                 <TabItem>
-                    <Border x:Name="Border01" BorderBrush="#B0B0B0" BorderThickness="1,0,1,0" Background="#FFF7F7F7">
+                    <StackPanel x:Name="Border01" Background="#FFF7F7F7">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition/>
-                                <ColumnDefinition/>
+                                <ColumnDefinition Width="550"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Viewbox Grid.Column="0" >
-                                <Canvas Height="638" Width="540" Background="#FFF7F7F7">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="150"/>
-                                            <RowDefinition Height="80"/>
-                                            <RowDefinition Height="124"/>
-                                            <RowDefinition Height="94"/>
-                                            <RowDefinition Height="62"/>
-                                            <RowDefinition Height="126"/>
-                                        </Grid.RowDefinitions>
-                                        <GroupBox x:Name="B01GroupPreSet" Grid.Row="0" Height="150" Width="532" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-2,0,0" BorderBrush="#FF404040" Background="#FFF7F7F7">
-                                            <GroupBox.Header>
-                                                <Label Content="{Binding Group_PreSet, Source={StaticResource Resources}}"/>
-                                            </GroupBox.Header>
-                                            <StackPanel Background="#FFF7F7F7" Orientation="Vertical" Margin="0,-5,0,0">
-                                                <StackPanel IsEnabled="{Binding B01GroupPreSetSelectIsEnabled}">
-                                                    <CheckBox Content="{Binding Group_PreSet_Select, Source={StaticResource Resources}}" IsEnabled="{Binding B01GroupPreSetSelectCheckBoxIsEnabled}" IsChecked="{Binding B01GroupPreSetSelectCheckBoxIsChecked}"/>
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="90"></ColumnDefinition>
-                                                            <ColumnDefinition Width="70"></ColumnDefinition>
-                                                            <ColumnDefinition Width="70"></ColumnDefinition>
-                                                            <ColumnDefinition Width="300"></ColumnDefinition>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Bank, Source={StaticResource Resources}}"/>
-                                                        <TextBlock Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Address, Source={StaticResource Resources}}"/>
-                                                        <TextBlock Grid.Column="2" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Length, Source={StaticResource Resources}}"/>
-                                                        <TextBlock Grid.Column="3" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Data, Source={StaticResource Resources}}"/>
-                                                    </Grid>
-                                                    <Grid Margin="0,0,0,2" Height="30">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="90"></ColumnDefinition>
-                                                            <ColumnDefinition Width="70"></ColumnDefinition>
-                                                            <ColumnDefinition Width="70"></ColumnDefinition>
-                                                            <ColumnDefinition Width="290"></ColumnDefinition>
-                                                        </Grid.ColumnDefinitions>
-                                                        <ComboBox Grid.Column="0" Width="88" Style="{StaticResource ComboBoxStyle}" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="1"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Canvas Grid.Column="0" Grid.Row="1" Height="760" Width="550" VerticalAlignment="Top" HorizontalAlignment="Left">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="170"/>
+                                        <RowDefinition Height="100"/>
+                                        <RowDefinition Height="145"/>
+                                        <RowDefinition Height="120"/>
+                                        <RowDefinition Height="75"/>
+                                        <RowDefinition Height="145"/>
+                                        <RowDefinition Height="70"/>
+                                    </Grid.RowDefinitions>
+                                    <GroupBox Grid.Row="0" Height="170" Width="540" VerticalAlignment="Top" Margin="5,0,0,0" BorderBrush="#FF606060" BorderThickness="2" 
+                                               x:Name="B01GroupPreSet" Background="#FFF7F7F7">
+                                        <GroupBox.Header>
+                                            <Label Content="{Binding Group_PreSet, Source={StaticResource Resources}}"/>
+                                        </GroupBox.Header>
+                                        <StackPanel Background="#FFF7F7F7" Orientation="Vertical">
+                                            <StackPanel IsEnabled="{Binding B01GroupPreSetSelectIsEnabled}">
+                                                <CheckBox Content="{Binding Group_PreSet_Select, Source={StaticResource Resources}}"
+                                                          IsEnabled="{Binding B01GroupPreSetSelectCheckBoxIsEnabled}" IsChecked="{Binding B01GroupPreSetSelectCheckBoxIsChecked}"/>
+                                                <Grid Margin="0,3,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="90"></ColumnDefinition>
+                                                        <ColumnDefinition Width="70"></ColumnDefinition>
+                                                        <ColumnDefinition Width="70"></ColumnDefinition>
+                                                        <ColumnDefinition Width="300"></ColumnDefinition>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Bank, Source={StaticResource Resources}}"/>
+                                                    <TextBlock Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Address, Source={StaticResource Resources}}"/>
+                                                    <TextBlock Grid.Column="2" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Length, Source={StaticResource Resources}}"/>
+                                                    <TextBlock Grid.Column="3" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Data, Source={StaticResource Resources}}"/>
+                                                </Grid>
+                                                <Grid Height="30">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="90"></ColumnDefinition>
+                                                        <ColumnDefinition Width="70"></ColumnDefinition>
+                                                        <ColumnDefinition Width="70"></ColumnDefinition>
+                                                        <ColumnDefinition Width="290"></ColumnDefinition>
+                                                    </Grid.ColumnDefinitions>
+                                                    <ComboBox Grid.Column="0" Width="88" Style="{StaticResource ComboBoxStyle}"
 						                                    ItemsSource="{Binding MemBank}" SelectedItem="{Binding B01GroupPreSetSelectMemBank}" DisplayMemberPath="Content"
 						                                    DropDownClosed="OnB01ComboBoxMemBankSelectDownClosed" SelectionChanged="OnB01ComboBoxMemBankSelectChanged"/>
-                                                        <TextBox x:Name="B01GroupPreSetSelectBitAddress" input:InputMethod.IsInputMethodEnabled="True"
+                                                    <TextBox x:Name="B01GroupPreSetSelectBitAddress" input:InputMethod.IsInputMethodEnabled="True"
 					                                        Grid.Column="1" Width="66" MaxLength="4" Style="{StaticResource TextBoxDefaultStyle}"
                                                             PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation"
                                                             LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                        Text="{Binding B01GroupPreSetSelectBitAddress, UpdateSourceTrigger=PropertyChanged}"/>
-                                                        <TextBox x:Name="B01GroupPreSetSelectBitLength" input:InputMethod.IsInputMethodEnabled="True"
+                                                    <TextBox x:Name="B01GroupPreSetSelectBitLength" input:InputMethod.IsInputMethodEnabled="True"
 					                                        Grid.Column="2" Width="66" MaxLength="2" Style="{StaticResource TextBoxDefaultStyle}"
 					                                        PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                             LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                        Text="{Binding B01GroupPreSetSelectBitLength, UpdateSourceTrigger=PropertyChanged}"/>
-                                                        <TextBox x:Name="B01GroupPreSetSelectBitData" input:InputMethod.IsInputMethodEnabled="True"
+                                                    <TextBox x:Name="B01GroupPreSetSelectBitData" input:InputMethod.IsInputMethodEnabled="True"
 					                                        Grid.Column="3" Width="286" Style="{StaticResource TextBoxDefaultStyle}"
 					                                        PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                             LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                        Text="{Binding B01GroupPreSetSelectBitData, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    </Grid>
-                                                </StackPanel>
-                                                <CheckBox Content="{Binding Group_PreSet_Access, Source={StaticResource Resources}}" IsChecked="{Binding B01GroupPreSetAccessheckBoxIsChecked}"/>
-                                                <TextBlock 
+                                                </Grid>
+                                            </StackPanel>
+                                            <CheckBox Margin="0,12,0,0" Content="{Binding Group_PreSet_Access, Source={StaticResource Resources}}" IsChecked="{Binding B01GroupPreSetAccessheckBoxIsChecked}"/>
+                                            <TextBlock 
                                                     Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" TextWrapping="Wrap" 
                                                     Text="{Binding Group_PreSet_AccessPassword, Source={StaticResource Resources}}"/>
-                                                <TextBox x:Name="B01GroupPreSetAccessPassword" input:InputMethod.IsInputMethodEnabled="True" Width="140" MaxLength="8" HorizontalAlignment="Left" Style="{StaticResource TextBoxDefaultStyle}" 
+                                            <TextBox x:Name="B01GroupPreSetAccessPassword" input:InputMethod.IsInputMethodEnabled="True" Width="140" MaxLength="8" HorizontalAlignment="Left" Style="{StaticResource TextBoxDefaultStyle}" 
 				                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                     LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 				                                    Text="{Binding B01GroupPreSetAccessPassword, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-                                        </GroupBox>
-                                        <GroupBox x:Name="B01GroupEPC" Grid.Row="1" Height="86" Width="532" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-6,0,0" Grid.RowSpan="7" BorderBrush="#FF404040" IsEnabled="{Binding B01GroupEPCIsEnabled}">
-                                            <GroupBox.Header>
-                                                <Label Content="{Binding GroupEPC, Source={StaticResource Resources}}"/>
-                                            </GroupBox.Header>
-                                            <StackPanel Background="#FFF7F7F7" Orientation="Vertical">
-                                                <Grid Height="26" Margin="0,-5,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="100"></ColumnDefinition>
-                                                        <ColumnDefinition Width="430"></ColumnDefinition>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0" x:Name="B01GroupEPCButtonReadEPC" Style="{StaticResource ButtonStyle14B}" Click="OnB01GroupEPCButtonReadEPCClick" 
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Grid.Row="1" Height="100" Width="540" VerticalAlignment="Top" Margin="5,0,0,0" BorderBrush="#FF404040" BorderThickness="2" 
+                                              x:Name="B01GroupEPC"  IsEnabled="{Binding B01GroupEPCIsEnabled}">
+                                        <GroupBox.Header>
+                                            <Label Content="{Binding GroupEPC, Source={StaticResource Resources}}"/>
+                                        </GroupBox.Header>
+                                        <StackPanel Background="#FFF7F7F7" Orientation="Vertical">
+                                            <Grid Height="26" Margin="0,2,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                                    <ColumnDefinition Width="430"></ColumnDefinition>
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0" x:Name="B01GroupEPCButtonReadEPC" Style="{StaticResource ButtonStyle14B}" Click="OnB01GroupEPCButtonReadEPCClick" 
 						                                    Content="{Binding GroupEPCReadEPC, Source={StaticResource Resources}}"/>
-                                                    <TextBox Grid.Column="1" x:Name="B01GroupEPCTextBoxEPC" Width="416" Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupEPCTextBoxEPC, UpdateSourceTrigger=PropertyChanged}"/>
-                                                </Grid>
-                                                <Grid Height="26" Margin="0,2,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="100"></ColumnDefinition>
-                                                        <ColumnDefinition Width="300"></ColumnDefinition>
-                                                        <ColumnDefinition Width="72"></ColumnDefinition>
-                                                        <ColumnDefinition Width="48"></ColumnDefinition>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0" x:Name="B01GroupEPCButtonTID" Style="{StaticResource ButtonStyle14B}" Click="OnB01GroupEPCButtonReadTIDClick" 
+                                                <TextBox Grid.Column="1" x:Name="B01GroupEPCTextBoxEPC" Width="416" Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupEPCTextBoxEPC, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </Grid>
+                                            <Grid Height="26" Margin="0,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                                    <ColumnDefinition Width="300"></ColumnDefinition>
+                                                    <ColumnDefinition Width="72"></ColumnDefinition>
+                                                    <ColumnDefinition Width="48"></ColumnDefinition>
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0" x:Name="B01GroupEPCButtonTID" Style="{StaticResource ButtonStyle14B}" Click="OnB01GroupEPCButtonReadTIDClick" 
 						                                Content="{Binding GroupEPCReadTID, Source={StaticResource Resources}}"/>
-                                                    <TextBox Grid.Column="1" x:Name="B01GroupEPCTextBoxTID" Width="295" Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupEPCTextBoxTID, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    <TextBlock Grid.Column="2" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Right" Text="{Binding Group_ReadWrite_Length, Source={StaticResource Resources}}"/>
-                                                    <TextBox x:Name="B01GroupEPCTextBoxTIDLength" input:InputMethod.IsInputMethodEnabled="True"
+                                                <TextBox Grid.Column="1" x:Name="B01GroupEPCTextBoxTID" Width="295" Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupEPCTextBoxTID, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <TextBlock Grid.Column="2" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Right" Text="{Binding Group_ReadWrite_Length, Source={StaticResource Resources}}"/>
+                                                <TextBox x:Name="B01GroupEPCTextBoxTIDLength" input:InputMethod.IsInputMethodEnabled="True"
 					                                    Grid.Column="3" Width="44" MaxLength="2" Style="{StaticResource TextBoxDefaultStyle}" 
 					                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation"                                            
 					                                    LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                    Text="{Binding B01GroupEPCTextBoxTIDLength, UpdateSourceTrigger=PropertyChanged}"/>
-                                                </Grid>
-                                            </StackPanel>
-                                        </GroupBox>
-                                        <GroupBox Grid.Row="2" Height="128" Width="532" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-8,0,0" BorderBrush="#FF404040"
+                                            </Grid>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Grid.Row="2" Height="145" Width="540" VerticalAlignment="Top" Margin="5,0,0,0" BorderBrush="#FF404040" BorderThickness="2"
 			                                    x:Name="B01GroupReadWrite" IsEnabled="{Binding B01GroupRWIsEnabled}">
-                                            <GroupBox.Header>
-                                                <Label Content="{Binding Group_ReadWrite, Source={StaticResource Resources}}"/>
-                                            </GroupBox.Header>
-                                            <StackPanel Background="#FFF7F7F7" Orientation="Vertical" Margin="0,-5,0,0">
-                                                <Grid Margin="0,0,0,2" Height="42">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="100"/>
-                                                        <ColumnDefinition Width="70"/>
-                                                        <ColumnDefinition Width="74"/>
-                                                        <ColumnDefinition Width="145"/>
-                                                        <ColumnDefinition Width="165"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="16"/>
-                                                        <RowDefinition Height="26"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Bank, Source={StaticResource Resources}}"/>
-                                                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Address, Source={StaticResource Resources}}"/>
-                                                    <TextBlock Grid.Row="0" Grid.Column="2" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Length, Source={StaticResource Resources}}"/>
-                                                    <ComboBox Grid.Row="1" Grid.Column="0" Width="100" x:Name="B01GroupRWComboBoxMemBank" Style="{StaticResource ComboBoxStyle}" 
+                                        <GroupBox.Header>
+                                            <Label Content="{Binding Group_ReadWrite, Source={StaticResource Resources}}"/>
+                                        </GroupBox.Header>
+                                        <StackPanel Background="#FFF7F7F7" Orientation="Vertical" Margin="0,-5,0,0">
+                                            <Grid Margin="0,4,0,2" Height="42">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="74"/>
+                                                    <ColumnDefinition Width="145"/>
+                                                    <ColumnDefinition Width="165"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="16"/>
+                                                    <RowDefinition Height="26"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Bank, Source={StaticResource Resources}}"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Address, Source={StaticResource Resources}}"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="2" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Length, Source={StaticResource Resources}}"/>
+                                                <ComboBox Grid.Row="1" Grid.Column="0" Width="100" x:Name="B01GroupRWComboBoxMemBank" Style="{StaticResource ComboBoxStyle}" 
 						                                ItemsSource="{Binding MemBank}" SelectedItem="{Binding B01GroupRWComboBoxMemBank}" DisplayMemberPath="Content"
 						                                DropDownClosed="OnB01GroupRWMemBankDownClosed"/>
-                                                    <TextBox x:Name="B01GroupRWTextBoxAddress" input:InputMethod.IsInputMethodEnabled="True"
+                                                <TextBox x:Name="B01GroupRWTextBoxAddress" input:InputMethod.IsInputMethodEnabled="True"
 					                                    Grid.Row="1" Grid.Column="1" Margin="2,0,2,0" Width="66" MaxLength="4" Style="{StaticResource TextBoxDefaultStyle}"
 					                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                         LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                    Text="{Binding B01GroupRWTextBoxAddress, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    <TextBox x:Name="B01GroupRWTextBoxLength" input:InputMethod.IsInputMethodEnabled="True"
+                                                <TextBox x:Name="B01GroupRWTextBoxLength" input:InputMethod.IsInputMethodEnabled="True"
 					                                    Grid.Row="1" Grid.Column="2" Margin="2,0,2,0" Width="66" MaxLength="2" Style="{StaticResource TextBoxDefaultStyle}" 
 					                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                         LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                    Text="{Binding B01GroupRWTextBoxLength, UpdateSourceTrigger=PropertyChanged}"/>
-                                                </Grid>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="100"></ColumnDefinition>
-                                                        <ColumnDefinition Width="430"></ColumnDefinition>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="26"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Button Grid.Row="1" Grid.Column="0" Click="OnB01GroupRWButtonWriteClick"
+                                            </Grid>
+                                            <Grid  Margin="0,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                                    <ColumnDefinition Width="430"></ColumnDefinition>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="26"/>
+                                                </Grid.RowDefinitions>
+                                                <Button Grid.Row="1" Grid.Column="0" Click="OnB01GroupRWButtonWriteClick"
 						                                Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_ReadWrite_Write, Source={StaticResource Resources}}"/>
-                                                    <TextBox x:Name="B01GroupRWTextBoxWrite" input:InputMethod.IsInputMethodEnabled="True"
+                                                <TextBox x:Name="B01GroupRWTextBoxWrite" input:InputMethod.IsInputMethodEnabled="True"
 					                                    Grid.Row="1" Grid.Column="1" Width="416" Style="{StaticResource TextBoxDefaultStyle}"
 					                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                         LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                    Text="{Binding B01GroupRWTextBoxWrite, UpdateSourceTrigger=PropertyChanged}"/>
-                                                </Grid>
-                                                <Grid Margin="0,2,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="100"></ColumnDefinition>
-                                                        <ColumnDefinition Width="430"></ColumnDefinition>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0" Click="OnB01GroupRWButtonReadClick" 
+                                            </Grid>
+                                            <Grid Margin="0,4,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                                    <ColumnDefinition Width="430"></ColumnDefinition>
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0" Click="OnB01GroupRWButtonReadClick" 
 						                                Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_ReadWrite_Read, Source={StaticResource Resources}}"/>
-                                                    <TextBox Grid.Column="1" Width="416" Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupRWTextBoxRead, UpdateSourceTrigger=PropertyChanged}" />
-                                                </Grid>
-                                            </StackPanel>
-                                        </GroupBox>
-                                        <GroupBox Grid.Row="3" Height="102" Width="532" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-10,0,0" BorderBrush="#FF404040"
-			                                x:Name="B01GroupLock" IsEnabled="{Binding B01GroupLockIsEnabled}">
-                                            <GroupBox.Header>
-                                                <Label Content="{Binding Group_Lock, Source={StaticResource Resources}}"/>
-                                            </GroupBox.Header>
-                                            <StackPanel Background="#FFF7F7F7" Orientation="Vertical" Margin="0,-6,0,0">
-                                                <Grid x:Name="B01GridLockMemoryBlock">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="102"/>
-                                                        <ColumnDefinition Width="102"/>
-                                                        <ColumnDefinition Width="102"/>
-                                                        <ColumnDefinition Width="102"/>
-                                                        <ColumnDefinition Width="102"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="16"/>
-                                                        <RowDefinition Height="26"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Column="0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_KillPwd, Source={StaticResource Resources}}"/>
-                                                    <TextBlock Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_AccessPwd, Source={StaticResource Resources}}"/>
-                                                    <TextBlock Grid.Column="2" Margin="4,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_EPC, Source={StaticResource Resources}}"/>
-                                                    <TextBlock Grid.Column="3" Margin="4,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_TID, Source={StaticResource Resources}}"/>
-                                                    <TextBlock Grid.Column="4" Margin="4,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_USER, Source={StaticResource Resources}}"/>
+                                                <TextBox Grid.Column="1" Width="416" Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupRWTextBoxRead, UpdateSourceTrigger=PropertyChanged}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Grid.Row="3" Height="120" Width="540" VerticalAlignment="Top" Margin="5,0,0,0" BorderBrush="#FF404040" BorderThickness="2" x:Name="B01GroupLock" IsEnabled="{Binding B01GroupLockIsEnabled}">
+                                        <GroupBox.Header>
+                                            <Label Content="{Binding Group_Lock, Source={StaticResource Resources}}"/>
+                                        </GroupBox.Header>
+                                        <StackPanel Background="#FFF7F7F7" Orientation="Vertical">
+                                            <Grid x:Name="B01GridLockMemoryBlock" Margin="2,0,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="102"/>
+                                                    <ColumnDefinition Width="102"/>
+                                                    <ColumnDefinition Width="102"/>
+                                                    <ColumnDefinition Width="102"/>
+                                                    <ColumnDefinition Width="102"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="16"/>
+                                                    <RowDefinition Height="30"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Column="0" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_KillPwd, Source={StaticResource Resources}}"/>
+                                                <TextBlock Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_AccessPwd, Source={StaticResource Resources}}"/>
+                                                <TextBlock Grid.Column="2" Margin="4,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_EPC, Source={StaticResource Resources}}"/>
+                                                <TextBlock Grid.Column="3" Margin="4,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_TID, Source={StaticResource Resources}}"/>
+                                                <TextBlock Grid.Column="4" Margin="4,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Lock_Field_USER, Source={StaticResource Resources}}"/>
 
-                                                    <ComboBox Grid.Row="1" Grid.Column="0" Margin="-4,0,0,0" Width="100" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockKillPwd"
+                                                <ComboBox Grid.Row="1" Grid.Column="0" Width="100" Margin="0,2,0,0" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockKillPwd" HorizontalAlignment="Left"
                                                         DropDownClosed="OnB01GroupLockComboBoxDownClosed">
-                                                        <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
-                                                        <ComboBoxItem Content="{Binding Lock_00Description, Source={StaticResource Resources}}" Tag="1" />
-                                                        <ComboBoxItem Content="{Binding Lock_01Description, Source={StaticResource Resources}}" Tag="2"/>
-                                                        <ComboBoxItem Content="{Binding Lock_10Description, Source={StaticResource Resources}}" Tag="3"/>
-                                                        <ComboBoxItem Content="{Binding Lock_11Description, Source={StaticResource Resources}}" Tag="4"/>
-                                                    </ComboBox>
-                                                    <ComboBox Grid.Row="1" Grid.Column="1" Width="100" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockAccessPwd"
+                                                    <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
+                                                    <ComboBoxItem Content="{Binding Lock_00Description, Source={StaticResource Resources}}" Tag="1" />
+                                                    <ComboBoxItem Content="{Binding Lock_01Description, Source={StaticResource Resources}}" Tag="2"/>
+                                                    <ComboBoxItem Content="{Binding Lock_10Description, Source={StaticResource Resources}}" Tag="3"/>
+                                                    <ComboBoxItem Content="{Binding Lock_11Description, Source={StaticResource Resources}}" Tag="4"/>
+                                                </ComboBox>
+                                                <ComboBox Grid.Row="1" Grid.Column="1" Width="100" Margin="0,2,0,0" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockAccessPwd"
                                                         DropDownClosed="OnB01GroupLockComboBoxDownClosed">
-                                                        <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
-                                                        <ComboBoxItem Content="{Binding Lock_00Description, Source={StaticResource Resources}}" Tag="1"/>
-                                                        <ComboBoxItem Content="{Binding Lock_01Description, Source={StaticResource Resources}}" Tag="2"/>
-                                                        <ComboBoxItem Content="{Binding Lock_10Description, Source={StaticResource Resources}}" Tag="3"/>
-                                                        <ComboBoxItem Content="{Binding Lock_11Description, Source={StaticResource Resources}}" Tag="4"/>
-                                                    </ComboBox>
-                                                    <ComboBox Grid.Row="1" Grid.Column="2" Width="100" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockEPC"
+                                                    <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
+                                                    <ComboBoxItem Content="{Binding Lock_00Description, Source={StaticResource Resources}}" Tag="1"/>
+                                                    <ComboBoxItem Content="{Binding Lock_01Description, Source={StaticResource Resources}}" Tag="2"/>
+                                                    <ComboBoxItem Content="{Binding Lock_10Description, Source={StaticResource Resources}}" Tag="3"/>
+                                                    <ComboBoxItem Content="{Binding Lock_11Description, Source={StaticResource Resources}}" Tag="4"/>
+                                                </ComboBox>
+                                                <ComboBox Grid.Row="1" Grid.Column="2" Width="100" Margin="0,2,0,0" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockEPC"
                                                         DropDownClosed="OnB01GroupLockComboBoxDownClosed">
-                                                        <ComboBoxItem Content="  == skip ==" Tag="0" IsSelected="True"/>
-                                                        <ComboBoxItem Content="{Binding Lock_00Description_, Source={StaticResource Resources}}" Tag="1"/>
-                                                        <ComboBoxItem Content="{Binding Lock_01Description_, Source={StaticResource Resources}}" Tag="2"/>
-                                                        <ComboBoxItem Content="{Binding Lock_10Description_, Source={StaticResource Resources}}" Tag="3"/>
-                                                        <ComboBoxItem Content="{Binding Lock_11Description_, Source={StaticResource Resources}}" Tag="4"/>
-                                                    </ComboBox>
-                                                    <ComboBox Grid.Row="1" Grid.Column="3" Width="100" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockTID"
+                                                    <ComboBoxItem Content="  == skip ==" Tag="0" IsSelected="True"/>
+                                                    <ComboBoxItem Content="{Binding Lock_00Description_, Source={StaticResource Resources}}" Tag="1"/>
+                                                    <ComboBoxItem Content="{Binding Lock_01Description_, Source={StaticResource Resources}}" Tag="2"/>
+                                                    <ComboBoxItem Content="{Binding Lock_10Description_, Source={StaticResource Resources}}" Tag="3"/>
+                                                    <ComboBoxItem Content="{Binding Lock_11Description_, Source={StaticResource Resources}}" Tag="4"/>
+                                                </ComboBox>
+                                                <ComboBox Grid.Row="1" Grid.Column="3" Width="100" Margin="0,2,0,0" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockTID"
                                                         DropDownClosed="OnB01GroupLockComboBoxDownClosed">
-                                                        <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
-                                                        <ComboBoxItem Content="{Binding Lock_00Description_, Source={StaticResource Resources}}" Tag="1"/>
-                                                        <ComboBoxItem Content="{Binding Lock_01Description_, Source={StaticResource Resources}}" Tag="2"/>
-                                                        <ComboBoxItem Content="{Binding Lock_10Description_, Source={StaticResource Resources}}" Tag="3"/>
-                                                        <ComboBoxItem Content="{Binding Lock_11Description_, Source={StaticResource Resources}}" Tag="4"/>
-                                                    </ComboBox>
-                                                    <ComboBox Grid.Row="1" Grid.Column="4" Width="100" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockUser"
+                                                    <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
+                                                    <ComboBoxItem Content="{Binding Lock_00Description_, Source={StaticResource Resources}}" Tag="1"/>
+                                                    <ComboBoxItem Content="{Binding Lock_01Description_, Source={StaticResource Resources}}" Tag="2"/>
+                                                    <ComboBoxItem Content="{Binding Lock_10Description_, Source={StaticResource Resources}}" Tag="3"/>
+                                                    <ComboBoxItem Content="{Binding Lock_11Description_, Source={StaticResource Resources}}" Tag="4"/>
+                                                </ComboBox>
+                                                <ComboBox Grid.Row="1" Grid.Column="4" Width="100" Margin="0,2,0,0" Style="{StaticResource ComboBoxStyle}" x:Name="B01ComboBoxLockUser"
                                                         DropDownClosed="OnB01GroupLockComboBoxDownClosed">
-                                                        <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
-                                                        <ComboBoxItem Content="{Binding Lock_00Description_, Source={StaticResource Resources}}" Tag="1"/>
-                                                        <ComboBoxItem Content="{Binding Lock_01Description_, Source={StaticResource Resources}}" Tag="2"/>
-                                                        <ComboBoxItem Content="{Binding Lock_10Description_, Source={StaticResource Resources}}" Tag="3"/>
-                                                        <ComboBoxItem Content="{Binding Lock_11Description_, Source={StaticResource Resources}}" Tag="4"/>
-                                                    </ComboBox>
-                                                </Grid>
-                                                <Grid Height="26"  Margin="0,4,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="100"></ColumnDefinition>
-                                                        <ColumnDefinition Width="102"></ColumnDefinition>
-                                                        <ColumnDefinition Width="105"></ColumnDefinition>
-                                                        <ColumnDefinition Width="3"></ColumnDefinition>
-                                                        <ColumnDefinition Width="105"></ColumnDefinition>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0" Click="OnB01GroupLockButtonClick" Style="{StaticResource ButtonStyle14B}"
+                                                    <ComboBoxItem Content="   == skip ==" Tag="0" IsSelected="True"/>
+                                                    <ComboBoxItem Content="{Binding Lock_00Description_, Source={StaticResource Resources}}" Tag="1"/>
+                                                    <ComboBoxItem Content="{Binding Lock_01Description_, Source={StaticResource Resources}}" Tag="2"/>
+                                                    <ComboBoxItem Content="{Binding Lock_10Description_, Source={StaticResource Resources}}" Tag="3"/>
+                                                    <ComboBoxItem Content="{Binding Lock_11Description_, Source={StaticResource Resources}}" Tag="4"/>
+                                                </ComboBox>
+                                            </Grid>
+                                            <Grid Height="28"  Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                                    <ColumnDefinition Width="202"></ColumnDefinition>
+                                                    <ColumnDefinition Width="104"></ColumnDefinition>
+                                                    <ColumnDefinition Width="5"></ColumnDefinition>
+                                                    <ColumnDefinition Width="104"></ColumnDefinition>
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0" Click="OnB01GroupLockButtonClick" Style="{StaticResource ButtonStyle14B}"
 					                                    Content="{Binding Group_Lock_Execute, Source={StaticResource Resources}}"/>
-                                                    <TextBlock Grid.Column="1" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Right" Text="{Binding Group_Lock_Field, Source={StaticResource Resources}}"/>
-                                                    <TextBox x:Name="B01GroupLockTextBoxMask" input:InputMethod.IsInputMethodEnabled="True"
+                                                <TextBlock Grid.Column="1" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Right" Text="{Binding Group_Lock_Field, Source={StaticResource Resources}}"/>
+                                                <TextBox x:Name="B01GroupLockTextBoxMask" input:InputMethod.IsInputMethodEnabled="True"
                                                         Grid.Column="2" Width="100" MaxLength="3" Style="{StaticResource TextBoxDefaultStyle}" HorizontalAlignment="Right"
 					                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                         LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                    Text="{Binding B01GroupLockTextBoxMask, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    <TextBlock Grid.Column="3" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Center" Text="{Binding Group_Lock_Field_, Source={StaticResource Resources}}"/>
-                                                    <TextBox x:Name="B01GroupLockTextBoxAction" input:InputMethod.IsInputMethodEnabled="True"
+                                                <TextBlock Grid.Column="3" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Center" Text="{Binding Group_Lock_Field_, Source={StaticResource Resources}}"/>
+                                                <TextBox x:Name="B01GroupLockTextBoxAction" input:InputMethod.IsInputMethodEnabled="True"
                                                         Grid.Column="4"  Width="100" MaxLength="3" Style="{StaticResource TextBoxDefaultStyle}" 
 					                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                         LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
 					                                    Text="{Binding B01GroupLockTextBoxAction, UpdateSourceTrigger=PropertyChanged}"/>
-                                                </Grid>
-                                            </StackPanel>
-                                        </GroupBox>
-                                        <GroupBox Grid.Row="4" Height="70" Width="532" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-8,0,0" BorderBrush="#FF404040"
-			                                x:Name="B01GroupKill" IsEnabled="{Binding B01GroupKillIsEnabled}">
-                                            <GroupBox.Header>
-                                                <Label Content="{Binding Group_Kill, Source={StaticResource Resources}}"></Label>
-                                            </GroupBox.Header>
-                                            <StackPanel Background="#FFF7F7F7" Orientation="Vertical" Margin="0,-8,0,0">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="100"></ColumnDefinition>
-                                                        <ColumnDefinition Width="144"></ColumnDefinition>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="15"/>
-                                                        <RowDefinition Height="26"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Kill_KillPwd, Source={StaticResource Resources}}"/>
-                                                    <Button Grid.Row="1" Grid.Column="0" x:Name="B01ButtonKill" Click="OnB01ButtonKillClick" 
-						                                Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_Kill_Kill, Source={StaticResource Resources}}"/>
-                                                    <TextBox x:Name="B01TextBoxKillPassword" input:InputMethod.IsInputMethodEnabled="True"
-					                                    Grid.Row="1" Grid.Column="1" Width="140" MaxLength="8" Style="{StaticResource TextBoxDefaultStyle}" 
-					                                    PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
-                                                        LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
-                                                        Text="{Binding B01TextBoxKillPassword, UpdateSourceTrigger=PropertyChanged}"/>
-                                                </Grid>
-                                            </StackPanel>
-                                        </GroupBox>
-                                        <GroupBox Grid.Row="5" Height="130" Width="532" HorizontalAlignment="Left" VerticalAlignment="Top"  Margin="5,-5,0,0" BorderBrush="#FF404040"
-                                            x:Name="B01GroupGPIO" IsEnabled="{Binding B01GroupGPIOIsEnabled}">
-                                            <GroupBox.Header>
-                                                <Label Content="{Binding Group_GPIO, Source={StaticResource Resources}}"/>
-                                            </GroupBox.Header>
-                                            <Grid Margin="0,-8,0,0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="90"/>
-                                                    <ColumnDefinition Width="40"/>
-                                                    <ColumnDefinition Width="40"/>
-                                                    <ColumnDefinition Width="40"/>
-                                                    <ColumnDefinition Width="60"/>
-                                                    <ColumnDefinition Width="110"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="15"/>
-                                                    <RowDefinition Height="28"/>
-                                                    <RowDefinition Height="3"/>
-                                                    <RowDefinition Height="26"/>
-                                                    <RowDefinition Height="28"/>
-                                                </Grid.RowDefinitions>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">pin 10</TextBlock>
-                                                <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">pin 11</TextBlock>
-                                                <TextBlock Grid.Row="0" Grid.Column="3" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">pin 14</TextBlock>
-                                                <TextBlock Grid.Row="0" Grid.Column="4" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">total pins</TextBlock>
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,5,0">Configuration</TextBlock>
-                                                <CheckBox Grid.Row="1" Grid.Column="1" Style="{StaticResource CheckBoxConfigStyle}" IsChecked="{Binding B01GroupGPIOCheckBoxConfigur10IsChecked}" Checked="OnB01GroupGPIOConfigur10Checked" Unchecked="OnB01GroupGPIOConfigur10UnChecked"/>
-                                                <CheckBox Grid.Row="1" Grid.Column="2" Style="{StaticResource CheckBoxConfigStyle}" IsChecked="{Binding B01GroupGPIOCheckBoxConfigur11IsChecked}" Checked="OnB01GroupGPIOConfigur11Checked" Unchecked="OnB01GroupGPIOConfigur11UnChecked"/>
-                                                <CheckBox Grid.Row="1" Grid.Column="3" Style="{StaticResource CheckBoxConfigStyle}" IsChecked="{Binding B01GroupGPIOCheckBoxConfigur14IsChecked}" Checked="OnB01GroupGPIOConfigur14Checked" Unchecked="OnB01GroupGPIOConfigur14UnChecked"/>
-                                                <ComboBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding GPIOConfig}" SelectedItem="{Binding B01GroupGPIOComboBoxConfigur}" DisplayMemberPath="Content"
-                                                    Style="{StaticResource ComboBoxStyle}" Width="60" DropDownClosed="OnB01GroupGPIOComboBoxConfigurDownClosed"/>
-
-                                                <Button Grid.Row="1" Grid.Column="5" x:Name="B01GroupGPIOButtonGetConfiguration" Click="OnB01GroupGPIOButtonGetConfigurationClick" Style="{StaticResource ButtonStyle14B}"  Content="{Binding Group_GPIO_Read, Source={StaticResource Resources}}"/>
-
-                                                <Line Grid.Row="2" Grid.Column="0" X1="10" Y1="1" X2="100" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1"/>
-                                                <Line Grid.Row="2" Grid.Column="1" X1="0" Y1="1" X2="40" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1"/>
-                                                <Line Grid.Row="2" Grid.Column="2" X1="0" Y1="1" X2="40" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1"/>
-                                                <Line Grid.Row="2" Grid.Column="3" X1="0" Y1="1" X2="40" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1"/>
-                                                <Line Grid.Row="2" Grid.Column="4" X1="0" Y1="1" X2="100" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1"/>
-                                                <Line Grid.Row="2" Grid.Column="5" X1="2" Y1="1" X2="110" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1"/>
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,5,0">Port</TextBlock>
-                                                <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding B01GroupGPIOCheckBoxPin10IsChecked}" Style="{StaticResource CheckBoxPinStyle}" Checked="OnB01GroupGPIOPins10Checked" Unchecked="OnB01GroupGPIOPins10UnChecked"/>
-                                                <CheckBox Grid.Row="3" Grid.Column="2" IsChecked="{Binding B01GroupGPIOCheckBoxPin11IsChecked}" Style="{StaticResource CheckBoxPinStyle}" Checked="OnB01GroupGPIOPins11Checked" Unchecked="OnB01GroupGPIOPins11UnChecked"/>
-                                                <CheckBox Grid.Row="3" Grid.Column="3" IsChecked="{Binding B01GroupGPIOCheckBoxPin14IsChecked}" Style="{StaticResource CheckBoxPinStyle}" Checked="OnB01GroupGPIOPins14Checked" Unchecked="OnB01GroupGPIOPins14UnChecked"/>
-                                                <ComboBox Grid.Row="3" Grid.Column="4"
-                                                    ItemsSource="{Binding GPIOConfig}" SelectedItem="{Binding B01GroupGPIOComboBoxPins}" DisplayMemberPath="Content"
-                                                    Style="{StaticResource ComboBoxStyle}" Width="60" DropDownClosed="OnB01GroupGPIOComboBoxPinsDownClosed">
-                                                </ComboBox>
-
-                                                <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Right" Margin="0,0,5,0">Port Status</TextBlock>
-                                                <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding B01GroupGPIOCheckBoxStatus10IsChecked}" Style="{StaticResource CheckBoxPortSatatusStyle}" IsEnabled="False"/>
-                                                <CheckBox Grid.Row="4" Grid.Column="2" IsChecked="{Binding B01GroupGPIOCheckBoxStatus11IsChecked}" Style="{StaticResource CheckBoxPortSatatusStyle}" IsEnabled="False"/>
-                                                <CheckBox Grid.Row="4" Grid.Column="3" IsChecked="{Binding B01GroupGPIOCheckBoxStatus14IsChecked}" Style="{StaticResource CheckBoxPortSatatusStyle}" IsEnabled="False"/>
-                                                <Button Grid.Row="4" Grid.Column="5" x:Name="B01GroupGPIOButtonGetPort" Click="OnB01GroupGPIOButtonGetPortClick" Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_GPIO_Read, Source={StaticResource Resources}}"/>
-                                            </Grid>
-                                        </GroupBox>
-                                    </Grid>
-                                </Canvas>
-                            </Viewbox>
-                            <Viewbox Grid.Column="2">
-                                <Canvas Height="638" Width="550" Background="#FFF7F7F7">
-                                    <GroupBox Grid.Row="1" Height="638" Width="547" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-2,5,0" BorderBrush="#FF404040"
-			                                x:Name="B01GroupMsg" IsEnabled="{Binding B01GroupMsgIsEnabled}">
-                                        <GroupBox.Header>
-                                            <Label Content="{Binding Group_Record_Info, Source={StaticResource Resources}}"/>
-                                        </GroupBox.Header>
-                                        <StackPanel>
-                                            <ListBox x:Name="B01GroupMsgListBox" ItemsSource="{Binding B01GroupMsgListBox}" Height="{Binding B01GroupMsgListBoxHeight, UpdateSourceTrigger=PropertyChanged}"
-					                        IsSynchronizedWithCurrentItem="True" FontFamily="Consolas" HorizontalAlignment="Left" VerticalAlignment="Top" Width="534" SelectionMode="Extended">
-                                                <ListBox.Resources>
-                                                    <Style x:Key="CopyItemMenuStyle" TargetType="MenuItem">
-                                                        <EventSetter Event="Click" Handler="OnB01GroupMsgListBoxMenuItemCopyClick"/>
-                                                    </Style>
-                                                    <Style x:Key="DeleteItemMenuStyle" TargetType="MenuItem">
-                                                        <EventSetter Event="Click" Handler="OnB01GroupMsgListBoxMenuItemDeleteRangeClick"/>
-                                                    </Style>
-                                                    <Style x:Key="DeleteAllItemMenuStyle" TargetType="MenuItem">
-                                                        <EventSetter Event="Click" Handler="OnB01GroupMsgListBoxMenuItemDeleteAllClick"/>
-                                                    </Style>
-                                                </ListBox.Resources>
-                                                <ListBox.ItemContainerStyle>
-                                                    <Style TargetType="ListBoxItem">
-                                                        <Setter Property="ContextMenu">
-                                                            <Setter.Value>
-                                                                <ContextMenu>
-                                                                    <MenuItem Header="Copy" Style="{StaticResource CopyItemMenuStyle}"/>
-                                                                    <MenuItem Header="Delete" Style="{StaticResource DeleteItemMenuStyle}"/>
-                                                                    <MenuItem Header="Delete All" Style="{StaticResource DeleteAllItemMenuStyle}"/>
-                                                                </ContextMenu>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </ListBox.ItemContainerStyle>
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Foreground="{Binding HandlerColor, UpdateSourceTrigger=PropertyChanged}" Text="{Binding Handler, UpdateSourceTrigger=PropertyChanged}"/>
-                                                            <TextBlock Foreground="{Binding ContentColor, UpdateSourceTrigger=PropertyChanged}" Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"/>
-                                                        </StackPanel>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                            <Grid x:Name="B01GroupMsgPop" Height="36" IsEnabled="{Binding B01GroupMsgPopIsEnabled}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="432"></ColumnDefinition>
-                                                    <ColumnDefinition Width="100"></ColumnDefinition>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox Grid.Column="0" x:Name="B01GroupMsgTextBoxCustom" Height="28" Width="432" HorizontalAlignment="Center" Margin="0"
-						                        Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupMsgTextBoxCustom, UpdateSourceTrigger=PropertyChanged}"/>
-                                                <Button Grid.Column="1" x:Name="B01GroupMsgButtonCustom" Click="OnB01GroupMsgButtonCustomClick" 
-					                            Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_Msg_ButtonCustom, Source={StaticResource Resources}}"/>
                                             </Grid>
                                         </StackPanel>
                                     </GroupBox>
-                                </Canvas>
-                            </Viewbox>
+                                    <GroupBox Grid.Row="4" Height="75" Width="540" VerticalAlignment="Top" Margin="5,0,0,0" BorderBrush="#FF404040" BorderThickness="2"
+			                                x:Name="B01GroupKill" IsEnabled="{Binding B01GroupKillIsEnabled}">
+                                        <GroupBox.Header>
+                                            <Label Content="{Binding Group_Kill, Source={StaticResource Resources}}"></Label>
+                                        </GroupBox.Header>
+                                        <Grid Background="#FFF7F7F7" Margin="0,-4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="110"></ColumnDefinition>
+                                                <ColumnDefinition Width="144"></ColumnDefinition>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="15"/>
+                                                <RowDefinition Height="26"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_Kill_KillPwd, Source={StaticResource Resources}}"/>
+                                            <Button Grid.Row="1" Grid.Column="0" x:Name="B01ButtonKill" Click="OnB01ButtonKillClick" HorizontalAlignment="Left"
+						                            Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_Kill_Kill, Source={StaticResource Resources}}"/>
+                                            <TextBox x:Name="B01TextBoxKillPassword" input:InputMethod.IsInputMethodEnabled="True"
+					                                Grid.Row="1" Grid.Column="1" Width="140" MaxLength="8" Style="{StaticResource TextBoxDefaultStyle}" 
+					                                PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
+                                                    LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
+                                                    Text="{Binding B01TextBoxKillPassword, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </Grid>
+                                    </GroupBox>
+                                    <GroupBox Grid.Row="5" Height="145" Width="540" VerticalAlignment="Top"  Margin="5,0,0,0" BorderBrush="#FF404040" BorderThickness="2"
+                                            x:Name="B01GroupGPIO" IsEnabled="{Binding B01GroupGPIOIsEnabled}">
+                                        <GroupBox.Header>
+                                            <Label Content="{Binding Group_GPIO, Source={StaticResource Resources}}"/>
+                                        </GroupBox.Header>
+                                        <Grid Margin="0,-4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="90"/>
+                                                <ColumnDefinition Width="40"/>
+                                                <ColumnDefinition Width="40"/>
+                                                <ColumnDefinition Width="40"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="110"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="15"/>
+                                                <RowDefinition Height="28"/>
+                                                <RowDefinition Height="8"/>
+                                                <RowDefinition Height="30"/>
+                                                <RowDefinition Height="28"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">pin 10</TextBlock>
+                                            <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">pin 11</TextBlock>
+                                            <TextBlock Grid.Row="0" Grid.Column="3" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">pin 14</TextBlock>
+                                            <TextBlock Grid.Row="0" Grid.Column="4" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Center">total pins</TextBlock>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,5,0">Configuration</TextBlock>
+                                            <CheckBox Grid.Row="1" Grid.Column="1" Style="{StaticResource CheckBoxConfigStyle}" IsChecked="{Binding B01GroupGPIOCheckBoxConfigur10IsChecked}" Checked="OnB01GroupGPIOConfigur10Checked" Unchecked="OnB01GroupGPIOConfigur10UnChecked"/>
+                                            <CheckBox Grid.Row="1" Grid.Column="2" Style="{StaticResource CheckBoxConfigStyle}" IsChecked="{Binding B01GroupGPIOCheckBoxConfigur11IsChecked}" Checked="OnB01GroupGPIOConfigur11Checked" Unchecked="OnB01GroupGPIOConfigur11UnChecked"/>
+                                            <CheckBox Grid.Row="1" Grid.Column="3" Style="{StaticResource CheckBoxConfigStyle}" IsChecked="{Binding B01GroupGPIOCheckBoxConfigur14IsChecked}" Checked="OnB01GroupGPIOConfigur14Checked" Unchecked="OnB01GroupGPIOConfigur14UnChecked"/>
+                                            <ComboBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding GPIOConfig}" SelectedItem="{Binding B01GroupGPIOComboBoxConfigur}" DisplayMemberPath="Content"
+                                                    Style="{StaticResource ComboBoxStyle}" Width="60" DropDownClosed="OnB01GroupGPIOComboBoxConfigurDownClosed"/>
+
+                                            <Button Grid.Row="1" Grid.Column="5" x:Name="B01GroupGPIOButtonGetConfiguration" Click="OnB01GroupGPIOButtonGetConfigurationClick" Style="{StaticResource ButtonStyle14B}"  Content="{Binding Group_GPIO_Read, Source={StaticResource Resources}}"/>
+
+                                            <Line Grid.Row="2" Grid.Column="0" X1="10" Y1="1" X2="100" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1" VerticalAlignment="Center"/>
+                                            <Line Grid.Row="2" Grid.Column="1" X1="0" Y1="1" X2="40" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1" VerticalAlignment="Center"/>
+                                            <Line Grid.Row="2" Grid.Column="2" X1="0" Y1="1" X2="40" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1" VerticalAlignment="Center"/>
+                                            <Line Grid.Row="2" Grid.Column="3" X1="0" Y1="1" X2="40" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1" VerticalAlignment="Center"/>
+                                            <Line Grid.Row="2" Grid.Column="4" X1="0" Y1="1" X2="100" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1" VerticalAlignment="Center"/>
+                                            <Line Grid.Row="2" Grid.Column="5" X1="2" Y1="1" X2="110" Y2="1" StrokeDashArray="2" Stroke="#5E5E5E" StrokeThickness="1" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource TextBlockStyle11}" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,5,0">Port</TextBlock>
+                                            <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding B01GroupGPIOCheckBoxPin10IsChecked}" Style="{StaticResource CheckBoxPinStyle}" Checked="OnB01GroupGPIOPins10Checked" Unchecked="OnB01GroupGPIOPins10UnChecked"/>
+                                            <CheckBox Grid.Row="3" Grid.Column="2" IsChecked="{Binding B01GroupGPIOCheckBoxPin11IsChecked}" Style="{StaticResource CheckBoxPinStyle}" Checked="OnB01GroupGPIOPins11Checked" Unchecked="OnB01GroupGPIOPins11UnChecked"/>
+                                            <CheckBox Grid.Row="3" Grid.Column="3" IsChecked="{Binding B01GroupGPIOCheckBoxPin14IsChecked}" Style="{StaticResource CheckBoxPinStyle}" Checked="OnB01GroupGPIOPins14Checked" Unchecked="OnB01GroupGPIOPins14UnChecked"/>
+                                            <ComboBox Grid.Row="3" Grid.Column="4"
+                                                    ItemsSource="{Binding GPIOConfig}" SelectedItem="{Binding B01GroupGPIOComboBoxPins}" DisplayMemberPath="Content"
+                                                    Style="{StaticResource ComboBoxStyle}" Width="60" DropDownClosed="OnB01GroupGPIOComboBoxPinsDownClosed">
+                                            </ComboBox>
+
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource TextBlockStyle11}" HorizontalAlignment="Right" Margin="0,0,5,0">Port Status</TextBlock>
+                                            <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding B01GroupGPIOCheckBoxStatus10IsChecked}" Style="{StaticResource CheckBoxPortSatatusStyle}" IsEnabled="False"/>
+                                            <CheckBox Grid.Row="4" Grid.Column="2" IsChecked="{Binding B01GroupGPIOCheckBoxStatus11IsChecked}" Style="{StaticResource CheckBoxPortSatatusStyle}" IsEnabled="False"/>
+                                            <CheckBox Grid.Row="4" Grid.Column="3" IsChecked="{Binding B01GroupGPIOCheckBoxStatus14IsChecked}" Style="{StaticResource CheckBoxPortSatatusStyle}" IsEnabled="False"/>
+                                            <Button Grid.Row="4" Grid.Column="5" x:Name="B01GroupGPIOButtonGetPort" Click="OnB01GroupGPIOButtonGetPortClick" Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_GPIO_Read, Source={StaticResource Resources}}"/>
+                                        </Grid>
+                                    </GroupBox>
+                                    <GroupBox Grid.Row="6" Height="70" Width="540" VerticalAlignment="Top"  Margin="5,0,0,0" BorderBrush="#FF404040" BorderThickness="2"
+                                              x:Name="B01GroupCustomize">
+                                        <GroupBox.Header>
+                                            <Label Content="{Binding Group_Customize, Source={StaticResource Resources}}"></Label>
+                                        </GroupBox.Header>
+                                        <Grid x:Name="B01GroupMsgPop" Background="#FFF7F7F7" Margin="0,-8,0,0" IsEnabled="{Binding B01GroupMsgPopIsEnabled}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="auto"></ColumnDefinition>
+                                                <ColumnDefinition Width="110"></ColumnDefinition>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" x:Name="B01GroupMsgTextBoxCustom" Height="28" Width="418" HorizontalAlignment="Stretch" Margin="2,0"
+						                            Style="{StaticResource TextBoxStyle}" Text="{Binding B01GroupMsgTextBoxCustom, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <Button Grid.Column="1" x:Name="B01GroupMsgButtonCustom" Click="OnB01GroupMsgButtonCustomClick"
+					                                Style="{StaticResource ButtonStyle14B}" Content="{Binding Group_Msg_ButtonCustom, Source={StaticResource Resources}}"/>
+                                        </Grid>
+                                    </GroupBox>
+                                </Grid>
+                            </Canvas>
+                            <GroupBox x:Name="B01GroupMsg" Grid.Column="1" Grid.Row="1" Height="825" VerticalAlignment="Stretch" BorderBrush="#FF404040" BorderThickness="2" IsEnabled="{Binding B01GroupMsgIsEnabled}">
+                                <GroupBox.Header>
+                                    <Label Content="{Binding Group_Record_Info, Source={StaticResource Resources}}"/>
+                                </GroupBox.Header>
+                                <ListBox x:Name="B01GroupMsgListBox" IsSynchronizedWithCurrentItem="True" Margin="3,2,3,3" FontFamily="Consolas" SelectionMode="Extended"  ItemsSource="{Binding B01GroupMsgListBox}">
+                                    <ListBox.Resources>
+                                        <Style x:Key="CopyItemMenuStyle" TargetType="MenuItem">
+                                            <EventSetter Event="Click" Handler="OnB01GroupMsgListBoxMenuItemCopyClick"/>
+                                        </Style>
+                                        <Style x:Key="DeleteItemMenuStyle" TargetType="MenuItem">
+                                            <EventSetter Event="Click" Handler="OnB01GroupMsgListBoxMenuItemDeleteRangeClick"/>
+                                        </Style>
+                                        <Style x:Key="DeleteAllItemMenuStyle" TargetType="MenuItem">
+                                            <EventSetter Event="Click" Handler="OnB01GroupMsgListBoxMenuItemDeleteAllClick"/>
+                                        </Style>
+                                    </ListBox.Resources>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="ContextMenu">
+                                                <Setter.Value>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Copy" Style="{StaticResource CopyItemMenuStyle}"/>
+                                                        <MenuItem Header="Delete" Style="{StaticResource DeleteItemMenuStyle}"/>
+                                                        <MenuItem Header="Delete All" Style="{StaticResource DeleteAllItemMenuStyle}"/>
+                                                    </ContextMenu>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Foreground="{Binding HandlerColor, UpdateSourceTrigger=PropertyChanged}" Text="{Binding Handler, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <TextBlock Foreground="{Binding ContentColor, UpdateSourceTrigger=PropertyChanged}" Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </GroupBox>
                         </Grid>
-                    </Border>
+                    </StackPanel>
                 </TabItem>
                 <TabItem>
-                    <Border x:Name="Border02" BorderBrush="#B0B0B0"  BorderThickness="1,0,1,0" Background="#FFF7F7F7">
+                    <StackPanel x:Name="Border02" Background="#FFF7F7F7">
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="340"/>
                                 <RowDefinition Height="*"/>
+                                <RowDefinition Height="400"/>
                             </Grid.RowDefinitions>
-                            <GroupBox x:Name="B02GroupRecord" Height="340" Width="1087" HorizontalAlignment="Left" VerticalAlignment="Top" BorderBrush="#FF404040" Margin="4,-4,0,0">
+                            <GroupBox x:Name="B02GroupRecord" MinHeight="400" MinWidth="1087" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" BorderBrush="#FF404040" BorderThickness="2" Margin="2,0">
                                 <GroupBox.Header>
                                     <Label Content="{Binding Group_Record, Source={StaticResource Resources}}"/>
                                 </GroupBox.Header>
                                 <StackPanel Background="#FFF7F7F7" Orientation="Vertical">
-                                    <Grid Height="338">
+                                    <Grid>
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="276"/>
-                                            <RowDefinition Height="30"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="35"/>
                                         </Grid.RowDefinitions>
-                                        <ListView Grid.Row="0" ItemsSource="{Binding B02ListViewItemsSource}"
-                                                    Height="276" Width="1074" FontSize="13" FontFamily="Consolas" GridViewColumnHeader.Click="OnB02ListViewQUHeaderClick">
+                                        <ListView Grid.Row="0" x:Name="B02ListViewStatisticsMsg" ItemsSource="{Binding B02ListViewItemsSource}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                                    MinHeight="400" MinWidth="1000" FontSize="13" FontFamily="Consolas" GridViewColumnHeader.Click="OnB02ListViewQUHeaderClick">
                                             <ListView.ItemContainerStyle>
                                                 <Style TargetType="ListViewItem">
                                                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -989,30 +990,30 @@
                                     </Grid>
                                 </StackPanel>
                             </GroupBox>
-                            <StackPanel Grid.Row="1">
+                            <StackPanel Grid.Row="1" Margin="0,10,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="510"/>
+                                        <ColumnDefinition Width="560"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Orientation="Vertical" Width="500" Background="#FFF7F7F7" >
-                                        <StackPanel Orientation="Horizontal" Width="500">
+                                    <StackPanel Grid.Column="0" Orientation="Vertical"  Width="550" Background="#FFF7F7F7" >
+                                        <StackPanel Orientation="Horizontal" Width="550">
                                             <RadioButton GroupName="ItemTitle" Tag="1" IsEnabled="{Binding B02TabControlItemIsEnabled}" Content="{Binding B02Item01, Source={StaticResource Resources}}" Checked="OnRadioButtonB02ItemChecked" Style="{StaticResource RadioButtonItemStyle}" IsChecked="True"/>
                                             <RadioButton GroupName="ItemTitle" Tag="2" IsEnabled="{Binding B02TabControlItemIsEnabled}" Content="{Binding B02Item02, Source={StaticResource Resources}}" Checked="OnRadioButtonB02ItemChecked" Style="{StaticResource RadioButtonItemStyle}"/>
                                         </StackPanel>
-                                        <TabControl x:Name="B02TabControlItem" BorderBrush="Gray" SelectionChanged="B02TabControlItemSelectionChanged">
+                                        <TabControl x:Name="B02TabControlItem" BorderBrush="#FF404040" BorderThickness="2" SelectionChanged="B02TabControlItemSelectionChanged">
                                             <TabControl.ItemContainerStyle>
                                                 <Style>
                                                     <Setter Property="TabItem.Visibility" Value="Collapsed"/>
                                                 </Style>
                                             </TabControl.ItemContainerStyle>
                                             <TabItem x:Name="B02Item01">
-                                                <StackPanel Orientation="Vertical" Background="#FFF7F7F7">
-                                                    <GroupBox x:Name="B02GroupPreSet" Height="149" Width="502" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-4,-8,-3,0" BorderBrush="#FF404040">
+                                                <StackPanel Orientation="Vertical" Height="310" Background="#FFF7F7F7">
+                                                    <GroupBox x:Name="B02GroupPreSet" Height="160" Width="535" VerticalAlignment="Top" Margin="0,-4,0,0" BorderBrush="#FF404040">
                                                         <GroupBox.Header>
                                                             <Label Content="{Binding Group_PreSet, Source={StaticResource Resources}}"></Label>
                                                         </GroupBox.Header>
-                                                        <StackPanel Background="#FFF7F7F7" Orientation="Vertical" Margin="0,-5,0,0">
+                                                        <StackPanel Background="#FFF7F7F7" Orientation="Vertical" Margin="0,-2,0,0">
                                                             <StackPanel IsEnabled="{Binding B02GroupPreSetSelectIsEnabled}">
                                                                 <CheckBox x:Name="B02GroupPreSetSelectCheckBox" Content="{Binding Group_PreSet_Select, Source={StaticResource Resources}}"/>
                                                                 <Grid>
@@ -1020,7 +1021,7 @@
                                                                         <ColumnDefinition Width="90"></ColumnDefinition>
                                                                         <ColumnDefinition Width="70"></ColumnDefinition>
                                                                         <ColumnDefinition Width="70"></ColumnDefinition>
-                                                                        <ColumnDefinition Width="270"></ColumnDefinition>
+                                                                        <ColumnDefinition Width="290"></ColumnDefinition>
                                                                     </Grid.ColumnDefinitions>
                                                                     <TextBlock Grid.Column="0" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Bank, Source={StaticResource Resources}}"/>
                                                                     <TextBlock Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_PreSet_Select_Address, Source={StaticResource Resources}}"/>
@@ -1032,7 +1033,7 @@
                                                                         <ColumnDefinition Width="90"></ColumnDefinition>
                                                                         <ColumnDefinition Width="70"></ColumnDefinition>
                                                                         <ColumnDefinition Width="70"></ColumnDefinition>
-                                                                        <ColumnDefinition Width="260"></ColumnDefinition>
+                                                                        <ColumnDefinition Width="284"></ColumnDefinition>
                                                                     </Grid.ColumnDefinitions>
                                                                     <ComboBox Grid.Column="0" Width="88" Style="{StaticResource ComboBoxStyle}" 
                                                                         ItemsSource="{Binding MemBank}" SelectedItem="{Binding B02GroupPreSetSelectMemBank}" DisplayMemberPath="Content"/>
@@ -1047,13 +1048,13 @@
                                                                         LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
                                                                         Text="{Binding B02GroupPreSetSelectBitLength, UpdateSourceTrigger=PropertyChanged}"/>
                                                                     <TextBox x:Name="B02GroupPreSetSelectBitData" input:InputMethod.IsInputMethodEnabled="True"
-                                                                        Grid.Column="3" Width="256" Style="{StaticResource TextBoxDefaultStyle}"
+                                                                        Grid.Column="3" Width="280" Style="{StaticResource TextBoxDefaultStyle}"
                                                                         PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
                                                                         LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
                                                                         Text="{Binding B02GroupPreSetSelectBitData, UpdateSourceTrigger=PropertyChanged}"/>
                                                                 </Grid>
                                                             </StackPanel>
-                                                            <StackPanel IsEnabled="{Binding B02GroupPreSetAccessIsEnabled}">
+                                                            <StackPanel IsEnabled="{Binding B02GroupPreSetAccessIsEnabled}" Margin="0,5,0,0">
                                                                 <CheckBox x:Name="B02GroupPreSetAccessCheckBox" Margin="0,3,0,0" Content="{Binding Group_PreSet_Access, Source={StaticResource Resources}}"/>
                                                                 <TextBlock Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" TextWrapping="Wrap" Text="{Binding Group_PreSet_AccessPassword, Source={StaticResource Resources}}"/>
                                                                 <TextBox x:Name="B02GroupPreSetAccessPassword" input:InputMethod.IsInputMethodEnabled="True"
@@ -1064,7 +1065,7 @@
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </GroupBox>
-                                                    <GroupBox x:Name="B02GroupReadCtrl" Height="68" Width="502" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-4,-3,-3,0" BorderBrush="#FF404040"
+                                                    <GroupBox x:Name="B02GroupReadCtrl" Height="75" Width="535" Margin="0,-3,0,0" BorderBrush="#FF404040"
                                                         IsEnabled="{Binding B02GroupReadCtrlIsEnabled}">
                                                         <GroupBox.Header>
                                                             <StackPanel Orientation="Horizontal">
@@ -1100,29 +1101,29 @@
                                                                 Text="{Binding B02GroupPreSetReadLength, UpdateSourceTrigger=PropertyChanged}"/>
                                                         </Grid>
                                                     </GroupBox>
-                                                    <StackPanel Orientation="Horizontal" Margin="-4,-7,0,0">
-                                                        <GroupBox Height="68" Width="206" VerticalAlignment="Top" BorderBrush="#FF404040">
+                                                    <StackPanel Orientation="Horizontal" >
+                                                        <GroupBox Height="75" Width="220" Margin="4,0" VerticalAlignment="Top" BorderBrush="#FF404040">
                                                             <GroupBox.Header>
                                                                 <Label Content="{Binding Group_U, Source={StaticResource Resources}}"/>
                                                             </GroupBox.Header>
-                                                            <StackPanel Orientation="Horizontal" Margin="0,-7,0,0">
+                                                            <StackPanel Orientation="Horizontal">
                                                                 <StackPanel IsEnabled="{Binding B02GroupUSlotQIsEnabled}">
                                                                     <CheckBox  IsChecked="{Binding B02GroupUSlotQCheckBoxIsChecked}" VerticalAlignment="Center" Content="{Binding Group_U_SlotQ, Source={StaticResource Resources}}"/>
                                                                     <ComboBox Width="90" Style="{StaticResource ComboBoxStyle}" 
                                                                         ItemsSource="{Binding SlotQ}" SelectedItem="{Binding B02GroupUSlotQComboBox}" DisplayMemberPath="Content"/>
                                                                 </StackPanel>
-                                                                <StackPanel Margin="4,0,0,0">
+                                                                <StackPanel Margin="10,0,0,0">
                                                                     <CheckBox x:Name="B02GroupPreSetURepeat" Content="Continue" IsEnabled="{Binding B02GroupPreSetRepeatUIsEnabled}"/>
                                                                     <Button x:Name="B02GroupUButton" Style="{StaticResource ButtonStyle14B}"
                                                                         IsEnabled="{Binding B02GroupUButtonIsEnabled}" Click="OnB02GroupUButtonClick" Content="{Binding B02GroupUButton,  Mode=OneWay}"/>
                                                                 </StackPanel>
                                                             </StackPanel>
                                                         </GroupBox>
-                                                        <GroupBox Height="68" Width="130" VerticalAlignment="Top" BorderBrush="#FF404040">
+                                                        <GroupBox Height="75" Width="130" Margin="2,0" VerticalAlignment="Top" BorderBrush="#FF404040">
                                                             <GroupBox.Header>
                                                                 <Label Content="{Binding Group_Q, Source={StaticResource Resources}}"/>
                                                             </GroupBox.Header>
-                                                            <StackPanel Margin="5,-7,0,0">
+                                                            <StackPanel Margin="5,0,0,0">
                                                                 <CheckBox x:Name="B02GroupPreSetQRepeat" Content="Continue" IsEnabled="{Binding B02GroupPreSetRepeatQIsEnabled}"/>
                                                                 <Button x:Name="B02GroupQButton" Style="{StaticResource ButtonStyle14B}" HorizontalAlignment="Left"
                                                                     IsEnabled="{Binding B02GroupQButtonIsEnabled}" Click="OnB02GroupQButtonClick" Content="{Binding B02GroupQButton, Mode=OneWay}"/>
@@ -1131,10 +1132,10 @@
                                                     </StackPanel>
                                                 </StackPanel>
                                             </TabItem>
-                                            <TabItem x:Name="B02Item02">
-                                                <StackPanel  Orientation="Vertical" Background="#FFF7F7F7">
-                                                    <ListBox x:Name="B02Item02ListBox" ItemTemplate="{StaticResource ListBoxDataTemplate}" cla:AutoScrollBottom.ScrollOnNewItem ="{Binding B02ScrollViewerIsTextChanged}" 
-                                                                 PreviewMouseLeftButtonDown="OnB02Item02ListBoxMouseLeftButtonDown" Height="252" MaxHeight="238">
+                                            <TabItem x:Name="B02Item02" >
+                                                <StackPanel  Orientation="Vertical" Height="310" Background="#FFF7F7F7">
+                                                    <ListBox x:Name="B02Item02ListBox" ItemTemplate="{StaticResource ListBoxDataTemplate}" iclass:AutoScrollBottom.ScrollOnNewItem ="{Binding B02ScrollViewerIsTextChanged}" 
+                                                                 PreviewMouseLeftButtonDown="OnB02Item02ListBoxMouseLeftButtonDown" Margin="2" Height="274" MaxHeight="400">
                                                         <ListBox.Resources>
                                                             <Style x:Key="DeleteItemContextMenuStyle" TargetType="MenuItem">
                                                                 <EventSetter Event="Click" Handler="OnB02Item02ListBoxMenuItemDeleteRangeClick"/>
@@ -1152,13 +1153,13 @@
                                                             </Style>
                                                         </ListBox.ItemContainerStyle>
                                                         <interaction:Interaction.Behaviors>
-                                                            <cla:ItemsControlDragDropBehavior  ItemType="{x:Type cla:B02Item02Command}" DataTemplate="{StaticResource ListBoxDataTemplate}" />
+                                                            <iclass:ItemsControlDragDropBehavior  ItemType="{x:Type iclass:B02Item02Command}" DataTemplate="{StaticResource ListBoxDataTemplate}" />
                                                         </interaction:Interaction.Behaviors>
                                                     </ListBox>
                                                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                        <Button Style="{StaticResource ButtonStyle14B}" IsEnabled="{Binding B02Item02BtnOpenIsEnabled}" Click="OnB02Item02BtnOpenClick">Open</Button>
-                                                        <Button Style="{StaticResource ButtonStyle14B}" IsEnabled="{Binding B02Item02BtnSaveIsEnabled}" Click="OnB02Item02BtnSaveClick" Margin="2,0,0,0">Save</Button>
-                                                        <Button Style="{StaticResource ButtonStyle14B}" IsEnabled="{Binding B02Item02BtnIsEnabled}" Click="OnB02Item02BtnClick" Margin="192,0,0,0">Send</Button>
+                                                        <Button Style="{StaticResource ButtonStyle14B}" IsEnabled="{Binding B02Item02BtnOpenIsEnabled}" Click="OnB02Item02BtnOpenClick" Margin="2,2,0,0">Open</Button>
+                                                        <Button Style="{StaticResource ButtonStyle14B}" IsEnabled="{Binding B02Item02BtnSaveIsEnabled}" Click="OnB02Item02BtnSaveClick" Margin="4,2,0,0">Save</Button>
+                                                        <Button Style="{StaticResource ButtonStyle14B}" IsEnabled="{Binding B02Item02BtnIsEnabled}" Click="OnB02Item02BtnClick" Margin="233,2,0,0">Send</Button>
                                                         <!--
                                                         <Button Height="28" Width="100" IsEnabled="{Binding B02Item02BtnAddDynamIsEnabled}" Click="OnB02Item02AddDynamCommand">+Command</Button>
                                                         -->
@@ -1167,17 +1168,16 @@
                                             </TabItem>
                                         </TabControl>
                                     </StackPanel>
-                                    <GroupBox Grid.Column="1" x:Name="B02GroupMsg" Height="296" Width="580" HorizontalAlignment="Left" VerticalAlignment="Top" BorderBrush="#FF404040" Margin="2,-2,0,0">
+                                    <GroupBox Grid.Column="1" x:Name="B02GroupMsg" Height="344" MinWidth="580" HorizontalAlignment="Stretch" VerticalAlignment="Top" BorderBrush="#FF404040" BorderThickness="2" Margin="2,-4,0,0">
                                         <GroupBox.Header>
                                             <!--
                                             <Label Content="{Binding Group_Record_Info, Source={StaticResource Resources}}"></Label>
                                             -->
-                                            <CheckBox x:Name="B02GroupMsgLogCheckBox" FontStyle="Oblique" Content="{Binding Group_Record_Info, Source={StaticResource Resources}}"
+                                            <CheckBox x:Name="B02GroupMsgLogCheckBox" FontStyle="Oblique" Width="100" Content="{Binding Group_Record_Info, Source={StaticResource Resources}}"
                                                       Checked="OnB02CheckBoxGroupMsgLogChecked" IsChecked="{Binding B02GroupMsgLogCheckBoxIsChecked}">
-                                                
                                             </CheckBox>
                                         </GroupBox.Header>
-                                        <ListBox x:Name="B02ListBox" HorizontalAlignment="Left" VerticalAlignment="Top" Width="566" Height="272" Margin="0,1,0,0" FontFamily="Consolas" SelectionMode="Extended">
+                                        <ListBox x:Name="B02ListBox" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="3" FontFamily="Consolas" SelectionMode="Extended">
                                             <ListBox.Resources>
                                                 <Style x:Key="CopyItemMenuStyle" TargetType="MenuItem">
                                                     <EventSetter Event="Click" Handler="OnB02ListBoxMenuItemCopyClick"/>
@@ -1207,261 +1207,253 @@
                                 </Grid>
                             </StackPanel>
                         </Grid>
-                    </Border>
+                    </StackPanel>
                 </TabItem>
                 <TabItem >
-                    <Border x:Name="Border03" BorderBrush="#B0B0B0"  BorderThickness="1,0,1,0" Background="#FFF7F7F7" IsEnabled="{Binding B03IsEnabled}">
-                        <StackPanel Orientation="Horizontal">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="54"/>
-                                    <RowDefinition Height="82"/>
-                                    <RowDefinition Height="137"/>
-                                    <RowDefinition Height="95"/>
-                                    <RowDefinition Height="235"/>
-                                    <RowDefinition Height="30"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="650"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Row="0">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="550"/>
-                                            <ColumnDefinition Width="100"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0" Orientation="Vertical">
-                                            <Label>1&#160;&#160;&#160;&#160;&#160;獲取EM標籤(E280B04)</Label>
-                                            <TextBlock Margin="15,0">
-                                                <Span FontFamily="Consolas">
-                                                    1) Select command: &#160;&#160;&#160;<Span Foreground="DarkGreen">[TX] &lt;LF>T2,0,1A,E280B04&lt;CR></Span><LineBreak/>
-                                                    2) Multi(UR) command: <Span Foreground="DarkGreen">[TX] &lt;LF>U,R2,3,3&lt;CR></Span>
-                                                </Span>
-                                            </TextBlock>
-                                        </StackPanel>
-                                        <Button Grid.Column="1" Style="{StaticResource ButtonStyle14B}" VerticalAlignment="Bottom"
-                                        Click="OnB03GroupTagWindowButtonGetClick" 
-                                        Content="{Binding Group_TagWindow_Get, Source={StaticResource Resources}}" 
-                                        IsEnabled="{Binding B03GroupTagWindowButtonGetIsEnabled}"/>
-                                    </Grid>
-                                </StackPanel>
-                                <StackPanel Grid.Row="1">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="480"/>
-                                            <ColumnDefinition Width="170"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0" Orientation="Vertical">
-                                            <Label>2-1 依勾選標籤測試LED Flash</Label>
-                                            <TextBlock Name="B03GroupLEDFlash" Margin="15,0">
-                                                <Span FontFamily="Consolas">
-                                                    1) Select command:<LineBreak/>
-                                                    &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
-                                                    &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
-                                                    2) LED Flash Seconds: <LineBreak/>
-                                                    &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>Y1,1,E0{
-                                                        <Span FontStyle="Italic" Foreground="#FF236DC7">
-                                                            <Underline MouseMove="OnB03GroupLEDFlashMouseMove" MouseLeave="OnB03GroupLEDFlashMouseLeave">
-                                                                ZZ
-                                                            </Underline>
-                                                        </Span> }&lt;CR></Span>
-                                                    &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>Y{
-                                                        <Span FontStyle="Italic" Foreground="#FF236DC7">
-                                                            ZZ
-                                                        </Span> }&lt;CR>&lt;LF></Span>
-                                                    </Span>
-                                            </TextBlock>
-                                            <Popup Name="B03GroupB03GroupLEDFlashPop" IsOpen="False" PlacementTarget="{Binding ElementName=B03GroupLEDFlash}" 
-                                                Placement="MousePoint" HorizontalOffset="10" VerticalOffset="5">
-                                                <Border BorderBrush="DarkSalmon" BorderThickness="1" Background="OldLace">
-                                                    <StackPanel Orientation="Vertical">
-                                                        <TextBlock Margin="10" Width="350" TextWrapping="Wrap">
-                                                        <Span FontWeight="DemiBold" FontStyle="Italic">ZZ :&#160; 00 ~ FF</Span><LineBreak/>
-                                                            LED flash 0x00~0xFF seconds <LineBreak/><LineBreak/>
-                                                            If value of the received flash second telegrams same as transmission, 
-                                                            LED flash turn on/off once per second until { ZZ } seconds.
-                                                        </TextBlock>
-                                                    </StackPanel>
-                                                </Border>
-                                            </Popup>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                            <Label VerticalAlignment="Bottom">Flash時間:</Label>
-                                            <TextBox x:Name="B03GroupTagWindowTime" input:InputMethod.IsInputMethodEnabled="True"
-                                                Width="100" MaxLength="2" Style="{StaticResource TextBoxDefaultStyle}" VerticalAlignment="Bottom"
-                                                PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
-                                                LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
-                                                Text="{Binding B03GroupTagWindowTime, UpdateSourceTrigger=PropertyChanged}"/>
-                                        </StackPanel>
-                                    </Grid>
-
-
-                                </StackPanel>
-                                <StackPanel Grid.Row="2">
-                                    <Label>2-2 依勾選標籤測試Low Battery Alarm and Temperature &#128267;/&#8451;</Label>
-                                    <TextBlock Name="B03GroupLowBattAlarmandTemp" Margin="15,0">
-                                        <Span FontFamily="Consolas">
-                                            1) Select command: <LineBreak/>
-                                            &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
-                                            &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
-                                            2) Write 0x0000 start Tempature meansure:<LineBreak/>
-                                            &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>W3,100,1,0000&lt;CR></Span>
-                                            &#160;&#160;&#160;&#160;&#160;
-                                            &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>W&lt;OK>&lt;CR>&lt;LF></Span><LineBreak/>
-                                            3) Select command: <LineBreak/>
-                                            &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
-                                            &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
-                                            4) Read Low Battery Alarm and Temperature:<LineBreak/>
-                                            &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>R3,100,1&lt;CR></Span>
-                                            &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-                                            &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>R806F&lt;CR>&lt;LF></Span>
-                                            &#160;&#160;=>  
-                                            <Span FontStyle="Italic"  Foreground="#FF236DC7">
-                                                <Underline MouseMove="OnB03GroupLowBattAlarmandTempMouseMove" MouseLeave="OnB03GroupLowBattAlarmandTempMouseLeave">
-                                                    Low battery and 27.75 degree
-                                                </Underline> 
-                                            </Span>
-                                        </Span>
-                                    </TextBlock>
-                                    <Popup Name="B03GroupLowBattAlarmandTempPop" IsOpen="False" PlacementTarget="{Binding ElementName=B03GroupLowBattAlarmandTemp}" 
-                                        Placement="MousePoint" HorizontalOffset="10" VerticalOffset="5">
-                                        <Border BorderBrush="DarkSalmon" BorderThickness="1" Background="OldLace">
-                                            <StackPanel Orientation="Horizontal">
-                                                <StackPanel Orientation="Vertical">
-                                                    <TextBlock Margin="10" Width="350" TextWrapping="Wrap">
-                                                    <Span FontWeight="DemiBold">bit&lt;15>: Low Battery Alarm</Span> <LineBreak/>
-                                                    &#160;&#160;0: No problem, <LineBreak/>
-                                                    &#160;&#160;1: Low battery detected &lt; 2.2V<LineBreak/><LineBreak/>
-                                                    
-                                                    <Span FontWeight="DemiBold">bit&lt;8:0>: Tempature (2’s complement with LSB = 0.25°C)</Span><LineBreak/> 
-                                                    Min value = 100000001 = -63.75°C<LineBreak/>
-                                                    Mid value = 000000000 = 0.00°C<LineBreak/>
-                                                    Max value = 011111111 = +63.75°C
-                                                    </TextBlock>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Border>
-                                    </Popup>
-                                </StackPanel>
-                                <StackPanel Grid.Row="3">
-                                    <Label>2-3 依勾選標籤測試Battery Voltage &#128267;(mV)</Label>
-                                    <TextBlock Margin="15,0">
-                                        <Span FontFamily="Consolas">
-                                            1) Select command: <LineBreak/>
-                                            &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
-                                            &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
-                                            2) Read EM Battery Voltage command: <LineBreak/>
-                                            &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>Y1,2,E10000&lt;CR></Span>
-                                            &#160;&#160;&#160;&#160;&#160;&#160;&#160;
-                                            &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>YZZZZ&lt;CR></Span>
-                                            &#160;&#160;&#160;&#160;&#160;&#160;<Span FontStyle="Italic">=> Meansure Data Translate to <LineBreak/>
-                                            &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-                                            &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
-                                            Battery Voltage (mV) = 0x00100000/0xZZZZ</Span>
-                                        </Span>
-                                    </TextBlock>
-                                </StackPanel>
-                                <!--SelectedItem="{Binding B03ListViewTagWindowSelected, Mode=TwoWay}"-->
-                                <ListView Grid.Row="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,8,0,0" Height="224" Width="636" FontSize="13" FontFamily="Consolas"
-                                    ItemsSource="{Binding B03ListViewItemsSource}" SelectedItem="{Binding B03ListViewTagWindowSelected, Mode=TwoWay}">
-                                    <ListView.ItemContainerStyle>
-                                        <Style TargetType="ListViewItem">
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                            <!--
-                                        <EventSetter Event="PreviewMouseLeftButtonDown" Handler="B03ListViewTagWindowItemPreviewMouseLeftButtonDown" />
-                                        -->
-                                        </Style>
-                                    </ListView.ItemContainerStyle>
-                                    <ListView.View>
-                                        <GridView>
-                                            <GridViewColumn  Width="70">
-                                                <GridViewColumn.Header>
-                                                    <CheckBox Content="Check" FontSize="13" FontFamily="Consolas" Checked="OnB03GroupTagWindowChecked"  Unchecked="OnB03GroupTagWindowUnchecked" IsThreeState="False"/>
-                                                </GridViewColumn.Header>
-                                                <GridViewColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <CheckBox IsChecked="{Binding B03ListViewTagWindowSelCheck}"/>
-                                                    </DataTemplate>
-                                                </GridViewColumn.CellTemplate>
-                                            </GridViewColumn>
-                                            <GridViewColumn  Width="200" Header="EM TID(words: 3 ~ 5)">
-                                                <GridViewColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock Style="{StaticResource TextBlockStyle12B}" Text="{Binding B03ListViewTagWindowData}"/>
-                                                    </DataTemplate>
-                                                </GridViewColumn.CellTemplate>
-                                            </GridViewColumn>
-                                            <GridViewColumn HeaderTemplate="{StaticResource ListViewHeaderTemplate}" Width="60">
-                                                <GridViewColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Style="{StaticResource TextBlockStyle11}" Width="25" Text="{Binding B03ListViewTagWindowLightsTimes}"/>
-                                                            <CheckBox HorizontalAlignment="Right" Style="{StaticResource CheckBoxB03LightStyle}" IsChecked="{Binding B03ListViewTagWindowLights}"/>
-                                                        </StackPanel>
-                                                    </DataTemplate>
-                                                </GridViewColumn.CellTemplate>
-                                            </GridViewColumn>
-                                            <GridViewColumn Width="96" Header="Flash">
-                                                <GridViewColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <Button Click="OnB03ListViewItemLEDFlashClick" Style="{StaticResource ButtonStyle_ListViewItem}" Content="Flash"/>
-                                                    </DataTemplate>
-                                                </GridViewColumn.CellTemplate>
-                                            </GridViewColumn>
-                                            <GridViewColumn Width="102" Header="&#128267;/&#8451;">
-                                                <GridViewColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <Button Click="OnB03ListViewItemBattAlarmTempClick" Style="{StaticResource ButtonStyle_ListViewItem_NB}" Content="{Binding B03ListViewBattAlarmTemp}"/>
-                                                    </DataTemplate>
-                                                </GridViewColumn.CellTemplate>
-                                            </GridViewColumn>
-                                            <GridViewColumn Width="102" Header="&#128267;(mV)">
-                                                <GridViewColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <Button Click="OnB03ListViewItemBattVoltClick" Style="{StaticResource ButtonStyle_ListViewItem_NB}" Content="{Binding B03ListViewBattVolt}"/>
-                                                    </DataTemplate>
-                                                </GridViewColumn.CellTemplate>
-
-                                            </GridViewColumn>
-                                            <GridViewColumn Header="Status" HeaderTemplate="{StaticResource ListViewHeaderTemplate}" Width="100" DisplayMemberBinding="{Binding B03ListViewTagWindowStatus}"/>
-                                        </GridView>
-                                    </ListView.View>
-                                </ListView>
-                                <StackPanel Grid.Row="5" Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
-                                    <Label  Margin="0,0,15,0">Polling:</Label>
-                                    <Button x:Name="B03GroupTagWindowButtonRun" Style="{StaticResource ButtonStyle14B}" Margin="0,0,5,0"
-                                        Click="OnB03GroupTagWindowButtonLEDFlashClick" 
-                                        IsEnabled="{Binding B03GroupTagWindowButtonRunIsEnabled}">Flash</Button>
-                                    <Button Style="{StaticResource ButtonStyle14B}" Margin="0,0,5,0"
-                                        Click="OnB03GroupTagWindowButtonBattAlarmTempClick" 
-                                        IsEnabled="{Binding B03GroupTagWindowButtonBattAlarmTempIsEnabled}">&#128267;/&#8451;</Button>
-                                    <Button Style="{StaticResource ButtonStyle14B}" Margin="0,0,10,0" 
-                                        Click="OnB03GroupTagWindowButtonBattVoltClick" 
-                                        IsEnabled="{Binding B03GroupTagWindowButtonBattVoltIsEnabled}">&#128267;(V)</Button>
-                                </StackPanel>
-
-                            </Grid>
-                            <ListBox Margin="5,0,0,0" Height="628" Width="450" x:Name="B03ListBox" VerticalAlignment="Top"
-                                        BorderThickness="1" Background="Transparent" FontFamily="Consolas" SelectionMode="Extended">
-                                <ListBox.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Delete All" Click="OnB03ListBoxMenuItemDeleteAllClick"/>
-                                    </ContextMenu>
-                                </ListBox.ContextMenu>
-                            </ListBox>
-                        </StackPanel>
-                    </Border>
-                </TabItem>
-                <TabItem>
-                    <Border x:Name="Border04" BorderBrush="#B0B0B0"  BorderThickness="1,0,1,0" Background="#FFF7F7F7" IsEnabled="{Binding B04IsEnabled}">
+                    <StackPanel x:Name="Border03" Background="#FFF7F7F7" Orientation="Horizontal" IsEnabled="{Binding B03IsEnabled}">
                         <Grid>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="60"/>
+                                <RowDefinition Height="90"/>
+                                <RowDefinition Height="145"/>
+                                <RowDefinition Height="100"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="30"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="650"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Row="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="550"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Vertical">
+                                        <Label FontSize="14" FontWeight="UltraBold">1&#160;&#160;&#160;&#160;&#160;獲取EM標籤(E280B04)</Label>
+                                        <TextBlock Margin="15,0">
+                                            <Span FontFamily="Consolas">
+                                                1) Select command: &#160;&#160;&#160;<Span Foreground="DarkGreen">[TX] &lt;LF>T2,0,1A,E280B04&lt;CR></Span><LineBreak/>
+                                                2) Multi(UR) command: <Span Foreground="DarkGreen">[TX] &lt;LF>U,R2,3,3&lt;CR></Span>
+                                            </Span>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Style="{StaticResource ButtonStyle14B}" VerticalAlignment="Bottom"
+                                    Click="OnB03GroupTagWindowButtonGetClick" 
+                                    Content="{Binding Group_TagWindow_Get, Source={StaticResource Resources}}" 
+                                    IsEnabled="{Binding B03GroupTagWindowButtonGetIsEnabled}"/>
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="480"/>
+                                        <ColumnDefinition Width="170"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Vertical">
+                                        <Label FontSize="14" FontWeight="UltraBold">2-1 依勾選標籤測試LED Flash</Label>
+                                        <TextBlock Name="B03GroupLEDFlash" Margin="15,0">
+                                            <Span FontFamily="Consolas">
+                                                1) Select command:<LineBreak/>
+                                                &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
+                                                &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
+                                                2) LED Flash Seconds: <LineBreak/>
+                                                &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>Y1,1,E0{
+                                                    <Span FontStyle="Italic" Foreground="#FF236DC7">
+                                                        <Underline MouseMove="OnB03GroupLEDFlashMouseMove" MouseLeave="OnB03GroupLEDFlashMouseLeave">
+                                                            ZZ
+                                                        </Underline>
+                                                    </Span> }&lt;CR></Span>
+                                                &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>Y{
+                                                    <Span FontStyle="Italic" Foreground="#FF236DC7">
+                                                        ZZ
+                                                    </Span> }&lt;CR>&lt;LF></Span>
+                                                </Span>
+                                        </TextBlock>
+                                        <Popup Name="B03GroupB03GroupLEDFlashPop" IsOpen="False" PlacementTarget="{Binding ElementName=B03GroupLEDFlash}" 
+                                            Placement="MousePoint" HorizontalOffset="10" VerticalOffset="5">
+                                            <Border BorderBrush="DarkSalmon" BorderThickness="1" Background="OldLace">
+                                                <StackPanel Orientation="Vertical">
+                                                    <TextBlock Margin="10" Width="350" TextWrapping="Wrap">
+                                                    <Span FontWeight="DemiBold" FontStyle="Italic">ZZ :&#160; 00 ~ FF</Span><LineBreak/>
+                                                        LED flash 0x00~0xFF seconds <LineBreak/><LineBreak/>
+                                                        If value of the received flash second telegrams same as transmission, 
+                                                        LED flash turn on/off once per second until { ZZ } seconds.
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Label VerticalAlignment="Bottom">Flash時間:</Label>
+                                        <TextBox x:Name="B03GroupTagWindowTime" input:InputMethod.IsInputMethodEnabled="True"
+                                            Width="100" MaxLength="2" Style="{StaticResource TextBoxDefaultStyle}" VerticalAlignment="Bottom"
+                                            PreviewKeyDown="TextBoxPreviewKeyDownValidation" KeyUp="TextBoxKeyUpValidation" 
+                                            LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
+                                            Text="{Binding B03GroupTagWindowTime, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel Grid.Row="2">
+                                <Label FontSize="14" FontWeight="UltraBold">2-2 依勾選標籤測試Low Battery Alarm and Temperature &#128267;/&#8451;</Label>
+                                <TextBlock Name="B03GroupLowBattAlarmandTemp" Margin="15,0">
+                                    <Span FontFamily="Consolas">
+                                        1) Select command: <LineBreak/>
+                                        &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
+                                        &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
+                                        2) Write 0x0000 start Tempature meansure:<LineBreak/>
+                                        &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>W3,100,1,0000&lt;CR></Span>
+                                        &#160;&#160;&#160;&#160;&#160;
+                                        &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>W&lt;OK>&lt;CR>&lt;LF></Span><LineBreak/>
+                                        3) Select command: <LineBreak/>
+                                        &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
+                                        &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
+                                        4) Read Low Battery Alarm and Temperature:<LineBreak/>
+                                        &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>R3,100,1&lt;CR></Span>
+                                        &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                                        &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>R806F&lt;CR>&lt;LF></Span>
+                                        &#160;&#160;=>  
+                                        <Span FontStyle="Italic"  Foreground="#FF236DC7">
+                                            <Underline MouseMove="OnB03GroupLowBattAlarmandTempMouseMove" MouseLeave="OnB03GroupLowBattAlarmandTempMouseLeave">
+                                                Low battery and 27.75 degree
+                                            </Underline> 
+                                        </Span>
+                                    </Span>
+                                </TextBlock>
+                                <Popup Name="B03GroupLowBattAlarmandTempPop" IsOpen="False" PlacementTarget="{Binding ElementName=B03GroupLowBattAlarmandTemp}" 
+                                    Placement="MousePoint" HorizontalOffset="10" VerticalOffset="5">
+                                    <Border BorderBrush="DarkSalmon" BorderThickness="1" Background="OldLace">
+                                        <StackPanel Orientation="Horizontal">
+                                            <StackPanel Orientation="Vertical">
+                                                <TextBlock Margin="10" Width="350" TextWrapping="Wrap">
+                                                <Span FontWeight="DemiBold">bit&lt;15>: Low Battery Alarm</Span> <LineBreak/>
+                                                &#160;&#160;0: No problem, <LineBreak/>
+                                                &#160;&#160;1: Low battery detected &lt; 2.2V<LineBreak/><LineBreak/>
+                                                    
+                                                <Span FontWeight="DemiBold">bit&lt;8:0>: Tempature (2’s complement with LSB = 0.25°C)</Span><LineBreak/> 
+                                                Min value = 100000001 = -63.75°C<LineBreak/>
+                                                Mid value = 000000000 = 0.00°C<LineBreak/>
+                                                Max value = 011111111 = +63.75°C
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                            </StackPanel>
+                            <StackPanel Grid.Row="3">
+                                <Label FontSize="14" FontWeight="UltraBold">2-3 依勾選標籤測試Battery Voltage &#128267;(mV)</Label>
+                                <TextBlock Margin="15,0">
+                                    <Span FontFamily="Consolas">
+                                        1) Select command: <LineBreak/>
+                                        &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>T2,30,30,{ EM TID }&lt;CR></Span>
+                                        &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>T&lt;CR>&lt;LF></Span><LineBreak/>
+                                        2) Read EM Battery Voltage command: <LineBreak/>
+                                        &#160;&#160;[TX] <Span Foreground="DarkGreen">&lt;LF>Y1,2,E10000&lt;CR></Span>
+                                        &#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                                        &#160;&#160;[RX] <Span Foreground="Maroon">&lt;LF>YZZZZ&lt;CR></Span>
+                                        &#160;&#160;&#160;&#160;&#160;&#160;<Span FontStyle="Italic">=> Meansure Data Translate to <LineBreak/>
+                                        &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                                        &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;
+                                        Battery Voltage (mV) = 0x00100000/0xZZZZ</Span>
+                                    </Span>
+                                </TextBlock>
+                            </StackPanel>
+                            <!--SelectedItem="{Binding B03ListViewTagWindowSelected, Mode=TwoWay}"-->
+                            <ListView Grid.Row="4" x:Name="B03EMListView" VerticalAlignment="Stretch" Margin="5" MinHeight="300" Width="636" FontSize="13" FontFamily="Consolas"
+                                ItemsSource="{Binding B03ListViewItemsSource}" SelectedItem="{Binding B03ListViewTagWindowSelected, Mode=TwoWay}" BorderBrush="#FF606060" BorderThickness="2">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn  Width="70">
+                                            <GridViewColumn.Header>
+                                                <CheckBox Content="Check" FontSize="13" FontFamily="Consolas" Checked="OnB03GroupTagWindowChecked"  Unchecked="OnB03GroupTagWindowUnchecked" IsThreeState="False"/>
+                                            </GridViewColumn.Header>
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding B03ListViewTagWindowSelCheck}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn  Width="200" Header="EM TID(words: 3 ~ 5)">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Style="{StaticResource TextBlockStyle12B}" Text="{Binding B03ListViewTagWindowData}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn HeaderTemplate="{StaticResource ListViewHeaderTemplate}" Width="60">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Style="{StaticResource TextBlockStyle11}" Width="25" Text="{Binding B03ListViewTagWindowLightsTimes}"/>
+                                                        <CheckBox HorizontalAlignment="Right" Style="{StaticResource CheckBoxB03LightStyle}" IsChecked="{Binding B03ListViewTagWindowLights}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Width="96" Header="Flash">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Click="OnB03ListViewItemLEDFlashClick" Style="{StaticResource ButtonStyle_ListViewItem}" Content="Flash"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Width="102" Header="&#128267;/&#8451;">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Click="OnB03ListViewItemBattAlarmTempClick" Style="{StaticResource ButtonStyle_ListViewItem_NB}" Content="{Binding B03ListViewBattAlarmTemp}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Width="102" Header="&#128267;(mV)">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Click="OnB03ListViewItemBattVoltClick" Style="{StaticResource ButtonStyle_ListViewItem_NB}" Content="{Binding B03ListViewBattVolt}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Status" HeaderTemplate="{StaticResource ListViewHeaderTemplate}" Width="100" DisplayMemberBinding="{Binding B03ListViewTagWindowStatus}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                            <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Label  Margin="0,0,15,0">Polling:</Label>
+                                <Button x:Name="B03GroupTagWindowButtonRun" Style="{StaticResource ButtonStyle14B}" Margin="0,0,5,0"
+                                    Click="OnB03GroupTagWindowButtonLEDFlashClick" 
+                                    IsEnabled="{Binding B03GroupTagWindowButtonRunIsEnabled}">Flash</Button>
+                                <Button Style="{StaticResource ButtonStyle14B}" Margin="0,0,5,0"
+                                    Click="OnB03GroupTagWindowButtonBattAlarmTempClick" 
+                                    IsEnabled="{Binding B03GroupTagWindowButtonBattAlarmTempIsEnabled}">&#128267;/&#8451;</Button>
+                                <Button Style="{StaticResource ButtonStyle14B}" Margin="0,0,8,0" 
+                                    Click="OnB03GroupTagWindowButtonBattVoltClick" 
+                                    IsEnabled="{Binding B03GroupTagWindowButtonBattVoltIsEnabled}">&#128267;(V)</Button>
+                            </StackPanel>
+                        </Grid>
+                        <ListBox x:Name="B03ListBox" Margin="10,2" MinHeight="628" MinWidth="450" VerticalAlignment="Stretch" BorderBrush="#FF606060" BorderThickness="2"
+                                Background="Transparent" FontFamily="Consolas" SelectionMode="Extended">
+                            <ListBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Delete All" Click="OnB03ListBoxMenuItemDeleteAllClick"/>
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                        </ListBox>
+                    </StackPanel>
+                </TabItem>
+                <TabItem>
+                    <StackPanel x:Name="Border04" Background="#FFF7F7F7" IsEnabled="{Binding B04IsEnabled}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="100"></RowDefinition>
                                 <RowDefinition Height="90"></RowDefinition>
-                                <RowDefinition Height="70"></RowDefinition>
                                 <RowDefinition Height="*"></RowDefinition>
                                 <RowDefinition Height="30"></RowDefinition>
                             </Grid.RowDefinitions>
-                            <GroupBox Grid.Row="0" x:Name="B04GroupAntennaCtrl" Height="90" Width="1090" Margin="5,0,0,0" BorderBrush="#FF404040" HorizontalAlignment="Left"
+                            <GroupBox Grid.Row="0" x:Name="B04GroupAntennaCtrl" Height="90" MinWidth="1090" Margin="3" BorderBrush="#FF404040" BorderThickness="2" HorizontalAlignment="Stretch"
                                 IsEnabled="{Binding B04GroupAntennaCtrlIsEnabled}">
                                 <StackPanel Orientation="Vertical">
                                     <StackPanel  Orientation="Horizontal">
@@ -1545,29 +1537,35 @@
                                     </StackPanel>
                                 </StackPanel>
                             </GroupBox>
-                            <StackPanel Grid.Row="1" Orientation="Horizontal">
-                                <GroupBox x:Name="B04GroupReadCtrl" Height="68" Width="400" Margin="5,-5,0,0" BorderBrush="#FF404040"
-                                            IsEnabled="{Binding B04GroupReadCtrlIsEnabled}">
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="420"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <GroupBox Grid.Column="0" x:Name="B04GroupReadCtrl" 
+                                          Height="86" Width="400" Margin="3" BorderBrush="#FF404040" BorderThickness="2" HorizontalAlignment="Left"
+                                          IsEnabled="{Binding B04GroupReadCtrlIsEnabled}">
                                     <GroupBox.Header>
                                         <StackPanel Orientation="Horizontal">
                                             <CheckBox Margin="0,6,0,0" IsChecked="{Binding B04GroupReadCtrlCheckBoxIsChecked}"/>
                                             <Label Margin="-3,0,0,0" Content="{Binding Group_ReadCtrl, Source={StaticResource Resources}}"/>
                                         </StackPanel>
                                     </GroupBox.Header>
-                                    <Grid Margin="0,-4,0,0">
+                                    <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="70"/>
                                             <ColumnDefinition Width="74"/>
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
-                                            <RowDefinition/>
+                                            <RowDefinition Height="20"/>
                                             <RowDefinition Height="26"/>
                                         </Grid.RowDefinitions>
                                         <TextBlock Grid.Row="0" Grid.Column="0" Margin="5,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Bank, Source={StaticResource Resources}}"/>
                                         <TextBlock Grid.Row="0" Grid.Column="1" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Address, Source={StaticResource Resources}}"/>
                                         <TextBlock Grid.Row="0" Grid.Column="2" Margin="2,0,0,0" Style="{StaticResource TextBlockStyle11}" Text="{Binding Group_ReadWrite_Length, Source={StaticResource Resources}}"/>
-                                        <ComboBox Grid.Row="1" Grid.Column="0" Margin="3,0,0,0" Width="108" Style="{StaticResource ComboBoxStyle}" 
+                                        <ComboBox Grid.Row="1" Grid.Column="0" Margin="3,0,0,0" Width="108" Style="{StaticResource ComboBoxStyle}" HorizontalAlignment="Left"
                                             ItemsSource="{Binding MemBank}" SelectedItem="{Binding B04GroupPreSetReadMemBank}" SelectedIndex="{Binding B04GroupPreSetReadMemBankIndex}" DisplayMemberPath="Content"
                                             DropDownClosed="OnB04GroupPreSetReadMemBankDownClosed" />
                                         <TextBox  x:Name="B04GroupPreSetReadAddress" input:InputMethod.IsInputMethodEnabled="True" 
@@ -1582,17 +1580,17 @@
                                             Text="{Binding B04GroupPreSetReadLength, UpdateSourceTrigger=PropertyChanged}"/>
                                     </Grid>
                                 </GroupBox>
-                                <GroupBox x:Name="B04GroupSlotQ" Height="68" Width="120" Margin="3,-5,0,0" BorderBrush="#FF404040" IsEnabled="{Binding B04GroupUSlotQIsEnabled}">
+                                <GroupBox Grid.Column="1" x:Name="B04GroupSlotQ" Height="86" Width="120" Margin="3" BorderBrush="#FF404040" BorderThickness="2" IsEnabled="{Binding B04GroupUSlotQIsEnabled}">
                                     <GroupBox.Header>
                                         <StackPanel Orientation="Horizontal">
                                             <CheckBox Margin="0,6,0,0" IsChecked="{Binding B04GroupUSlotQCheckBoxIsChecked}"/>
                                             <Label Margin="-3,0,0,0" Content="{Binding Group_U_SlotQ1, Source={StaticResource Resources}}"/>
                                         </StackPanel>
                                     </GroupBox.Header>
-                                    <ComboBox Width="80" Style="{StaticResource ComboBoxStyle}" HorizontalAlignment="Left"
+                                    <ComboBox Width="90" Style="{StaticResource ComboBoxStyle}" HorizontalAlignment="Center"
                                         ItemsSource="{Binding SlotQ}" SelectedItem="{Binding B04GroupUSlotQComboBox}" DisplayMemberPath="Content"/>
                                 </GroupBox>
-                                <StackPanel Orientation="Vertical" Margin="200,5,10,0">
+                                <StackPanel Grid.Column="2" Orientation="Vertical" HorizontalAlignment="Right">
                                     <StackPanel Orientation="Horizontal" >
                                         <Label Content="{Binding B04AntennaRepeatExecutionInterval, Source={StaticResource Resources}}" VerticalAlignment="Center" HorizontalContentAlignment="Right" Margin="5,0,5,0" Width="185"></Label>
                                         <TextBox x:Name="B04AntennaLoopDelayTime" input:InputMethod.IsInputMethodEnabled="True"
@@ -1614,9 +1612,9 @@
 
                                     <Button x:Name="B04AntennaRunButton" Style="{StaticResource ButtonStyle14B}" VerticalAlignment="Bottom" Click="OnB04AntennaRunClick" Content="{Binding B04AntennaRun, Source={StaticResource Resources}}" Margin="267,10,10,0"/>
                                 </StackPanel>
-                            </StackPanel>
-                            <ListView Grid.Row="2" Margin="5,-1,0,0" Height="445" Width="1090" FontSize="13" FontFamily="Consolas" HorizontalAlignment="Left"
-                                        ItemsSource="{Binding B04ListViewItemsSource}">
+                            </Grid>
+                            <ListView Grid.Row="2" x:Name="B04Listview" Margin="5" Height="445" MinWidth="1090" FontSize="13" FontFamily="Consolas" 
+                                      HorizontalAlignment="Stretch" BorderThickness="2" BorderBrush="#FF404040" ItemsSource="{Binding B04ListViewItemsSource}">
                                 <ListView.View>
                                     <GridView>
                                         <GridViewColumn Header="Tag" HeaderContainerStyle="{ StaticResource GridViewColumnHeaderStyle}" Width="600">
@@ -1661,82 +1659,96 @@
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
                                         </GridViewColumn>
-                                        <cla:GridViewColumnResize Header="A6" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA6Visibility}">
+                                        <iclass:GridViewColumnResize Header="A6" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA6Visibility}">
                                             <GridViewColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding A6RR}" HorizontalAlignment="Center"/>
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
-                                        </cla:GridViewColumnResize>
-                                        <cla:GridViewColumnResize Header="A7" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA7Visibility}">
+                                        </iclass:GridViewColumnResize>
+                                        <iclass:GridViewColumnResize Header="A7" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA7Visibility}">
                                             <GridViewColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding A7RR}" HorizontalAlignment="Center"/>
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
-                                        </cla:GridViewColumnResize>
-                                        <cla:GridViewColumnResize Header="A8" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA8Visibility}">
+                                        </iclass:GridViewColumnResize>
+                                        <iclass:GridViewColumnResize Header="A8" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA8Visibility}">
                                             <GridViewColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding A8RR}" HorizontalAlignment="Center"/>
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
-                                        </cla:GridViewColumnResize>
+                                        </iclass:GridViewColumnResize>
                                     </GridView>
                                 </ListView.View>
                             </ListView>
-                            <StackPanel Grid.Row="3" Orientation="Horizontal">
-                                <TextBlock Style="{StaticResource TextBlockStyle12}" Margin="5,0,0,0" Width="75" Text="{Binding B04TagCountTitle, Source={StaticResource Resources}}"/>
-                                <TextBlock Style="{StaticResource TextBlockStyle12}" Width="100" FontSize="14" Text="{Binding B04TagCount, UpdateSourceTrigger=PropertyChanged}"/>
-                                <TextBlock Style="{StaticResource TextBlockStyle12}" Margin="5,0,0,0" Width="80" Text="{Binding B04TagReadCountTitle, Source={StaticResource Resources}}"/>
-                                <TextBlock Style="{StaticResource TextBlockStyle12}" Width="100" FontSize="14" Text="{Binding B04TagReadCount, UpdateSourceTrigger=PropertyChanged}"/>
-                                <Label Content="Log:" VerticalAlignment="Center" Margin="403,0,0,0"></Label>
-                                <CheckBox x:Name="B04AntennaRawLogCheckBox" IsChecked="{Binding B04AntennaRawLogCheckBoxIsChecked}" Checked="OnB04CheckBoxRawLogChecked" VerticalAlignment="Center" Margin="5,0,0,0">Raw</CheckBox>
-                                <CheckBox x:Name="B04AntennaSingleSummaryLogCheckBox" IsChecked="{Binding B04AntennaFragmentSummaryLogCheckBoxIsChecked}" Checked="OnB04CheckBoxFragmentSummaryLogChecked" VerticalAlignment="Center" Margin="5,0,0,0">Fragment summary</CheckBox>
-                                <Button x:Name="B04AntennaRunLogButton" Style="{StaticResource ButtonStyle14B}" VerticalAlignment="Center" Margin="9,0,0,0" Click="OnB04AntennaRunLogClick">Log</Button>
-                            </StackPanel>
+                            <Grid Grid.Row="3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource TextBlockStyle12}" Margin="5,0,0,0" Width="75" Text="{Binding B04TagCountTitle, Source={StaticResource Resources}}"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource TextBlockStyle12}" Width="100" FontSize="14" Text="{Binding B04TagCount, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Grid.Column="2" Style="{StaticResource TextBlockStyle12}" Margin="5,0,0,0" Width="80" Text="{Binding B04TagReadCountTitle, Source={StaticResource Resources}}"/>
+                                <TextBlock Grid.Column="3" Style="{StaticResource TextBlockStyle12}" Width="100" FontSize="14" Text="{Binding B04TagReadCount, UpdateSourceTrigger=PropertyChanged}"/>
+                                <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Label Content="Log:" VerticalAlignment="Center"></Label>
+                                    <CheckBox x:Name="B04AntennaRawLogCheckBox" IsChecked="{Binding B04AntennaRawLogCheckBoxIsChecked}" Checked="OnB04CheckBoxRawLogChecked" VerticalAlignment="Center" Margin="2,0,5,0">Raw</CheckBox>
+                                    <CheckBox x:Name="B04AntennaSingleSummaryLogCheckBox" IsChecked="{Binding B04AntennaFragmentSummaryLogCheckBoxIsChecked}" Checked="OnB04CheckBoxFragmentSummaryLogChecked" VerticalAlignment="Center" Margin="5,0,5,0">Fragment summary</CheckBox>
+                                    <Button x:Name="B04AntennaRunLogButton" Style="{StaticResource ButtonStyle14B}" VerticalAlignment="Center" Margin="9,0,5,0" Click="OnB04AntennaRunLogClick">Log</Button>
+                                </StackPanel>
+                            </Grid>
                         </Grid>
-                    </Border>
+                    </StackPanel>
                 </TabItem>
             </TabControl>
         </Grid>
-        <Border Grid.Row="2" BorderBrush="#B0B0B0" BorderThickness="1,0,1,1" Background="Gainsboro" Grid.ColumnSpan="2">
-            <StackPanel DockPanel.Dock="Bottom" Background="#808080">
+        <Border Grid.Row="2" BorderBrush="#B0B0B0" BorderThickness="1,0,1,1">
+            <StackPanel DockPanel.Dock="Bottom" Background="LightGray">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="550"/>
-                        <ColumnDefinition Width="30"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="30"/>
-                        <ColumnDefinition Width="85"/>
-                        <ColumnDefinition Width="50"/>
-                        <ColumnDefinition Width="185"/>
-                        <ColumnDefinition Width="30"/>
+                        <ColumnDefinition Width="*"/>
+                        
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-
                     <TextBlock Grid.Column="0" Style="{StaticResource TextBlockStyle12B}" Margin="5,0,0,0" Width="530" HorizontalAlignment="Left"
                                 TextWrapping="Wrap" TextAlignment="Left" TextTrimming="CharacterEllipsis"  
                                 Text="{Binding BorderLabelMessage, UpdateSourceTrigger=PropertyChanged}"
                                 Foreground="{Binding Path=BorderLabelMessageForegroud}"/>
-                    <TextBlock Grid.Column="1" Style="{StaticResource TextBlockStyle12B}" TextAlignment="Right" Text="{Binding Group_Msg_Ver, Source={StaticResource Resources}}"/>
-                    <TextBlock Grid.Column="2" Style="{StaticResource TextBlockStyle12}" Width="140" Margin="3,0" Text="{Binding BorderFirmwareVersion, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Grid.Column="3" Style="{StaticResource TextBlockStyle12B}" TextAlignment="Right" Text="{Binding Group_Msg_ID, Source={StaticResource Resources}}"/>
-                    <TextBlock Grid.Column="4" Style="{StaticResource TextBlockStyle12}" Width="80" Margin="3,0" Text="{Binding BorderTBReaderID, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Grid.Column="5" Style="{StaticResource TextBlockStyle12B}" TextAlignment="Right" Text="{Binding Group_Msg_Status, Source={StaticResource Resources}}"/>
-                    <TextBlock Grid.Column="6" Style="{StaticResource TextBlockStyle12}" Width="180" Margin="3,0" HorizontalAlignment="Left" Text="{Binding BorderTextBlockStatus, UpdateSourceTrigger=PropertyChanged}" TextWrapping="WrapWithOverflow"/>
-                    <CheckBox Grid.Column="7" Tag="{Binding BorderCheckBoxStatusTag}" Style="{StaticResource CheckBoxLightStyle}" IsEnabled="{Binding BorderCheckBoxStatusIsEnabled}">
-                        <CheckBox.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="{Binding Disconnect, Source={StaticResource Resources}}" Click="OnCloseConnectClick"/>
-                                <Separator/>
-                                <MenuItem Header="{Binding Connect, Source={StaticResource Resources}}" Click="OnOpenConnectClick"/>
-                            </ContextMenu>
-                        </CheckBox.ContextMenu>
-                    </CheckBox>
+                    <StackPanel Grid.Column="1">
+                        <Grid HorizontalAlignment="Right">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="35"/>
+                                <ColumnDefinition Width="145"/>
+                                <ColumnDefinition Width="35"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="190"/>
+                                <ColumnDefinition Width="35"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource TextBlockStyle12B}" TextAlignment="Right" Text="{Binding Group_Msg_Ver, Source={StaticResource Resources}}"/>
+                            <TextBlock Grid.Column="1" Style="{StaticResource TextBlockStyle12}" Width="141" Text="{Binding BorderFirmwareVersion, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Column="2" Style="{StaticResource TextBlockStyle12B}" TextAlignment="Right" Text="{Binding Group_Msg_ID, Source={StaticResource Resources}}"/>
+                            <TextBlock Grid.Column="3" Style="{StaticResource TextBlockStyle12}" Width="86" Text="{Binding BorderTBReaderID, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Column="4" Style="{StaticResource TextBlockStyle12B}" TextAlignment="Right" Text="{Binding Group_Msg_Status, Source={StaticResource Resources}}"/>
+                            <TextBlock Grid.Column="5" Style="{StaticResource TextBlockStyle12}" Width="186" HorizontalAlignment="Left" Text="{Binding BorderTextBlockStatus, UpdateSourceTrigger=PropertyChanged}" TextWrapping="WrapWithOverflow"/>
+                            <CheckBox Grid.Column="6" Tag="{Binding BorderCheckBoxStatusTag}" Style="{StaticResource CheckBoxLightStyle}" IsEnabled="{Binding BorderCheckBoxStatusIsEnabled}">
+                                <CheckBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{Binding Disconnect, Source={StaticResource Resources}}" Click="OnCloseConnectClick"/>
+                                        <Separator/>
+                                        <MenuItem Header="{Binding Connect, Source={StaticResource Resources}}" Click="OnOpenConnectClick"/>
+                                    </ContextMenu>
+                                </CheckBox.ContextMenu>
+                            </CheckBox>
+                        </Grid>
+                        
+                    </StackPanel>
+                    
                 </Grid>
             </StackPanel>
         </Border>

@@ -37,6 +37,7 @@ using System.Net.Sockets;
 using System.Xml.XPath;
 using System.Reflection;
 using RFID.Service.IInterface.BLE.Events;
+using System.Windows.Interop;
 
 namespace RFID.Utility
 {
@@ -208,6 +209,8 @@ namespace RFID.Utility
         {
 			InitializeComponent();
 
+            Loaded += InitWindowActualHeight_OnLoaded;
+
             stringManager =
             new ResourceManager("en-US", Assembly.GetExecutingAssembly());
 
@@ -307,7 +310,61 @@ namespace RFID.Utility
 
 
 
-        #region === #Interface Function ===
+        #region === #Interface Function ===]
+        private void InitWindowActualHeight_OnLoaded(object sender, RoutedEventArgs e)
+        {             
+            Loaded -= InitWindowActualHeight_OnLoaded;
+            InitWindowActualHeight();
+            InitWindowActualWidth();
+        }
+
+        const double DpiPercent = 96;
+        private double GetScreenHeight()
+        {
+            var intPtr = new WindowInteropHelper(this).Handle;
+            var screen = System.Windows.Forms.Screen.FromHandle(intPtr);
+ 
+            double height = 0;         
+            using (System.Drawing.Graphics currentGraphics = System.Drawing.Graphics.FromHwnd(intPtr))
+            {
+                double dpiXRatio = currentGraphics.DpiX / DpiPercent;
+                double dpiYRatio = currentGraphics.DpiY / DpiPercent;
+                height = screen.WorkingArea.Height / dpiYRatio;
+            }
+            return height;
+        }
+
+        private double GetScreenWidth()
+        {
+            var intPtr = new WindowInteropHelper(this).Handle;
+            var screen = System.Windows.Forms.Screen.FromHandle(intPtr);
+
+            double width = 0;
+            using (System.Drawing.Graphics currentGraphics = System.Drawing.Graphics.FromHwnd(intPtr))
+            {
+                double dpiXRatio = currentGraphics.DpiX / DpiPercent;
+                double dpiYRatio = currentGraphics.DpiY / DpiPercent;
+                width = screen.WorkingArea.Width / dpiXRatio;
+            }
+            return width;
+        }
+
+        private void InitWindowActualHeight()
+        {
+            var visibleAreaHeight = GetScreenHeight();
+            B01GroupMsg.Height = visibleAreaHeight - 42;
+            B02ListViewStatisticsMsg.Height = visibleAreaHeight - 465;
+            B03EMListView.Height = visibleAreaHeight - 480;
+            B04Listview.Height = visibleAreaHeight - 270;
+        }
+
+        private void InitWindowActualWidth()
+        {
+            var visibleAreaWidth = GetScreenWidth();
+            B03ListBox.Width = visibleAreaWidth - 672;
+
+        }
+
         /// <summary>
         /// item enable or disable
         /// </summary>
@@ -4460,6 +4517,9 @@ namespace RFID.Utility
                         {
                             number++;
                             VM.B02ListViewItemsSource[j].B02Count = number.ToString(CultureInfo.CurrentCulture);
+                            /**
+                            * auto receive mode need check run count value
+                            **/
                             if (this.B02ListViewRunCount == 0)
                                 VM.B02ListViewItemsSource[j].B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / 1));
                             else
@@ -4469,14 +4529,6 @@ namespace RFID.Utility
                         }
                         else
                             bCompare = false;
-
-
-                        /*if (B02ListViewRunCount > 0)
-                            VM.B02ListViewItemsSource[j].B02Percentage = 
-                                String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / this.B02ListViewRunCount));
-
-                        if (bCompare) break;*/
-                            
                     }
                 }
 
@@ -4485,6 +4537,10 @@ namespace RFID.Utility
                 {
                     newBank.B02Count = "1";
                     number = Convert.ToInt32(newBank.B02Count, CultureInfo.CurrentCulture);
+
+                    /**
+                     * auto receive mode need check run count value
+                    **/
                     if (this.B02ListViewRunCount == 0)
                         newBank.B02Percentage = String.Format(CultureInfo.CurrentCulture, "{0}%", (Int32)(number * 100 / 1));
                     else
@@ -4702,7 +4758,7 @@ namespace RFID.Utility
                                 {
                                     this.B02GroupUButton.Content = (this.Culture.IetfLanguageTag == "en-US") ? "Multi(U)" : "讀取(U)";
                                 }));*/
-                                MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
+                    MessageShow((this.Culture.IetfLanguageTag == "en-US") ?
                                     "Multi(U) command timeout(the last reception command interval is more than 3 seconds) and break process." :
                                     "U指令超時(最後接收的U指令起，間隔超過3秒)，執行中斷。", true);
                                 IsReceiveDataWork = false;
@@ -6744,7 +6800,7 @@ namespace RFID.Utility
                 DefaultExt = ".xml",
                 Filter = "Xml documents (.xml)|*.xml"
             };
-            var _result = _openFileDialog.ShowDialog();
+            var _result = _openFileDialog.ShowDialog(this);
             if (_result == true)
             {
                 B02Item02Commands.Clear();
@@ -6754,8 +6810,10 @@ namespace RFID.Utility
 
                 var _section = this.ProfileXml.GetSectionNames();
 
-                if (_section != null) {
-                    for (int i = 0; i < _section.Length; i++) {
+                if (_section != null)
+                {
+                    for (int i = 0; i < _section.Length; i++)
+                    {
                         var _check = ProfileXml.GetValue(_section[i], "CHECK", "true");
                         var _type = ProfileXml.GetValue(_section[i], "TYPE", "false");
                         var _name = ProfileXml.GetValue(_section[i], "NAME", "");
@@ -6774,14 +6832,19 @@ namespace RFID.Utility
                     }
                     B02Item02Commands.Add(new B02Item02Command());
                 }
-                else {
+                else
+                {
                     B02Item02Commands.Add(new B02Item02Command());
                 }
 
                 ProfileXmlName = System.IO.Path.GetFileName(_openFileDialog.FileName);
 
 
-                
+
+            }
+            else {
+                _openFileDialog.Reset();
+                _openFileDialog = null;
             }
             
         }
