@@ -11,7 +11,7 @@ using System.Windows;
 [assembly: AssemblyDescription("UHF Reader Utility")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("FAVEPC Inc.")]
-[assembly: AssemblyProduct("ReaderUtility V4.1.2")]
+[assembly: AssemblyProduct("ReaderUtility V4.1.3")]
 [assembly: AssemblyCopyright("Copyright © 2013 FAVEPC")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

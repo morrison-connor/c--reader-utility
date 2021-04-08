@@ -7,7 +7,6 @@
         Title="Connect"  ResizeMode="NoResize" WindowStyle="None" mc:Ignorable="d" 
         d:DesignHeight="234" d:DesignWidth="440" SizeToContent="WidthAndHeight" Topmost="False">
     <Window.Resources>
-        
         <Style TargetType="{x:Type TabItem}">
             <Setter Property="Background" Value="White" />
             <Setter Property="FontFamily" Value="微軟正黑體"/>
@@ -73,7 +72,7 @@
             <Grid Margin="2">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <TextBlock Style="{StaticResource TextBlockStyle16B}" Foreground="WhiteSmoke">Reader Search</TextBlock>
-                    <TextBlock Style="{StaticResource TextBlockStyle12B}" Margin="5,15,0,0" Foreground="WhiteSmoke">v4.1.2</TextBlock>
+                    <TextBlock Style="{StaticResource TextBlockStyle12B}" Margin="5,15,0,0" Foreground="WhiteSmoke">v4.1.3</TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="ConnectDialogClose" Content="{StaticResource IMG_Close}" Width="28" Height="28" Click="OnConnectDialogCloseClick" VerticalContentAlignment="Center"/>
