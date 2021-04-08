@@ -72,7 +72,6 @@ namespace RFID.Utility
 
             B04GPIOPINS,
             B04ANTENNA01, B04ANTENNA02, B04ANTENNA03, B04ANTENNA04,
-            B04ANTENNA05, B04ANTENNA06, B04ANTENNA07, B04ANTENNA08,
         };
 
         /// <summary>
@@ -173,7 +172,6 @@ namespace RFID.Utility
         private Boolean                         IsB04AntennaSetPinWork = false; 
         private Boolean                         IsB04ChangeAndRun = false;// false to deal with antenna change, otherwise is antenna test run
         private Boolean                         IsB04RepeatRunEnd = false;
-        private Int32                           B04AntennaType = 1; //1:Antenna5, 2:Antenna8
         private Byte                            B04AntennaTempData = 0x0;
         private Int32                           B04AntennaDelayTimes = 0;
         private Int32                           B04AntennaDelayTimesIdx = 0;
@@ -855,10 +853,6 @@ namespace RFID.Utility
                 case CommandStatus.B04ANTENNA02:
                 case CommandStatus.B04ANTENNA03:
                 case CommandStatus.B04ANTENNA04:
-                case CommandStatus.B04ANTENNA05:
-                case CommandStatus.B04ANTENNA06:
-                case CommandStatus.B04ANTENNA07:
-                case CommandStatus.B04ANTENNA08:
                     B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "[RX]{0}", Format.ShowCRLF(s_crlf)));
                     B04DisplayStatisticsMsg(Format.RemoveCRLFandTarget(s_crlf, 'U'));
                     IsReceiveSubDataWork = true;
@@ -8563,30 +8557,6 @@ namespace RFID.Utility
                                     VM.B04ListViewItemsSource[j].A4Count = number.ToString(CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A4RR = VM.B04ListViewItemsSource[j].A4Count;
                                     break;
-                                case CommandStatus.B04ANTENNA05:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A5Count) ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A5Count, CultureInfo.CurrentCulture) + 1;
-                                    VM.B04ListViewItemsSource[j].A5Count = number.ToString(CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A5RR = VM.B04ListViewItemsSource[j].A5Count;
-                                    break;
-                                case CommandStatus.B04ANTENNA06:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A6Count) ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A6Count, CultureInfo.CurrentCulture) + 1;
-                                    VM.B04ListViewItemsSource[j].A6Count = number.ToString(CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A6RR = VM.B04ListViewItemsSource[j].A6Count;
-                                    break;
-                                case CommandStatus.B04ANTENNA07:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A7Count) ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A7Count, CultureInfo.CurrentCulture) + 1;
-                                    VM.B04ListViewItemsSource[j].A7Count = number.ToString(CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A7RR = VM.B04ListViewItemsSource[j].A7Count;
-                                    break;
-                                case CommandStatus.B04ANTENNA08:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A8Count) ?
-                                        1 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A8Count, CultureInfo.CurrentCulture) + 1;
-                                    VM.B04ListViewItemsSource[j].A8Count = number.ToString(CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A8RR = VM.B04ListViewItemsSource[j].A8Count;
-                                    break;
                             }
                             bCompare = true;
                         }
@@ -8614,26 +8584,6 @@ namespace RFID.Utility
                                         0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A4Count, CultureInfo.CurrentCulture);
                                     VM.B04ListViewItemsSource[j].A4RR = number.ToString(CultureInfo.CurrentCulture);
                                     break;
-                                case CommandStatus.B04ANTENNA05:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A5Count) ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A5Count, CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A5RR = number.ToString(CultureInfo.CurrentCulture);
-                                    break;
-                                case CommandStatus.B04ANTENNA06:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A6Count) ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A6Count, CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A6RR = number.ToString(CultureInfo.CurrentCulture);
-                                    break;
-                                case CommandStatus.B04ANTENNA07:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A7Count)?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A7Count, CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A7RR = number.ToString(CultureInfo.CurrentCulture);
-                                    break;
-                                case CommandStatus.B04ANTENNA08:
-                                    number = String.IsNullOrEmpty(VM.B04ListViewItemsSource[j].A8Count) ?
-                                        0 : Convert.ToInt32(VM.B04ListViewItemsSource[j].A8Count, CultureInfo.CurrentCulture);
-                                    VM.B04ListViewItemsSource[j].A8RR = number.ToString(CultureInfo.CurrentCulture);
-                                    break;
                             }
                             bCompare = false;
                         }
@@ -8658,14 +8608,6 @@ namespace RFID.Utility
                             newItems.A3Count = "0"; newItems.A3RR = "0"; break;
                         case CommandStatus.B04ANTENNA04:
                             newItems.A4Count = "0"; newItems.A4RR = "0"; break;
-                        case CommandStatus.B04ANTENNA05:
-                            newItems.A5Count = "0"; newItems.A5RR = "0"; break;
-                        case CommandStatus.B04ANTENNA06:
-                            newItems.A6Count = "0"; newItems.A6RR = "0"; break;
-                        case CommandStatus.B04ANTENNA07:
-                            newItems.A7Count = "0"; newItems.A7RR = "0"; break;
-                        case CommandStatus.B04ANTENNA08:
-                            newItems.A8Count = "0"; newItems.A8RR = "0"; break;
                         default: break;
                     }
                     switch (this.DoProcess)
@@ -8678,14 +8620,6 @@ namespace RFID.Utility
                             newItems.A3Count = "1"; newItems.A3RR = "1"; break;
                         case CommandStatus.B04ANTENNA04:
                             newItems.A4Count = "1"; newItems.A4RR = "1"; break;
-                        case CommandStatus.B04ANTENNA05:
-                            newItems.A5Count = "1"; newItems.A5RR = "1"; break;
-                        case CommandStatus.B04ANTENNA06:
-                            newItems.A6Count = "1"; newItems.A6RR = "1"; break;
-                        case CommandStatus.B04ANTENNA07:
-                            newItems.A7Count = "1"; newItems.A7RR = "1"; break;
-                        case CommandStatus.B04ANTENNA08:
-                            newItems.A8Count = "1"; newItems.A8RR = "1"; break;
                     }
                     VM.B04ListViewAddNewItem(newItems);
                     B04ListViewList.Add(data[0]);
@@ -8716,100 +8650,42 @@ namespace RFID.Utility
 
                 try
                 {
-                    if (B04AntennaType == 1)
+                    switch (idx)
                     {
-                        switch (idx)
-                        {
-                            case CommandStatus.B04ANTENNA01:
-                                B04RAWLOG("天線A1");
-                                B04AntennaTempData = (Byte)0x4; _ant = "74"; break;
-                            case CommandStatus.B04ANTENNA02:
-                                B04RAWLOG("天線A2");
-                                B04AntennaTempData = (Byte)0x2; _ant = "72"; break;
-                            case CommandStatus.B04ANTENNA03:
-                                B04RAWLOG("天線A3");
-                                B04AntennaTempData = (Byte)0x1; _ant = "71"; break;
-                            case CommandStatus.B04ANTENNA04:
-                                B04RAWLOG("天線A4");
-                                B04AntennaTempData = (Byte)0x5; _ant = "75"; break;
-                            case CommandStatus.B04ANTENNA05:
-                                B04RAWLOG("天線A5");
-                                B04AntennaTempData = (Byte)0x7; _ant = "77"; break;
-                        }
-
-                        _data = this.ReaderService.SetGPIOPins(_ant);
-                        B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(_data)));
-                        switch (_ConnectType)
-                        {
-                            default:
-                            case ReaderService.ConnectType.DEFAULT:
-                                break;
-                            case ReaderService.ConnectType.COM:
-                                this._ICOM.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                            case ReaderService.ConnectType.USB:
-                                this._IUSB.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                            case ReaderService.ConnectType.NET:
-                                this._INet.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                            case ReaderService.ConnectType.BLE:
-                                this._IBLE.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                        }
+                        case CommandStatus.B04ANTENNA01:
+                            B04RAWLOG("天線A1");
+                            B04AntennaTempData = (Byte)0x0; _ant = "70"; break;
+                        case CommandStatus.B04ANTENNA02:
+                            B04RAWLOG("天線A2");
+                            B04AntennaTempData = (Byte)0x1; _ant = "71"; break;
+                        case CommandStatus.B04ANTENNA03:
+                            B04RAWLOG("天線A3");
+                            B04AntennaTempData = (Byte)0x3; _ant = "73"; break;
+                        case CommandStatus.B04ANTENNA04:
+                            B04RAWLOG("天線A4");
+                            B04AntennaTempData = (Byte)0x2; _ant = "72"; break;
                     }
-                    else
+
+                    _data = this.ReaderService.SetGPIOPins(_ant);
+                    B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(_data)));
+                    switch (_ConnectType)
                     {
-                        switch (idx)
-                        {
-                            case CommandStatus.B04ANTENNA01:
-                                B04RAWLOG("天線A1");
-                                B04AntennaTempData = (Byte)0x0; _ant = "70"; break;
-                            case CommandStatus.B04ANTENNA02:
-                                B04RAWLOG("天線A2");
-                                B04AntennaTempData = (Byte)0x1; _ant = "71"; break;
-                            case CommandStatus.B04ANTENNA03:
-                                B04RAWLOG("天線A3");
-                                B04AntennaTempData = (Byte)0x2; _ant = "72"; break;
-                            case CommandStatus.B04ANTENNA04:
-                                B04RAWLOG("天線A4");
-                                B04AntennaTempData = (Byte)0x3; _ant = "73"; break;
-                            case CommandStatus.B04ANTENNA05:
-                                B04RAWLOG("天線A5");
-                                B04AntennaTempData = (Byte)0x4; _ant = "74"; break;
-                            case CommandStatus.B04ANTENNA06:
-                                B04RAWLOG("天線A6");
-                                B04AntennaTempData = (Byte)0x5; _ant = "75"; break;
-                            case CommandStatus.B04ANTENNA07:
-                                B04RAWLOG("天線A7");
-                                B04AntennaTempData = (Byte)0x6; _ant = "76"; break;
-                            case CommandStatus.B04ANTENNA08:
-                                B04RAWLOG("天線A8");
-                                B04AntennaTempData = (Byte)0x7; _ant = "77"; break;
-                        }
-
-                        _data = this.ReaderService.SetGPIOPins(_ant);
-                        B04RAWLOG("[TX]" + Format.ShowCRLF(Format.BytesToString(_data)));
-                        switch (_ConnectType)
-                        {
-                            default:
-                            case ReaderService.ConnectType.DEFAULT:
-                                break;
-                            case ReaderService.ConnectType.COM:
-                                this._ICOM.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                            case ReaderService.ConnectType.USB:
-                                this._IUSB.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                            case ReaderService.ConnectType.NET:
-                                this._INet.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                            case ReaderService.ConnectType.BLE:
-                                this._IBLE.Send(_data, ReaderModule.CommandType.Normal);
-                                break;
-                        }
+                        default:
+                        case ReaderService.ConnectType.DEFAULT:
+                            break;
+                        case ReaderService.ConnectType.COM:
+                            this._ICOM.Send(_data, ReaderModule.CommandType.Normal);
+                            break;
+                        case ReaderService.ConnectType.USB:
+                            this._IUSB.Send(_data, ReaderModule.CommandType.Normal);
+                            break;
+                        case ReaderService.ConnectType.NET:
+                            this._INet.Send(_data, ReaderModule.CommandType.Normal);
+                            break;
+                        case ReaderService.ConnectType.BLE:
+                            this._IBLE.Send(_data, ReaderModule.CommandType.Normal);
+                            break;
                     }
-                    
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -8833,7 +8709,7 @@ namespace RFID.Utility
                 {
                     Thread.Sleep(10);
                     _index++;
-                    if (_index >= 100)
+                    if (_index >= 200)
                     {
                         _f = false;
                         break;
@@ -8869,7 +8745,7 @@ namespace RFID.Utility
         }
 
         /// <summary>
-        /// 
+        ///  check the select antenna
         /// </summary>
         /// <returns></returns>
         private Byte TestItemCheck()
@@ -8910,7 +8786,7 @@ namespace RFID.Utility
                             {
                                 this.IsB04BtnAntennaRun = false;
                                 B04RAWLOG("================= Test Infomation =============");
-                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "天線形式: {0}", (B04AntennaType == 1) ? 5 : 8));
+                                B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "天線形式: {0}", 4));
                                 B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "選擇天線: {0}", _selAntenna));
                                 B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "執行次數: {0}", _selRunTimes));
                                 B04RAWLOG(String.Format(CultureInfo.CurrentCulture, "循環次數: {0}", VM.B04AntennaLoopTimes));
@@ -8928,7 +8804,7 @@ namespace RFID.Utility
 
 
                                 FRAGMENTSUMMARYLOG("===============================================");
-                                FRAGMENTSUMMARYLOG("欄位定義: Tag, Antenna1,..,Antenna5(Antenna8)");
+                                FRAGMENTSUMMARYLOG("欄位定義: Tag, Antenna1,..,Antenna4");
                                 String _str;
                                 for (Int32 i = 0; i < VM.B04ListViewItemsSource.Count; i++)
                                 {
@@ -8936,27 +8812,22 @@ namespace RFID.Utility
                                           VM.B04ListViewItemsSource[i].A1RR + ",\t" +
                                           VM.B04ListViewItemsSource[i].A2RR + ",\t" +
                                           VM.B04ListViewItemsSource[i].A3RR + ",\t" +
-                                          VM.B04ListViewItemsSource[i].A4RR + ",\t" +
-                                          VM.B04ListViewItemsSource[i].A5RR + ",\t" +
-                                          VM.B04ListViewItemsSource[i].A6RR + ",\t" +
-                                          VM.B04ListViewItemsSource[i].A7RR + ",\t" +
-                                          VM.B04ListViewItemsSource[i].A8RR;
+                                          VM.B04ListViewItemsSource[i].A4RR;
                                     FRAGMENTSUMMARYLOG(_str);
                                     _str = String.Empty;
                                 }
-                                B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture) - B04AntennaTagIncreaseCount;
+
+                                if (string.IsNullOrEmpty(VM.B04TagReadCount))
+                                    B04AntennaTagIncreaseCount = 0;
+                                else
+                                    B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture) - B04AntennaTagIncreaseCount;
                                 FRAGMENTSUMMARYLOG(String.Format(CultureInfo.CurrentCulture, "標籤張數: {0},標籤讀取次數: {1}(+{2})", VM.B04TagCount, VM.B04TagReadCount, B04AntennaTagIncreaseCount));
-                                B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture);
+                                if (string.IsNullOrEmpty(VM.B04TagReadCount))
+                                    B04AntennaTagIncreaseCount = 0;
+                                else
+                                    B04AntennaTagIncreaseCount = Int32.Parse(VM.B04TagReadCount, CultureInfo.CurrentCulture);
                             }
                             
-
-                            //FRAGMENTSUMMARYLOG("===============================================");
-                            //FRAGMENTSUMMARYLOG("欄位定義: Tag, Antenna1,..,Antenna5(Antenna8)");
-                            //FRAGMENTSUMMARYLOG(String.Format(CultureInfo.CurrentCulture, "標籤張數: {0}", VM.B04TagCount));
-                            //FRAGMENTSUMMARYLOG(String.Format(CultureInfo.CurrentCulture, "標籤讀取次數: {0}", VM.B04TagReadCount));
-
-
-                            //B04AntennaDelayTimesIdx = 0;
                             B04Process.Start();
                         }
                         return;
@@ -9012,67 +8883,6 @@ namespace RFID.Utility
                             _selRunTimes += VM.B04Antenna4RunTimes;
                         }   
                         break;
-                    case 0x10:
-                        B04ProcessItem.Add(CommandStatus.B04ANTENNA05);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna5RunTimes, CultureInfo.CurrentCulture));
-                        this.B04AntennaRunIndex++;
-                        if (B04AntennaRunIndex > 1)
-                        {
-                            _selAntenna += ",A5";
-                            _selRunTimes += "," + VM.B04Antenna5RunTimes;
-                        }    
-                        else
-                        {
-                            _selAntenna += "A5";
-                            _selRunTimes += VM.B04Antenna5RunTimes;
-                        }
-                        break;
-                    case 0x20:
-                        B04ProcessItem.Add(CommandStatus.B04ANTENNA06);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna6RunTimes, CultureInfo.CurrentCulture));
-                        this.B04AntennaRunIndex++;
-                        if (B04AntennaRunIndex > 1)
-                        {
-                            _selAntenna += ",A6";
-                            _selRunTimes += "," + VM.B04Antenna6RunTimes;
-                        } 
-                        else
-                        {
-                            _selAntenna += "A6";
-                            _selRunTimes += VM.B04Antenna6RunTimes;
-                        }  
-                        break;
-                    case 0x40:
-                        B04ProcessItem.Add(CommandStatus.B04ANTENNA07);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna7RunTimes, CultureInfo.CurrentCulture));
-                        this.B04AntennaRunIndex++;
-                        if (B04AntennaRunIndex > 1)
-                        {
-                            _selAntenna += ",A7";
-                            _selRunTimes += "," + VM.B04Antenna7RunTimes;
-                        }   
-                        else
-                        {
-                            _selAntenna += "A7";
-                            _selRunTimes += VM.B04Antenna7RunTimes;
-                        }
-                            
-                        break;
-                    case 0x80:
-                        B04ProcessItem.Add(CommandStatus.B04ANTENNA08);
-                        B04AntennaTargetRunTimes.Add(Int32.Parse(VM.B04Antenna8RunTimes, CultureInfo.CurrentCulture));
-                        this.B04AntennaRunIndex++;
-                        if (B04AntennaRunIndex > 1)
-                        {
-                            _selAntenna += ",A8";
-                            _selRunTimes += "," + VM.B04Antenna8RunTimes;
-                        }
-                        else
-                        {
-                            _selAntenna += "A8";
-                            _selRunTimes += VM.B04Antenna8RunTimes;
-                        }
-                        break;
                 }
             }
         }
@@ -9102,11 +8912,7 @@ namespace RFID.Utility
                           VM.B04ListViewItemsSource[i].A1RR + ",\t" +
                           VM.B04ListViewItemsSource[i].A2RR + ",\t" +
                           VM.B04ListViewItemsSource[i].A3RR + ",\t" +
-                          VM.B04ListViewItemsSource[i].A4RR + ",\t" +
-                          VM.B04ListViewItemsSource[i].A5RR + ",\t" +
-                          VM.B04ListViewItemsSource[i].A6RR + ",\t" +
-                          VM.B04ListViewItemsSource[i].A7RR + ",\t" +
-                          VM.B04ListViewItemsSource[i].A8RR;
+                          VM.B04ListViewItemsSource[i].A4RR;
                     FRAGMENTSUMMARYLOG(_str);
                     _str = String.Empty;
                 }
@@ -9196,18 +9002,6 @@ namespace RFID.Utility
                                     break;
                                 case CommandStatus.B04ANTENNA04:
                                     MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna04...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
-                                    break;
-                                case CommandStatus.B04ANTENNA05:
-                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna05...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
-                                    break;
-                                case CommandStatus.B04ANTENNA06:
-                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna06...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
-                                    break;
-                                case CommandStatus.B04ANTENNA07:
-                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna07...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
-                                    break;
-                                case CommandStatus.B04ANTENNA08:
-                                    MessageShow(String.Format(CultureInfo.CurrentCulture, "Loop{0}, Antenna08...{1}", B04AntennaLoopIndex + 1, B04AntennaRunCount), false);
                                     break;
                             }
 
@@ -9344,62 +9138,19 @@ namespace RFID.Utility
             
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OnB04RadioButtonAntennaTypeChecked(object sender, RoutedEventArgs e) {
-            if (!(sender is RadioButton rb)) return;
-
-            this.B04AntennaType = Convert.ToInt32(rb.Tag.ToString(), CultureInfo.CurrentCulture);
-
-            if (this.B04AntennaType == 1)
-            {
-                VM.B04CheckBoxASW6IsChecked = false;
-                VM.B04CheckBoxASW7IsChecked = false;
-                VM.B04CheckBoxASW8IsChecked = false;
-                VM.B04CheckBoxASW6Visibility = Visibility.Hidden;
-                VM.B04CheckBoxASW7Visibility = Visibility.Hidden;
-                VM.B04CheckBoxASW8Visibility = Visibility.Hidden;
-                VM.B04Antenna6RunTimesVisibility = Visibility.Collapsed;
-                VM.B04Antenna7RunTimesVisibility = Visibility.Collapsed;
-                VM.B04Antenna8RunTimesVisibility = Visibility.Collapsed;
-                VM.B04ListViewA6Visibility = Visibility.Collapsed;
-                VM.B04ListViewA7Visibility = Visibility.Collapsed;
-                VM.B04ListViewA8Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                VM.B04CheckBoxASW6Visibility = Visibility.Visible;
-                VM.B04CheckBoxASW7Visibility = Visibility.Visible;
-                VM.B04CheckBoxASW8Visibility = Visibility.Visible;
-                VM.B04Antenna6RunTimesVisibility = Visibility.Visible;
-                VM.B04Antenna7RunTimesVisibility = Visibility.Visible;
-                VM.B04Antenna8RunTimesVisibility = Visibility.Visible;
-                VM.B04ListViewA6Visibility = Visibility.Visible;
-                VM.B04ListViewA7Visibility = Visibility.Visible;
-                VM.B04ListViewA8Visibility = Visibility.Visible;
-            }
-        }
+        
 
         private void OnB04CheckBoxAntenna01Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x01; B04Antenna1RunTimes.IsEnabled = true; }
         private void OnB04CheckBoxAntenna02Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x02; B04Antenna2RunTimes.IsEnabled = true; }
         private void OnB04CheckBoxAntenna03Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x04; B04Antenna3RunTimes.IsEnabled = true; }
         private void OnB04CheckBoxAntenna04Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x08; B04Antenna4RunTimes.IsEnabled = true; }
-        private void OnB04CheckBoxAntenna05Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x10; B04Antenna5RunTimes.IsEnabled = true; }
-        private void OnB04CheckBoxAntenna06Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x20; B04Antenna6RunTimes.IsEnabled = true; }
-        private void OnB04CheckBoxAntenna07Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x40; B04Antenna7RunTimes.IsEnabled = true; }
-        private void OnB04CheckBoxAntenna08Checked(object sender, RoutedEventArgs e) { B04AntennaItems |= 0x80; B04Antenna8RunTimes.IsEnabled = true; }
+
 
         private void OnB04CheckBoxAntenna01UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0xFE; B04Antenna1RunTimes.IsEnabled = false; }
         private void OnB04CheckBoxAntenna02UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0xFD; B04Antenna2RunTimes.IsEnabled = false; }
         private void OnB04CheckBoxAntenna03UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0xFB; B04Antenna3RunTimes.IsEnabled = false; }
         private void OnB04CheckBoxAntenna04UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0xF7; B04Antenna4RunTimes.IsEnabled = false; }
-        private void OnB04CheckBoxAntenna05UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0xEF; B04Antenna5RunTimes.IsEnabled = false; }
-        private void OnB04CheckBoxAntenna06UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0xDF; B04Antenna6RunTimes.IsEnabled = false; }
-        private void OnB04CheckBoxAntenna07UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0xBF; B04Antenna7RunTimes.IsEnabled = false; }
-        private void OnB04CheckBoxAntenna08UnChecked(object sender, RoutedEventArgs e) { B04AntennaItems &= 0x7F; B04Antenna8RunTimes.IsEnabled = false; }
+       
 
         private void B04AntennaGroupRunTimesMouseMove(object sender, MouseEventArgs e)
         {
@@ -9688,11 +9439,7 @@ namespace RFID.Utility
                       VM.B04ListViewItemsSource[i].A1RR + ",\t" +
                       VM.B04ListViewItemsSource[i].A2RR + ",\t" +
                       VM.B04ListViewItemsSource[i].A3RR + ",\t" +
-                      VM.B04ListViewItemsSource[i].A4RR + ",\t" +
-                      VM.B04ListViewItemsSource[i].A5RR + ",\t" +
-                      VM.B04ListViewItemsSource[i].A6RR + ",\t" +
-                      VM.B04ListViewItemsSource[i].A7RR + ",\t" +
-                      VM.B04ListViewItemsSource[i].A8RR ;
+                      VM.B04ListViewItemsSource[i].A4RR;
                 swStream.WriteLine(str);
                 str = String.Empty;
             }

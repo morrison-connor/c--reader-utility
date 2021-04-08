@@ -80,61 +80,7 @@ namespace RFID.Utility.VM
             }
         }
 
-        private String _A5Count = String.Empty;
-        public String A5Count
-        {
-            get { return _A5Count; }
-            set
-            {
-                if (_A5Count != value)
-                {
-                    _A5Count = value;
-                    RaisePropertyChanged("A5Count");
-                }
-            }
-        }
-
-        private String _A6Count = String.Empty;
-        public String A6Count
-        {
-            get { return _A6Count; }
-            set
-            {
-                if (_A6Count != value)
-                {
-                    _A6Count = value;
-                    RaisePropertyChanged("A6Count");
-                }
-            }
-        }
-
-        private String _A7Count = String.Empty;
-        public String A7Count
-        {
-            get { return _A7Count; }
-            set
-            {
-                if (_A7Count != value)
-                {
-                    _A7Count = value;
-                    RaisePropertyChanged("A7Count");
-                }
-            }
-        }
-
-        private String _A8Count = String.Empty;
-        public String A8Count
-        {
-            get { return _A8Count; }
-            set
-            {
-                if (_A8Count != value)
-                {
-                    _A8Count = value;
-                    RaisePropertyChanged("A8Count");
-                }
-            }
-        }
+       
 
         private String _A1RR = String.Empty;
         public String A1RR
@@ -193,61 +139,7 @@ namespace RFID.Utility.VM
             }
         }
 
-        private String _A5RR = String.Empty;
-        public String A5RR
-        {
-            get { return _A5RR; }
-            set
-            {
-                if (_A5RR != value)
-                {
-                    _A5RR = value;
-                    RaisePropertyChanged("A5RR");
-                }
-            }
-        }
-
-        private String _A6RR = String.Empty;
-        public String A6RR
-        {
-            get { return _A6RR; }
-            set
-            {
-                if (_A6RR != value)
-                {
-                    _A6RR = value;
-                    RaisePropertyChanged("A6RR");
-                }
-            }
-        }
-
-        private String _A7RR = String.Empty;
-        public String A7RR
-        {
-            get { return _A7RR; }
-            set
-            {
-                if (_A7RR != value)
-                {
-                    _A7RR = value;
-                    RaisePropertyChanged("A7RR");
-                }
-            }
-        }
-
-        private String _A8RR = String.Empty;
-        public String A8RR
-        {
-            get { return _A8RR; }
-            set
-            {
-                if (_A8RR != value)
-                {
-                    _A8RR = value;
-                    RaisePropertyChanged("A8RR");
-                }
-            }
-        }
+        
 
 
         private String _A1StartT = String.Empty;

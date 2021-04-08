@@ -1368,23 +1368,13 @@ namespace RFID.Utility.VM
         private Boolean _B04AntennaRunRepeatCheckBoxIsChecked = false;
         private Boolean _B04AntennaRawLogCheckBoxIsChecked = false;
         private Boolean _B04AntennaFragmentSummaryLogCheckBoxIsChecked = false;
-        private Boolean _B04CheckBoxASW6IsChecked = false;
-        private Boolean _B04CheckBoxASW7IsChecked = false;
-        private Boolean _B04CheckBoxASW8IsChecked = false;
+
         private Boolean _B04GroupAntennaCtrlIsEnabled = true;
         private Boolean _B04GroupReadCtrlIsEnabled = true;
         private Boolean _B04GroupReadCtrlCheckBoxIsChecked = false;
         private Boolean _B04GroupUSlotQIsEnabled = true;
         private Boolean _B04GroupUSlotQCheckBoxIsChecked = false;
-        private Visibility _B04CheckBoxASW6Visibility = Visibility.Visible;
-        private Visibility _B04CheckBoxASW7Visibility = Visibility.Visible;
-        private Visibility _B04CheckBoxASW8Visibility = Visibility.Visible;
-        private Visibility _B04Antenna6RunTimesVisibility = Visibility.Visible;
-        private Visibility _B04Antenna7RunTimesVisibility = Visibility.Visible;
-        private Visibility _B04Antenna8RunTimesVisibility = Visibility.Visible;
-        private Visibility _B04ListViewA6Visibility = Visibility.Visible;
-        private Visibility _B04ListViewA7Visibility = Visibility.Visible;
-        private Visibility _B04ListViewA8Visibility = Visibility.Visible;
+
         private MemBank _B04GroupPreSetReadMemBank;
         private String _B04GroupPreSetReadAddress = "2";
         private String _B04GroupPreSetReadLength = "6";
@@ -1587,162 +1577,6 @@ namespace RFID.Utility.VM
             }
         }
 
-        public Boolean B04CheckBoxASW6IsChecked
-        {
-            get { return _B04CheckBoxASW6IsChecked; }
-            set
-            {
-                if (_B04CheckBoxASW6IsChecked != value)
-                {
-                    _B04CheckBoxASW6IsChecked = value;
-                    OnPropertyChanged("B04CheckBoxASW6IsChecked");
-                }
-            }
-        }
-
-        public Boolean B04CheckBoxASW7IsChecked
-        {
-            get { return _B04CheckBoxASW7IsChecked; }
-            set
-            {
-                if (_B04CheckBoxASW7IsChecked != value)
-                {
-                    _B04CheckBoxASW7IsChecked = value;
-                    OnPropertyChanged("B04CheckBoxASW7IsChecked");
-                }
-            }
-        }
-
-        public Boolean B04CheckBoxASW8IsChecked
-        {
-            get { return _B04CheckBoxASW8IsChecked; }
-            set
-            {
-                if (_B04CheckBoxASW8IsChecked != value)
-                {
-                    _B04CheckBoxASW8IsChecked = value;
-                    OnPropertyChanged("B04CheckBoxASW8IsChecked");
-                }
-            }
-        }
-
-        public Visibility B04CheckBoxASW6Visibility
-        {
-            get { return _B04CheckBoxASW6Visibility; }
-            set
-            {
-                if (_B04CheckBoxASW6Visibility != value)
-                {
-                    _B04CheckBoxASW6Visibility = value;
-                    OnPropertyChanged("B04CheckBoxASW6Visibility");
-                }
-            }
-        }
-
-        public Visibility B04CheckBoxASW7Visibility
-        {
-            get { return _B04CheckBoxASW7Visibility; }
-            set
-            {
-                if (_B04CheckBoxASW7Visibility != value)
-                {
-                    _B04CheckBoxASW7Visibility = value;
-                    OnPropertyChanged("B04CheckBoxASW7Visibility");
-                }
-            }
-        }
-
-        public Visibility B04CheckBoxASW8Visibility
-        {
-            get { return _B04CheckBoxASW8Visibility; }
-            set
-            {
-                if (_B04CheckBoxASW8Visibility != value)
-                {
-                    _B04CheckBoxASW8Visibility = value;
-                    OnPropertyChanged("B04CheckBoxASW8Visibility");
-                }
-            }
-        }
-
-        public Visibility B04Antenna6RunTimesVisibility
-        {
-            get { return _B04Antenna6RunTimesVisibility; }
-            set
-            {
-                if (_B04Antenna6RunTimesVisibility != value)
-                {
-                    _B04Antenna6RunTimesVisibility = value;
-                    OnPropertyChanged("B04Antenna6RunTimesVisibility");
-                }
-            }
-        }
-
-        public Visibility B04Antenna7RunTimesVisibility
-        {
-            get { return _B04Antenna7RunTimesVisibility; }
-            set
-            {
-                if (_B04Antenna7RunTimesVisibility != value)
-                {
-                    _B04Antenna7RunTimesVisibility = value;
-                    OnPropertyChanged("B04Antenna7RunTimesVisibility");
-                }
-            }
-        }
-
-        public Visibility B04Antenna8RunTimesVisibility
-        {
-            get { return _B04Antenna8RunTimesVisibility; }
-            set
-            {
-                if (_B04Antenna8RunTimesVisibility != value)
-                {
-                    _B04Antenna8RunTimesVisibility = value;
-                    OnPropertyChanged("B04Antenna8RunTimesVisibility");
-                }
-            }
-        }
-
-
-        public Visibility B04ListViewA6Visibility
-        {
-            get { return _B04ListViewA6Visibility; }
-            set
-            {
-                if (_B04ListViewA6Visibility != value)
-                {
-                    _B04ListViewA6Visibility = value;
-                    OnPropertyChanged("B04ListViewA6Visibility");
-                }
-            }
-        }
-
-        public Visibility B04ListViewA7Visibility
-        {
-            get { return _B04ListViewA7Visibility; }
-            set
-            {
-                if (_B04ListViewA7Visibility != value)
-                {
-                    _B04ListViewA7Visibility = value;
-                    OnPropertyChanged("B04ListViewA7Visibility");
-                }
-            }
-        }
-
-        public Visibility B04ListViewA8Visibility
-        {
-            get { return _B04ListViewA8Visibility; }
-            set
-            {
-                if (_B04ListViewA8Visibility != value)
-                {
-                    _B04ListViewA8Visibility = value;
-                    OnPropertyChanged("B04ListViewA8Visibility");
-                }
-            }
-        }
 
         public void B04ListViewAddNewItem(B04ListViewItem items)
         {

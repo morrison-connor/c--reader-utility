@@ -470,7 +470,7 @@
             <Grid Margin="2">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <TextBlock Margin="2,0" FontSize="18" FontWeight="Bold" FontFamily="微軟正黑體" Foreground="WhiteSmoke" VerticalAlignment="Center">Reader Utility</TextBlock>
-                    <TextBlock Style="{StaticResource TextBlockStyle12}" Foreground="WhiteSmoke" Margin="2,0,0,1" Text="v4.1.2" VerticalAlignment="Bottom" MouseRightButtonDown="OnBorderMenuMouseRightButtonDown">
+                    <TextBlock Style="{StaticResource TextBlockStyle12}" Foreground="WhiteSmoke" Margin="2,0,0,1" Text="v4.1.3c" VerticalAlignment="Bottom" MouseRightButtonDown="OnBorderMenuMouseRightButtonDown">
                         <TextBlock.ContextMenu>
                             <ContextMenu>
                                 <MenuItem x:Name="MenuBugReport" Header="Bug Report" Click="OnMenuBugRepoetClick"/>
@@ -1466,8 +1466,10 @@
                                 <StackPanel Orientation="Vertical">
                                     <StackPanel  Orientation="Horizontal">
                                         <Label Content="{Binding B04AntennaType, Source={StaticResource Resources}}" VerticalAlignment="Center" HorizontalContentAlignment="Right" Margin="0,0,5,0" Width="100"></Label>
-                                        <RadioButton x:Name="B04AntennaType5" Tag="1" FontFamily="微軟正黑體" VerticalAlignment="Center" Checked="OnB04RadioButtonAntennaTypeChecked" IsChecked ="True" Margin="0,0,30,0">5</RadioButton>
+                                        <RadioButton x:Name="B04AntennaType5" Tag="1" FontFamily="微軟正黑體" VerticalAlignment="Center" IsChecked ="True" Margin="0,0,30,0">4</RadioButton>
+                                        <!--
                                         <RadioButton x:Name="B04AntennaType8" Tag="2" FontFamily="微軟正黑體" VerticalAlignment="Center" Checked="OnB04RadioButtonAntennaTypeChecked">8</RadioButton>
+                                        -->
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Orientation="Horizontal">
                                         <Label Content="{Binding B04AntennaSelect, Source={StaticResource Resources}}" VerticalAlignment="Center" HorizontalContentAlignment="Right" Margin="0,0,5,0"  Width="100"></Label>
@@ -1475,10 +1477,12 @@
                                         <CheckBox VerticalAlignment="Center" VerticalContentAlignment="Center" Tag="2" x:Name="B04CheckBoxASW2" Checked="OnB04CheckBoxAntenna02Checked" Unchecked="OnB04CheckBoxAntenna02UnChecked" Margin="5,0,15,0">A2</CheckBox>
                                         <CheckBox VerticalAlignment="Center" VerticalContentAlignment="Center" Tag="3" x:Name="B04CheckBoxASW3" Checked="OnB04CheckBoxAntenna03Checked" Unchecked="OnB04CheckBoxAntenna03UnChecked" Margin="5,0,15,0">A3</CheckBox>
                                         <CheckBox VerticalAlignment="Center" VerticalContentAlignment="Center" Tag="4" x:Name="B04CheckBoxASW4" Checked="OnB04CheckBoxAntenna04Checked" Unchecked="OnB04CheckBoxAntenna04UnChecked" Margin="5,0,15,0">A4</CheckBox>
+                                        <!--
                                         <CheckBox VerticalAlignment="Center" VerticalContentAlignment="Center" Tag="4" x:Name="B04CheckBoxASW5" Checked="OnB04CheckBoxAntenna05Checked" Unchecked="OnB04CheckBoxAntenna05UnChecked" Margin="5,0,15,0">A5</CheckBox>
                                         <CheckBox VerticalAlignment="Center" VerticalContentAlignment="Center" Tag="4" x:Name="B04CheckBoxASW6" Checked="OnB04CheckBoxAntenna06Checked" Unchecked="OnB04CheckBoxAntenna06UnChecked" Margin="5,0,15,0" IsChecked="{Binding B04CheckBoxASW6IsChecked}" Visibility="{Binding B04CheckBoxASW6Visibility}">A6</CheckBox>
                                         <CheckBox VerticalAlignment="Center" VerticalContentAlignment="Center" Tag="4" x:Name="B04CheckBoxASW7" Checked="OnB04CheckBoxAntenna07Checked" Unchecked="OnB04CheckBoxAntenna07UnChecked" Margin="5,0,15,0" IsChecked="{Binding B04CheckBoxASW7IsChecked}" Visibility="{Binding B04CheckBoxASW7Visibility}">A7</CheckBox>
                                         <CheckBox VerticalAlignment="Center" VerticalContentAlignment="Center" Tag="4" x:Name="B04CheckBoxASW8" Checked="OnB04CheckBoxAntenna08Checked" Unchecked="OnB04CheckBoxAntenna08UnChecked" Margin="5,0,15,0" IsChecked="{Binding B04CheckBoxASW8IsChecked}" Visibility="{Binding B04CheckBoxASW8Visibility}">A8</CheckBox>
+                                        -->
                                     </StackPanel>
                                     <StackPanel Grid.Row="2" Orientation="Horizontal">
                                         <Label Content="{Binding B04AntennaExecution, Source={StaticResource Resources}}" VerticalAlignment="Center" HorizontalContentAlignment="Right" Margin="0,0,4,0"  Width="100"></Label>
@@ -1499,25 +1503,6 @@
                                                 Style="{StaticResource TextBoxDefaultDStyle}" Width="51" 
                                                 PreviewKeyDown="TextBoxPreviewKeyDownDecValidation" KeyUp="TextBoxKeyUpDecValidation" LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
                                                 Text="{Binding B04Antenna4RunTimes, UpdateSourceTrigger=PropertyChanged}"/>
-                                            <TextBox x:Name="B04Antenna5RunTimes" input:InputMethod.IsInputMethodEnabled="True" IsEnabled="False"
-                                                Style="{StaticResource TextBoxDefaultDStyle}" Width="51" 
-                                                PreviewKeyDown="TextBoxPreviewKeyDownDecValidation" KeyUp="TextBoxKeyUpDecValidation" LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
-                                                Text="{Binding B04Antenna5RunTimes, UpdateSourceTrigger=PropertyChanged}"/>
-                                            <TextBox x:Name="B04Antenna6RunTimes" input:InputMethod.IsInputMethodEnabled="True" IsEnabled="False"
-                                                Style="{StaticResource TextBoxDefaultDStyle}" Width="51" 
-                                                PreviewKeyDown="TextBoxPreviewKeyDownDecValidation" KeyUp="TextBoxKeyUpDecValidation" LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
-                                                Text="{Binding B04Antenna6RunTimes, UpdateSourceTrigger=PropertyChanged}"
-                                                Visibility="{Binding B04Antenna6RunTimesVisibility}"/>
-                                            <TextBox x:Name="B04Antenna7RunTimes" input:InputMethod.IsInputMethodEnabled="True" IsEnabled="False"
-                                                Style="{StaticResource TextBoxDefaultDStyle}" Width="51" 
-                                                PreviewKeyDown="TextBoxPreviewKeyDownDecValidation" KeyUp="TextBoxKeyUpDecValidation" LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
-                                                Text="{Binding B04Antenna7RunTimes, UpdateSourceTrigger=PropertyChanged}"
-                                                Visibility="{Binding B04Antenna7RunTimesVisibility}"/>
-                                            <TextBox x:Name="B04Antenna8RunTimes" input:InputMethod.IsInputMethodEnabled="True" IsEnabled="False"
-                                                Style="{StaticResource TextBoxDefaultDStyle}" Width="51" 
-                                                PreviewKeyDown="TextBoxPreviewKeyDownDecValidation" KeyUp="TextBoxKeyUpDecValidation" LostFocus="TextBoxLostFocusValidation" GotFocus="TextBoxGotFocusValidation"
-                                                Text="{Binding B04Antenna8RunTimes, UpdateSourceTrigger=PropertyChanged}"
-                                                Visibility="{Binding B04Antenna8RunTimesVisibility}"/>
                                         </StackPanel>
                                         <Popup Name="B04AntennaGroupRunTimesPop" IsOpen="False" PlacementTarget="{Binding ElementName=B04AntennaGroupRunTimes}" 
                                                 Placement="MousePoint" HorizontalOffset="10" VerticalOffset="5">
@@ -1654,34 +1639,6 @@
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
                                         </GridViewColumn>
-                                        <GridViewColumn Header="A5" Width="60">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding A5RR}" HorizontalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </GridViewColumn>
-                                        <cla:GridViewColumnResize Header="A6" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA6Visibility}">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding A6RR}" HorizontalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </cla:GridViewColumnResize>
-                                        <cla:GridViewColumnResize Header="A7" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA7Visibility}">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding A7RR}" HorizontalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </cla:GridViewColumnResize>
-                                        <cla:GridViewColumnResize Header="A8" DefaultWidth="60" Width="60" Visibility="{Binding B04ListViewA8Visibility}">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding A8RR}" HorizontalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </cla:GridViewColumnResize>
                                     </GridView>
                                 </ListView.View>
                             </ListView>
