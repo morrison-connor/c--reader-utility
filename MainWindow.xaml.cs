@@ -8654,7 +8654,7 @@ namespace RFID.Utility
                     {
                         case CommandStatus.B04ANTENNA01:
                             B04RAWLOG("天線A1");
-                            B04AntennaTempData = (Byte)0x0; _ant = "72"; break;
+                            B04AntennaTempData = (Byte)0x0; _ant = "70"; break;
                         case CommandStatus.B04ANTENNA02:
                             B04RAWLOG("天線A2");
                             B04AntennaTempData = (Byte)0x1; _ant = "71"; break;
@@ -8663,7 +8663,7 @@ namespace RFID.Utility
                             B04AntennaTempData = (Byte)0x3; _ant = "73"; break;
                         case CommandStatus.B04ANTENNA04:
                             B04RAWLOG("天線A4");
-                            B04AntennaTempData = (Byte)0x2; _ant = "70"; break;
+                            B04AntennaTempData = (Byte)0x2; _ant = "72"; break;
                     }
 
                     _data = this.ReaderService.SetGPIOPins(_ant);
