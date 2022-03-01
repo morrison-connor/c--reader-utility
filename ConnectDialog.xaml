@@ -72,7 +72,7 @@
             <Grid Margin="2">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <TextBlock Style="{StaticResource TextBlockStyle16B}" Foreground="WhiteSmoke">Reader Search</TextBlock>
-                    <TextBlock Style="{StaticResource TextBlockStyle12B}" Margin="5,15,0,0" Foreground="WhiteSmoke">v4.1.3d</TextBlock>
+                    <TextBlock Style="{StaticResource TextBlockStyle12B}" Margin="5,15,0,0" Foreground="WhiteSmoke">v4.1.3e</TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="ConnectDialogClose" Content="{StaticResource IMG_Close}" Width="28" Height="28" Click="OnConnectDialogCloseClick" VerticalContentAlignment="Center"/>

@@ -8,7 +8,7 @@
         Title="Regulation" Height="554" Width="760" ResizeMode="NoResize" WindowStyle="None" Topmost="False">
     <Window.Resources>
 
-       
+
         <Style TargetType="ComboBox">
             <Setter Property="Height" Value="30"></Setter>
             <Setter Property="VerticalAlignment" Value="Top"></Setter>
@@ -17,10 +17,7 @@
             <Setter Property="FontSize" Value="14"></Setter>
         </Style>
     </Window.Resources>
-    
-    
-    
-    
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="34" />
@@ -62,12 +59,12 @@
                             <StackPanel Grid.Column="0" Background="#FFEEEEEE">
                                 <Grid>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="305"/>
-                                        <RowDefinition Height="120"/>
-                                        <RowDefinition Height="65"/>
-                                        <RowDefinition Height="130"/>
+                                        <RowDefinition Height="305*"/>
+                                        <RowDefinition Height="120*"/>
+                                        <RowDefinition Height="80"/>
+                                        <RowDefinition Height="130*"/>
                                     </Grid.RowDefinitions>
-                                    <GroupBox IsEnabled="{Binding GroupModuleSetIsEnabled}" Grid.Row="0" Height="302" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top" BorderBrush="LightSlateGray" Margin="5,0,0,0">
+                                    <GroupBox IsEnabled="{Binding GroupModuleSetIsEnabled}" Grid.Row="0" MaxHeight="302" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top" BorderBrush="LightSlateGray" Margin="5,0,0,0">
                                         <GroupBox.Header>
                                             <Label Content="{Binding Group_Setting_Regulation, Source={StaticResource Resources}}"></Label>
                                         </GroupBox.Header>
@@ -84,7 +81,7 @@
                                                 <Button IsEnabled="{Binding ButtonSetAreaIsEnabled}" Grid.Column="1" Margin="5,0,13,0" Style="{StaticResource ButtonStyle14B}" Click="OnButtonSetAreaClick" Content="{Binding Group_Setting_Set, Source={StaticResource Resources}}"/>
                                             </Grid>
 
-                                            <GroupBox Margin="-6,0,-6,0" Height="170" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top" BorderBrush="LightSlateGray">
+                                            <GroupBox Margin="-6,0,-6,0" Height="170" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top" BorderBrush="LightSlateGray" Visibility="Collapsed">
                                                 <GroupBox.Header>
                                                     <Label VerticalAlignment="Center" Content="{Binding Group_Setting_Measure_Frequency, Source={StaticResource Resources}}"></Label>
                                                 </GroupBox.Header>
@@ -134,7 +131,7 @@
                                             </Grid>
                                         </StackPanel>
                                     </GroupBox>
-                                    <GroupBox IsEnabled="{Binding GroupModuleMeasureIsEnabled}"  Grid.Row="1" Height="115" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-5,0,0" BorderBrush="LightSlateGray">
+                                    <GroupBox IsEnabled="{Binding GroupModuleMeasureIsEnabled}"  Grid.Row="1" Height="115" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,-5,0,0" BorderBrush="LightSlateGray" Visibility="Collapsed">
                                         <GroupBox.Header>
                                             <Label Content="{Binding Group_Setting_Measure, Source={StaticResource Resources}}"/>
                                         </GroupBox.Header>
@@ -163,7 +160,7 @@
                                             <Button x:Name="ButtonMeasureRun" IsEnabled="{Binding ButtonMeasureRunIsEnabled}" Margin="0,-15,2,0" Style="{StaticResource ButtonStyle14B}" HorizontalAlignment="Right" Click="OnButtonMeasureRunClick" Content="{Binding Group_Setting_Run, Source={StaticResource Resources}}"/>
                                         </StackPanel>
                                     </GroupBox>
-                                    <GroupBox x:Name="GroupBaudRate" Grid.Row="2"  Height="70" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top"  Margin="5,-10,0,0" BorderBrush="LightSlateGray">
+                                    <GroupBox x:Name="GroupBaudRate" Grid.Row="2"  Height="75" Width="320" HorizontalAlignment="Left" VerticalAlignment="Top"  Margin="5,0,0,0" BorderBrush="LightSlateGray">
                                         <GroupBox.Header>
                                             <Label Content="{Binding Group_Setting_BaudRate, Source={StaticResource Resources}}"/>
                                         </GroupBox.Header>
